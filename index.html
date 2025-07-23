@@ -631,8 +631,8 @@
         });
 
         // Dodaj serię świecową (candlestick series)
-        const candlestickSeries = chart.addCandlestickSeries();
-
+       // const candlestickSeries = chart.addCandlestickSeries();
+         const candlestickSeries = chart.addSeries(LightweightCharts.CandlestickSeries)
         // Przykładowe dane (zastąpisz je prawdziwymi danymi GPW w przyszłości)
         const data = [
             { time: '2025-01-01', open: 10, high: 12, low: 9, close: 11 },
