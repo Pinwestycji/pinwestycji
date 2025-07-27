@@ -643,7 +643,7 @@
                         return [];
                     }
                     try {
-                        const response = await fetch(`http://127.0.0.1:5000/api/data/${ticker}`);
+                        const response = await fetch(`https://pinwestycji.onrender.com/api/data/${ticker}`);
                         if (!response.ok) {
                             const errorData = await response.json();
                             throw new Error(`Błąd HTTP: ${response.status} - ${errorData.error}`);
