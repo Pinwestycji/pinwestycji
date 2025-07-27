@@ -81,4 +81,4 @@ def get_stock_data(ticker):
         return jsonify({"error": f"Wystąpił ogólny błąd podczas pobierania danych dla {ticker} ze Stooq.pl: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False) # Zmienione na False
