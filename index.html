@@ -167,13 +167,11 @@
                     </button>
 
                     <!-- Topbar Search -->
-                    <form
-                        class="d-none d-sm-inline-block form-inline mr-auto ml-md-3 my-2 my-md-0 mw-100 navbar-search">
+                    <form class="d-none d-sm-inline-block form-inline mr-auto ml-md-3 my-2 my-md-0 mw-100 navbar-search">
                         <div class="input-group">
-                            <input type="text" class="form-control bg-light border-0 small" placeholder="Search for..."
-                                aria-label="Search" aria-describedby="basic-addon2">
+                            <input type="text" class="form-control bg-light border-0 small" placeholder="Wprowadź symbol spółki (np. CDR, PKO)" aria-label="Search" aria-describedby="basic-addon2" id="stockTickerInput">
                             <div class="input-group-append">
-                                <button class="btn btn-primary" type="button">
+                                <button class="btn btn-primary" type="button" id="searchButton">
                                     <i class="fas fa-search fa-sm"></i>
                                 </button>
                             </div>
@@ -631,20 +629,68 @@
         });
 
         // Dodaj serię świecową (candlestick series)
-       // const candlestickSeries = chart.addCandlestickSeries();
-         const candlestickSeries = chart.addSeries(LightweightCharts.CandlestickSeries)
-        // Przykładowe dane (zastąpisz je prawdziwymi danymi GPW w przyszłości)
-        const data = [
-            { time: '2025-01-01', open: 10, high: 12, low: 9, close: 11 },
-            { time: '2025-01-02', open: 11, high: 13, low: 10, close: 12 },
-            { time: '2025-01-03', open: 12, high: 14, low: 11, close: 13 },
-            { time: '2025-01-06', open: 13, high: 15, low: 12, close: 14 },
-            { time: '2025-01-07', open: 14, high: 16, low: 13, close: 15 },
-            { time: '2025-01-08', open: 15, high: 17, low: 14, close: 16 },
-            { time: '2025-01-09', open: 16, high: 18, low: 15, close: 17 },
-            { time: '2025-01-10', open: 17, high: 19, low: 16, close: 18 },
-        ];
+                const candlestickSeries = chart.addSeries(LightweightCharts.CandlestickSeries);
 
+                // --- NOWY KOD: Pobieranie referencji do elementów HTML ---
+                const stockTickerInput = document.getElementById('stockTickerInput');
+                const searchButton = document.getElementById('searchButton');
+                // --- KONIEC NOWEGO KODU ---
+
+                // Funkcja do pobierania danych z Twojego API Flask
+                async function fetchStockData(ticker) {
+                    if (!ticker) { // Dodana walidacja: upewnij się, że ticker nie jest pusty
+                        console.warn("Symbol spółki nie może być pusty.");
+                        return [];
+                    }
+                    try {
+                        const response = await fetch(`http://127.0.0.1:5000/api/data/${ticker}`);
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(`Błąd HTTP: ${response.status} - ${errorData.error}`);
+                        }
+                        const data = await response.json();
+                        return data;
+                    } catch (error) {
+                        console.error("Błąd podczas pobierania danych giełdowych:", error);
+                        // Możesz tutaj wyświetlić komunikat o błędzie dla użytkownika
+                        alert(`Wystąpił błąd podczas pobierania danych: ${error.message}. Sprawdź symbol spółki.`);
+                        return []; // Zwróć pustą tablicę w przypadku błędu
+                    }
+                }
+
+                // Funkcja do ładowania danych na wykres
+                async function loadChartData(ticker) {
+                    const data = await fetchStockData(ticker);
+                    if (data && data.length > 0) {
+                        candlestickSeries.setData(data);
+                        console.log(`Dane giełdowe dla ${ticker} załadowane pomyślnie.`);
+                    } else {
+                        // Wyczyść wykres, jeśli brak danych
+                        candlestickSeries.setData([]);
+                        console.warn(`Brak danych do wyświetlenia dla symbolu ${ticker}.`);
+                    }
+                }
+
+                // --- NOWY KOD: Obsługa zdarzeń i początkowe ładowanie danych ---
+
+                // Początkowe ładowanie danych dla CDR po załadowaniu strony
+                loadChartData('CDR'); // Ładuje dane dla CDR domyślnie
+
+                // Dodaj nasłuchiwanie na kliknięcie przycisku wyszukiwania
+                searchButton.addEventListener('click', () => {
+                    const ticker = stockTickerInput.value.trim().toUpperCase(); // Pobierz wartość i konwertuj na duże litery
+                    loadChartData(ticker);
+                });
+
+                // Opcjonalnie: Obsługa klawisza Enter w polu wyszukiwania
+                stockTickerInput.addEventListener('keypress', (event) => {
+                    if (event.key === 'Enter') {
+                        event.preventDefault(); // Zapobiegnij domyślnej akcji (przeładowaniu strony)
+                        searchButton.click(); // Symuluj kliknięcie przycisku wyszukiwania
+                    }
+                });
+                // --- KONIEC NOWEGO KODU ---
+    
         candlestickSeries.setData(data);
 
         // Ustawienie skalowania dla responsywności
