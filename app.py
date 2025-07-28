@@ -4,9 +4,10 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 import io
+import logging
 # Konfiguracja logowania, aby wiadomości DEBUG były widoczne na Renderze
 logging.basicConfig(level=logging.DEBUG)
-import logging
+
 import requests # Nowy import: biblioteka do wykonywania żądań HTTP
 
 app = Flask(__name__)
