@@ -19,7 +19,6 @@ def home():
     return "Witaj na serwerze danych GPW! Spróbuj /api/data/CDPROJEKT"
 
 # Trasa do pobierania danych dla konkretnej spółki ze Stooq.pl
-@app.route('/api/data/<ticker>')
 @app.route('/api/data/<ticker>', defaults={'days_back': 20})
 @app.route('/api/data/<ticker>/<int:days_back>')
 def get_stock_data(ticker, days_back):
@@ -28,10 +27,18 @@ def get_stock_data(ticker, days_back):
 
     logging.debug(f"Próba pobrania danych ze Stooq.pl dla symbolu: {ticker} z URL: {stooq_url}")
 
+    # --- DODAJ TEN FRAGMENT KODU ---
+    # Dodanie nagłówków User-Agent, aby żądanie wyglądało jak z przeglądarki
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+    # --- KONIEC DODAWANEGO FRAGMENTU ---
+
     try:
-        # Dodanie timeoutu do żądania requests.get()
-        # Jeśli Stooq nie odpowie w ciągu 30 sekund, requests sam zgłosi błąd Timeout
-        response = requests.get(stooq_url, timeout=(10, 30))
+        # Zmień wywołanie requests.get(), aby używało nagłówków
+        response = requests.get(stooq_url, timeout=(10, 30), headers=headers) # WAŻNE: Dodaj 'headers=headers'
+
+        # ... reszta Twojego kodu funkcji get_stock_data ...
 
         logging.debug(f"Status odpowiedzi ze Stooq: {response.status_code}")
 
