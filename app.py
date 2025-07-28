@@ -31,7 +31,7 @@ def get_stock_data(ticker, days_back):
     try:
         # Dodanie timeoutu do żądania requests.get()
         # Jeśli Stooq nie odpowie w ciągu 30 sekund, requests sam zgłosi błąd Timeout
-        response = requests.get(stooq_url, timeout=30)
+        response = requests.get(stooq_url, timeout=(10, 30))
 
         logging.debug(f"Status odpowiedzi ze Stooq: {response.status_code}")
 
