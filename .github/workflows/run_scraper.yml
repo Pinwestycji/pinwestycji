@@ -4,7 +4,7 @@ on:
   schedule:
     # Poniżej znajduje się wyrażenie cron. Uruchomi skrypt raz dziennie o 00:00 UTC.
     # Możesz zmienić harmonogram, jeśli chcesz.
-    - cron: '25 16 * * *'
+    - cron: '0 17 * * *'
   workflow_dispatch:
 
 jobs:
