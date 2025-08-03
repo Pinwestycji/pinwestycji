@@ -3,7 +3,8 @@ Flask-Cors==4.0.0
 pandas==1.5.3
 requests==2.31.0
 gunicorn==21.2.0
-numpy==1.26.4  # Dodana/Zmieniona linia dla NumPy
-beautifulsoup4 # Dodaj tę linię
-lxml # Dodaj tę linię (zalecane)
-psycopg2-binary # Dodaj tę linię (dla PostgreSQL)
+numpy==1.26.4
+beautifulsoup4
+lxml
+psycopg2-binary
+sqlalchemy
