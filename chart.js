@@ -99,7 +99,16 @@ document.addEventListener('DOMContentLoaded', function() {
     async function loadChartData(ticker) {
         const data = await fetchStockData(ticker);
         if (data && data.length > 0) {
-            candlestickSeries.setData(data);
+            // Przetwarzanie danych, aby zmienić klucz 'date' na 'time'
+            const formattedData = data.map(item => ({
+                time: item.date,
+                open: item.open,
+                high: item.high,
+                low: item.low,
+                close: item.close,
+            }));
+
+            candlestickSeries.setData(formattedData);
             console.log(`Dane giełdowe dla ${ticker} załadowane pomyślnie.`);
         } else {
             candlestickSeries.setData([]);
