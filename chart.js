@@ -28,8 +28,8 @@ document.addEventListener('DOMContentLoaded', function() {
             borderColor: '#e0e0e0',
         },
     });
-
-    const candlestickSeries = chart.addCandlestickSeries();
+  //  const candlestickSeries = chart.addCandlestickSeries();
+    const candlestickSeries = chart.addSeries(LightweightCharts.CandlestickSeries);
 
     // Referencje do elementów DOM
     const stockTickerInput = document.getElementById('stockTickerInput');
