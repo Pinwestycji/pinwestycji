@@ -10,15 +10,12 @@ from datetime import datetime
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 app = Flask(__name__)
-# Włącz CORS dla wszystkich domen
 CORS(app)
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if not DATABASE_URL:
     logging.error("Zmienna środowiskowa 'DATABASE_URL' nie jest ustawiona.")
-    # Zwracanie błędu zamiast kończenia aplikacji
-    DATABASE_URL = "sqlite:///:memory:" # Zapasowy, nieprodukcyjny URL
-
+    DATABASE_URL = "sqlite:///:memory:"
 
 @app.route('/api/search', methods=['GET'])
 def search_companies():
@@ -32,9 +29,15 @@ def search_companies():
     try:
         engine = create_engine(DATABASE_URL)
         with engine.connect() as conn:
-            # Użycie LIKE do wyszukiwania po fragmencie nazwy
-            sql_query = f"SELECT DISTINCT company_name FROM historical_stock_data WHERE UPPER(company_name) LIKE '{query}%%' ORDER BY company_name LIMIT 10;"
-            companies_df = pd.read_sql(sql_query, conn)
+            # Użycie parametrów w zapytaniu SQL dla bezpieczeństwa
+            sql_query = """
+                SELECT DISTINCT company_name FROM historical_stock_data 
+                WHERE UPPER(company_name) LIKE :query 
+                ORDER BY company_name 
+                LIMIT 10;
+            """
+            params = {'query': f'{query}%'}
+            companies_df = pd.read_sql(sql_query, conn, params=params)
             companies_list = companies_df['company_name'].tolist()
         
         logging.info(f"Znaleziono {len(companies_list)} propozycji dla zapytania: '{query}'")
@@ -50,29 +53,28 @@ def get_stock_data(ticker):
     try:
         engine = create_engine(DATABASE_URL)
         with engine.connect() as conn:
-            # Upewnij się, że kolumny są zgodne z tymi z Twojej bazy danych
-            sql_query = f"""
+            sql_query = """
                 SELECT date, open_rate AS open, max_rate AS high, min_rate AS low, close_rate AS close
                 FROM historical_stock_data
-                WHERE company_name = '{ticker.upper()}'
+                WHERE company_name = :ticker
                 ORDER BY date;
             """
-            df = pd.read_sql(sql_query, conn)
+            params = {'ticker': ticker.upper()}
+            df = pd.read_sql(sql_query, conn, params=params)
         
         if df.empty:
             logging.warning(f"Brak danych w bazie dla symbolu: {ticker}")
             return jsonify({"error": f"Brak danych dla symbolu: {ticker}"}), 404
         
-        # Użycie to_dict z 'records' dla formatu JSON
         # Konwersja daty do formatu timestamp, aby LightweightCharts mogło go użyć
-        df['date'] = df['date'].apply(lambda x: datetime.strptime(x, '%Y-%m-%d').timestamp())
+        df['date'] = df['date'].apply(lambda x: int(datetime.strptime(x, '%Y-%m-%d').timestamp()))
 
         data_json = df.to_dict('records')
         logging.info(f"Pomyślnie pobrano {len(data_json)} rekordów dla {ticker}")
         return jsonify(data_json)
     except Exception as e:
         logging.error(f"Błąd podczas pobierania danych dla {ticker}: {e}")
-        return jsonify({"error": "Błąd serwera podczas pobierania danych."}), 500
+        return jsonify({"error": f"Błąd serwera podczas pobierania danych: {e}"}), 500
 
 if __name__ == '__main__':
     port = os.environ.get('PORT', 5000)
