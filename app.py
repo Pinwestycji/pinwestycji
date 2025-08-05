@@ -1,93 +1,79 @@
-from flask import Flask, jsonify
-from flask_cors import CORS
-from datetime import datetime, timedelta
-
 import pandas as pd
-import io
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+from sqlalchemy import create_engine
+import os
 import logging
-# Konfiguracja logowania, aby wiadomości DEBUG były widoczne na Renderze
-logging.basicConfig(level=logging.DEBUG)
+from datetime import datetime
 
-import requests # Nowy import: biblioteka do wykonywania żądań HTTP
+# Konfiguracja logowania
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 app = Flask(__name__)
+# Włącz CORS dla wszystkich domen
 CORS(app)
 
-# Prosta trasa testowa
-@app.route('/')
-def home():
-    return "Witaj na serwerze danych GPW! Spróbuj /api/data/CDPROJEKT"
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if not DATABASE_URL:
+    logging.error("Zmienna środowiskowa 'DATABASE_URL' nie jest ustawiona.")
+    # Zwracanie błędu zamiast kończenia aplikacji
+    DATABASE_URL = "sqlite:///:memory:" # Zapasowy, nieprodukcyjny URL
 
-# Trasa do pobierania danych dla konkretnej spółki ze Stooq.pl
-@app.route('/api/data/<ticker>', defaults={'days_back': 20})
-@app.route('/api/data/<ticker>/<int:days_back>')
-def get_stock_data(ticker, days_back):
-    logging.info(f"Odebrano żądanie dla symbolu: {ticker}, dni wstecz: {days_back}")
-    stooq_url = f"https://stooq.pl/q/d/l/?s={ticker}&d1={days_back}"
 
-    logging.debug(f"Próba pobrania danych ze Stooq.pl dla symbolu: {ticker} z URL: {stooq_url}")
-
-    # --- DODAJ TEN FRAGMENT KODU ---
-    # Dodanie nagłówków User-Agent, aby żądanie wyglądało jak z przeglądarki
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-    }
-    # --- KONIEC DODAWANEGO FRAGMENTU ---
-
+@app.route('/api/search', methods=['GET'])
+def search_companies():
+    """Endpoint do wyszukiwania nazw spółek."""
+    query = request.args.get('query', '').upper()
+    logging.info(f"Odebrano zapytanie do /api/search z query: '{query}'")
+    
+    if not query:
+        return jsonify({"error": "Query parameter 'query' is required."}), 400
+    
     try:
-        # Zmień wywołanie requests.get(), aby używało nagłówków
-        response = requests.get(stooq_url, timeout=(10, 30), headers=headers) # WAŻNE: Dodaj 'headers=headers'
-
-        # ... reszta Twojego kodu funkcji get_stock_data ...
-
-        logging.debug(f"Status odpowiedzi ze Stooq: {response.status_code}")
-
-        if response.status_code == 200:
-            # Sprawdzamy, czy odpowiedź nie jest pusta przed próbą parsowania
-            if not response.text.strip():
-                logging.warning(f"Otrzymano pustą odpowiedź ze Stooq dla {ticker}.")
-                return jsonify([]), 200
-
-            try:
-                # Używamy io.StringIO do odczytu danych CSV z tekstu odpowiedzi
-                df = pd.read_csv(io.StringIO(response.text))
-
-                # Sprawdź, czy DataFrame nie jest pusty po parsowaniu
-                if df.empty:
-                    logging.warning(f"DataFrame jest pusty po parsowaniu danych ze Stooq dla {ticker}.")
-                    return jsonify([]), 200
-
-                # Standardyzacja nazw kolumn
-                df.columns = df.columns.str.lower()
-                df = df[['data', 'otwarcie', 'max', 'min', 'zamkniecie']]
-                df.columns = ['time', 'open', 'high', 'low', 'close']
-
-                # Formatowanie daty i konwersja na listę słowników
-                df['time'] = pd.to_datetime(df['time']).dt.strftime('%Y-%m-%d')
-                data = df.to_dict(orient='records')
-
-                logging.info(f"Pomyślnie pobrano i przetworzono dane dla {ticker}. Liczba rekordów: {len(data)}")
-                return jsonify(data)
-
-            except pd.errors.EmptyDataError:
-                logging.warning(f"Brak danych lub pusty plik CSV ze Stooq dla {ticker}. Treść odpowiedzi (pierwsze 500 znaków): {response.text[:500]}...")
-                return jsonify([]), 200
-            except Exception as e:
-                logging.error(f"Błąd podczas parsowania danych ze Stooq dla {ticker}: {e}. Pełna odpowiedź (pierwsze 1000 znaków): {response.text[:1000]}...")
-                return jsonify({"error": "Błąd przetwarzania danych ze Stooq"}), 500
-        else:
-            logging.error(f"Błąd odpowiedzi ze Stooq dla {ticker}. Status: {response.status_code}. Treść odpowiedzi (pierwsze 1000 znaków): {response.text[:1000]}...")
-            return jsonify({"error": f"Błąd pobierania danych ze Stooq: Status {response.status_code}"}), 500
-
-    except requests.exceptions.Timeout:
-        logging.error(f"Zapytanie do Stooq dla {ticker} przekroczyło limit czasu (30s) na poziomie requests.")
-        return jsonify({"error": "Przekroczono limit czasu podczas łączenia ze Stooq"}), 500
-    except requests.exceptions.ConnectionError as e:
-        logging.error(f"Błąd połączenia ze Stooq dla {ticker}: {e}")
-        return jsonify({"error": "Błąd połączenia ze Stooq"}), 500
+        engine = create_engine(DATABASE_URL)
+        with engine.connect() as conn:
+            # Użycie LIKE do wyszukiwania po fragmencie nazwy
+            sql_query = f"SELECT DISTINCT company_name FROM historical_stock_data WHERE UPPER(company_name) LIKE '{query}%%' ORDER BY company_name LIMIT 10;"
+            companies_df = pd.read_sql(sql_query, conn)
+            companies_list = companies_df['company_name'].tolist()
+        
+        logging.info(f"Znaleziono {len(companies_list)} propozycji dla zapytania: '{query}'")
+        return jsonify(companies_list)
     except Exception as e:
-        logging.error(f"Nieoczekiwany błąd w API dla {ticker}: {e}")
-        return jsonify({"error": "Nieoczekiwany błąd serwera"}), 500
+        logging.error(f"Błąd podczas wyszukiwania spółek: {e}")
+        return jsonify({"error": "Błąd serwera podczas wyszukiwania."}), 500
+
+@app.route('/api/data/<ticker>', methods=['GET'])
+def get_stock_data(ticker):
+    """Endpoint do pobierania danych historycznych dla wykresu."""
+    logging.info(f"Odebrano zapytanie do /api/data/{ticker}")
+    try:
+        engine = create_engine(DATABASE_URL)
+        with engine.connect() as conn:
+            # Upewnij się, że kolumny są zgodne z tymi z Twojej bazy danych
+            sql_query = f"""
+                SELECT date, open_rate AS open, max_rate AS high, min_rate AS low, close_rate AS close
+                FROM historical_stock_data
+                WHERE company_name = '{ticker.upper()}'
+                ORDER BY date;
+            """
+            df = pd.read_sql(sql_query, conn)
+        
+        if df.empty:
+            logging.warning(f"Brak danych w bazie dla symbolu: {ticker}")
+            return jsonify({"error": f"Brak danych dla symbolu: {ticker}"}), 404
+        
+        # Użycie to_dict z 'records' dla formatu JSON
+        # Konwersja daty do formatu timestamp, aby LightweightCharts mogło go użyć
+        df['date'] = df['date'].apply(lambda x: datetime.strptime(x, '%Y-%m-%d').timestamp())
+
+        data_json = df.to_dict('records')
+        logging.info(f"Pomyślnie pobrano {len(data_json)} rekordów dla {ticker}")
+        return jsonify(data_json)
+    except Exception as e:
+        logging.error(f"Błąd podczas pobierania danych dla {ticker}: {e}")
+        return jsonify({"error": "Błąd serwera podczas pobierania danych."}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = os.environ.get('PORT', 5000)
+    app.run(debug=True, host='0.0.0.0', port=port)
