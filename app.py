@@ -29,7 +29,6 @@ def search_companies():
     try:
         engine = create_engine(DATABASE_URL)
         with engine.connect() as conn:
-            # Użycie funkcji text() z SQLAlchemy dla lepszej kompatybilności i bezpieczeństwa
             sql_query = text("SELECT DISTINCT company_name FROM historical_stock_data WHERE UPPER(company_name) LIKE :query ORDER BY company_name LIMIT 10;")
             params = {'query': f'{query}%'}
             
@@ -49,7 +48,6 @@ def get_stock_data(ticker):
     try:
         engine = create_engine(DATABASE_URL)
         with engine.connect() as conn:
-            # Użycie funkcji text() z SQLAlchemy i jawne przekazywanie parametrów
             sql_query = text("""
                 SELECT date, open_rate AS open, max_rate AS high, min_rate AS low, close_rate AS close
                 FROM historical_stock_data
@@ -63,9 +61,11 @@ def get_stock_data(ticker):
             logging.warning(f"Brak danych w bazie dla symbolu: {ticker}")
             return jsonify({"error": f"Brak danych dla symbolu: {ticker}"}), 404
         
-        df['date'] = pd.to_datetime(df['date'])
-        # Konwersja daty do formatu timestamp, aby LightweightCharts mogło go użyć
-        df['date'] = df['date'].apply(lambda x: int(x.timestamp()))
+        # Konwersja daty na timestamp
+        df['date'] = pd.to_datetime(df['date']).apply(lambda x: int(x.timestamp()))
+        
+        # Kluczowa zmiana: wypełnienie wartości NaN (powstałych z NULL) na None
+        df = df.fillna(value=None)
 
         data_json = df.to_dict('records')
         logging.info(f"Pomyślnie pobrano {len(data_json)} rekordów dla {ticker}")
