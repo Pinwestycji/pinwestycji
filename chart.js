@@ -20,14 +20,8 @@ document.addEventListener('DOMContentLoaded', function() {
         timeScale: { borderColor: '#cccccc', timeVisible: true, secondsVisible: false },
     });
 
-    const candlestickSeries = chart.addCandlestickSeries({
-      upColor: '#26a69a',
-      downColor: '#ef5350',
-      borderDownColor: '#ef5350',
-      borderUpColor: '#26a69a',
-      wickDownColor: '#ef5350',
-      wickUpColor: '#26a69a',
-    });
+    // Dodaj serię świecową (candlestick series)
+    const candlestickSeries = chart.addSeries(LightweightCharts.CandlestickSeries);
 
     // Referencje do elementów DOM
     const stockTickerInput = document.getElementById('stockTickerInput');
