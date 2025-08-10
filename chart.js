@@ -138,5 +138,5 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Załaduj przykładowy wykres na starcie (opcjonalnie)
-    loadChartData('CDPROJEKT');
+    loadChartData('CDR');
 });
