@@ -28,8 +28,8 @@ document.addEventListener('DOMContentLoaded', function() {
             borderColor: '#e0e0e0',
         },
     });
-  //  const candlestickSeries = chart.addCandlestickSeries();
-    const candlestickSeries = chart.addSeries(LightweightCharts.CandlestickSeries);
+
+    const candlestickSeries = chart.addCandlestickSeries();
 
     // Referencje do elementów DOM
     const stockTickerInput = document.getElementById('stockTickerInput');
@@ -99,16 +99,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function loadChartData(ticker) {
         const data = await fetchStockData(ticker);
         if (data && data.length > 0) {
-            // Przetwarzanie danych, aby zmienić klucz 'date' na 'time'
-            const formattedData = data.map(item => ({
-                time: item.date,
-                open: item.open,
-                high: item.high,
-                low: item.low,
-                close: item.close,
-            }));
-
-            candlestickSeries.setData(formattedData);
+            candlestickSeries.setData(data);
             console.log(`Dane giełdowe dla ${ticker} załadowane pomyślnie.`);
         } else {
             candlestickSeries.setData([]);
