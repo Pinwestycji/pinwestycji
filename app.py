@@ -18,34 +18,9 @@ if not DATABASE_URL:
     # Warto ustawić domyślną wartość dla testów lokalnych, jeśli jest potrzebna
     # DATABASE_URL = "sqlite:///your_local_database.db" 
 
-@app.route('/api/search', methods=['GET'])
-def search_companies():
-    """Endpoint do wyszukiwania nazw spółek."""
-    query = request.args.get('query', '').upper()
-    logging.info(f"Odebrano zapytanie do /api/search z query: '{query}'")
-    
-    if not query:
-        return jsonify({"error": "Query parameter 'query' is required."}), 400
-    
-    try:
-        engine = create_engine(DATABASE_URL)
-        with engine.connect() as conn:
-            # Wyszukujemy po tickerze (company_name), co jest bardziej standardowe
-            sql_query = text("""
-                SELECT DISTINCT company_name FROM historical_stock_data 
-                WHERE company_name LIKE :query 
-                ORDER BY company_name LIMIT 10;
-            """)
-            params = {'query': f'{query}%'}
-            
-            companies_df = pd.read_sql(sql_query, conn, params=params)
-            companies_list = companies_df['company_name'].tolist()
-        
-        logging.info(f"Znaleziono {len(companies_list)} propozycji dla zapytania: '{query}'")
-        return jsonify(companies_list)
-    except Exception as e:
-        logging.error(f"Błąd podczas wyszukiwania spółek: {e}", exc_info=True)
-        return jsonify({"error": "Błąd serwera podczas wyszukiwania."}), 500
+# app.py
+
+# ... (wszystkie importy i początek kodu bez zmian) ...
 
 @app.route('/api/data/<ticker>', methods=['GET'])
 def get_stock_data(ticker):
@@ -55,16 +30,19 @@ def get_stock_data(ticker):
         engine = create_engine(DATABASE_URL)
         with engine.connect() as conn:
             
-            # Ograniczenie zakresu dat do ostatnich 2 lat, aby uniknąć problemów z pamięcią
             end_date = datetime.utcnow().date()
-            start_date = end_date - timedelta(days=2*365) # Dwa lata wstecz
+            start_date = end_date - timedelta(days=2*365)
 
+            # --- JEDYNA ZMIANA JEST TUTAJ ---
+            # Dodajemy CAST(date AS date), aby przekonwertować tekst na datę przed porównaniem
             sql_query = text("""
                 SELECT date, open_rate AS open, max_rate AS high, min_rate AS low, close_rate AS close
                 FROM historical_stock_data
-                WHERE company_name = :ticker AND date >= :start_date
-                ORDER BY date;
+                WHERE company_name = :ticker AND CAST(date AS date) >= :start_date
+                ORDER BY CAST(date AS date);
             """)
+            # Zmieniamy też sortowanie na CAST(date AS date), aby było poprawne
+            
             params = {'ticker': ticker.upper(), 'start_date': start_date}
             df = pd.read_sql(sql_query, conn, params=params)
         
@@ -72,19 +50,14 @@ def get_stock_data(ticker):
             logging.warning(f"Brak danych w bazie dla symbolu: {ticker} w zadanym okresie.")
             return jsonify({"error": f"Brak danych dla symbolu: {ticker}"}), 404
         
-        # Używamy 'forward fill' do wypełnienia braków ostatnią znaną wartością
         df.ffill(inplace=True)
-        # Uzupełniamy ewentualne braki na początku danych
         df.bfill(inplace=True)
 
-        # Zmiana nazwy kolumny na 'time' i konwersja na timestamp
         df.rename(columns={'date': 'time'}, inplace=True)
         df['time'] = pd.to_datetime(df['time']).apply(lambda x: int(x.timestamp()))
         
-        # Ostateczne usunięcie wierszy, które mogłyby mieć NaN
         df.dropna(inplace=True)
 
-        # Upewnienie się, że wszystkie kolumny numeryczne mają właściwy typ
         for col in ['open', 'high', 'low', 'close']:
             df[col] = pd.to_numeric(df[col])
 
@@ -95,6 +68,8 @@ def get_stock_data(ticker):
     except Exception as e:
         logging.error(f"Błąd podczas pobierania danych dla {ticker}: {e}", exc_info=True)
         return jsonify({"error": "Wystąpił wewnętrzny błąd serwera."}), 500
+
+# ... (reszta pliku bez zmian) ...
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
