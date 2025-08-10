@@ -152,7 +152,13 @@ def get_historical_data(company_name: str) -> pd.DataFrame:
             }
 
             historical_df.rename(columns=column_mapping, inplace=True)
+            # ... (istniejący kod) ...
 
+            # [ZMIANA] Upewnij się, że kolumna 'Kod ISIN' jest usunięta, jeśli istnieje
+            if 'Kod ISIN' in historical_df.columns:
+                historical_df.drop('Kod ISIN', axis=1, inplace=True)
+            
+            # ... (reszta kodu, która konwertuje kolumny) ...
             # [ZMIANA] Konwersja daty do formatu YYYY-MM-DD
             if 'date' in historical_df.columns:
                 # pandas.to_datetime automatycznie konwertuje na datetime64[ns]
