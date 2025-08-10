@@ -5,24 +5,18 @@ import logging
 import re
 import time
 from urllib.parse import quote_plus
-import os # Dodaj import os do zmiennych środowiskowych
-from sqlalchemy import create_engine # Dodaj import do bazy danych
+import os
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import Connection
 
 # Konfiguracja logowania
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def get_wig_companies(url="https://www.stockwatch.pl/gpw/indeks/wig,sklad.aspx"):
-    # ... (Twój istniejący kod funkcji get_wig_companies) ...
     """
     Pobiera listę pełnych nazw spółek wchodzących w skład indeksu WIG
     ze strony StockWatch.pl.
-
-    Args:
-        url (str): Adres URL strony do pobrania składu indeksu WIG.
-                   Domyślnie ustawiony na StockWatch.pl.
-
-    Returns:
-        list: Lista stringów z nazwami spółek lub pusta lista w przypadku błędu.
+    ... (niezmieniony kod) ...
     """
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
@@ -37,9 +31,9 @@ def get_wig_companies(url="https://www.stockwatch.pl/gpw/indeks/wig,sklad.aspx")
         try:
             logging.info(f"Pobieranie kodu HTML z: {url} (Próba {attempt + 1}/{max_retries})")
             response = requests.get(url, headers=headers, timeout=15)
-            response.raise_for_status() # Sprawdza, czy zapytanie zakończyło się sukcesem (kody 2xx)
+            response.raise_for_status()
             html_content = response.text
-            break # Jeśli pobrano pomyślnie, wyjdź z pętli ponawiania
+            break
         except requests.exceptions.RequestException as e:
             logging.warning(f"Błąd podczas pobierania strony {url} (Próba {attempt + 1}/{max_retries}): {e}")
             if attempt < max_retries - 1:
@@ -48,7 +42,7 @@ def get_wig_companies(url="https://www.stockwatch.pl/gpw/indeks/wig,sklad.aspx")
                 time.sleep(delay)
             else:
                 logging.error(f"Wszystkie {max_retries} próby pobrania strony nie powiodły się.")
-                return [] # Wszystkie próby wyczerpane, zwróć pustą listę
+                return []
 
     if not html_content:
         logging.error("Nie udało się pobrać zawartości HTML strony.")
@@ -58,7 +52,6 @@ def get_wig_companies(url="https://www.stockwatch.pl/gpw/indeks/wig,sklad.aspx")
         wig_companies = []
         soup = BeautifulSoup(html_content, 'html.parser')
 
-        # StockWatch.pl: Nazwy spółek są w <td><strong><a href="...">NAZWA SPÓŁKI</a></strong></td>
         company_links = soup.select('td > strong > a[href*="/gpw/"]')
 
         if company_links:
@@ -103,18 +96,9 @@ def get_wig_companies(url="https://www.stockwatch.pl/gpw/indeks/wig,sklad.aspx")
         return []
 
 def get_historical_data(company_name: str) -> pd.DataFrame:
-    # ... (Twój istniejący kod funkcji get_historical_data) ...
     """
     Pobiera historyczne dane notowań dla danej spółki z archiwum GPW.
-    Zakłada, że URL z pustym parametrem 'date' zwraca wszystkie dane.
-    UWAGA: GPW API wymaga PEŁNEJ NAZWY INSTRUMENTU (spółki), a nie symbolu.
-
-    Args:
-        company_name (str): Pełna nazwa spółki (np. "CDPROJEKT", "PKO BP").
-
-    Returns:
-        pd.DataFrame: DataFrame z oczyszczonymi danymi historycznymi.
-                      Pusta DataFrame w przypadku błędu.
+    ... (niezmieniony kod) ...
     """
     base_url = "https://www.gpw.pl/archiwum-notowan-full"
 
@@ -143,11 +127,9 @@ def get_historical_data(company_name: str) -> pd.DataFrame:
 
             historical_df = pd.DataFrame()
 
-            # [MODYFIKACJA] Sprawdzanie kluczowych kolumn po ich dokładnych nazwach
             required_columns = ['Data sesji', 'Kurs otwarcia', 'Kurs zamknięcia', 'Wolumen obrotu (w szt.)']
 
             for i, table in enumerate(tables):
-                # Sprawdza, czy wszystkie wymagane kolumny istnieją w tej tabeli
                 if all(col in table.columns for col in required_columns):
                     logging.info(f"Znaleziono tabelę z danymi historycznymi (indeks: {i}) dla {company_name} po dokładnych nazwach kolumn.")
                     historical_df = table
@@ -157,7 +139,6 @@ def get_historical_data(company_name: str) -> pd.DataFrame:
                 logging.warning(f"Nie znaleziono tabeli zawierającej wszystkie wymagane kolumny dla {company_name} na stronie {url}.")
                 continue
 
-            # [MODYFIKACJA] Użycie dokładnych nazw kolumn jako kluczy
             column_mapping = {
                 'Data sesji': 'date',
                 'Kurs otwarcia': 'open_rate',
@@ -172,11 +153,12 @@ def get_historical_data(company_name: str) -> pd.DataFrame:
 
             historical_df.rename(columns=column_mapping, inplace=True)
 
-            # Konwersja daty do formatu YYYY-MM-DD
+            # [ZMIANA] Konwersja daty do formatu YYYY-MM-DD
             if 'date' in historical_df.columns:
-                historical_df['date'] = pd.to_datetime(historical_df['date'], format='%d-%m-%Y').dt.strftime('%Y-%m-%d')
+                # pandas.to_datetime automatycznie konwertuje na datetime64[ns]
+                # To jest preferowany format do zapisu do bazy danych z SQLAlchemy
+                historical_df['date'] = pd.to_datetime(historical_df['date'], format='%d-%m-%Y', errors='coerce')
 
-            # Upewnij się, że kluczowe kolumny numeryczne istnieją przed konwersją
             numeric_cols = ['open_rate', 'max_rate', 'min_rate', 'close_rate', 'volume']
             for col in numeric_cols:
                 if col in historical_df.columns:
@@ -200,11 +182,49 @@ def get_historical_data(company_name: str) -> pd.DataFrame:
     logging.warning("--------------------------------------------------")
     return pd.DataFrame()
 
+# [ZMIANA] Nowa funkcja do czyszczenia i tworzenia struktury bazy danych
+def setup_database(db_url: str):
+    """
+    Usuwa starą tabelę i tworzy nową o ustalonej strukturze,
+    zapobiegając problemom z nadpisywaniem i formatem danych.
+    """
+    try:
+        engine = create_engine(db_url)
+        with engine.begin() as connection:  # Użycie `engine.begin()` zapewnia atomową transakcję
+            logging.info("Rozpoczynam usuwanie starej tabeli i tworzenie nowej.")
+            
+            # Zapytanie SQL do usunięcia tabeli, jeśli istnieje
+            drop_table_query = text("DROP TABLE IF EXISTS historical_stock_data;")
+            connection.execute(drop_table_query)
+            logging.info("Stara tabela 'historical_stock_data' została usunięta (jeśli istniała).")
+
+            # Zapytanie SQL do utworzenia nowej tabeli
+            create_table_query = text("""
+            CREATE TABLE historical_stock_data (
+                date DATE,
+                open_rate FLOAT,
+                max_rate FLOAT,
+                min_rate FLOAT,
+                close_rate FLOAT,
+                change_percent TEXT, -- Zostawiamy jako TEXT ze względu na znak %
+                volume BIGINT,
+                transaction_count INTEGER,
+                turnover_thousands FLOAT,
+                company_name TEXT
+            );
+            """)
+            connection.execute(create_table_query)
+            logging.info("Nowa tabela 'historical_stock_data' została utworzona.")
+
+    except Exception as e:
+        logging.error(f"Błąd podczas ustawiania bazy danych: {e}")
+        # W przypadku błędu, skrypt powinien zakończyć działanie,
+        # aby uniknąć zapisu danych w uszkodzonym schemacie.
+        raise
+
 def save_df_to_db(df: pd.DataFrame, table_name: str, db_url: str):
     """
     Zapisuje DataFrame do bazy danych PostgreSQL.
-    Jeśli tabela nie istnieje, zostanie utworzona.
-    Dane zostaną dodane do istniejącej tabeli.
     """
     if df.empty:
         logging.info(f"DataFrame dla tabeli '{table_name}' jest pusty, pomijam zapis.")
@@ -212,10 +232,12 @@ def save_df_to_db(df: pd.DataFrame, table_name: str, db_url: str):
 
     try:
         engine = create_engine(db_url)
-        # Użyj 'append', aby dodać nowe wiersze do istniejącej tabeli
-        # lub utworzyć nową, jeśli nie istnieje.
-        # `index=False` zapobiega zapisywaniu indeksu DataFrame jako kolumny.
-        df.to_sql(table_name, engine, if_exists='append', index=False)
+        # Używamy `if_exists='append'`, ale po usunięciu starej tabeli
+        # i tak zostanie ona utworzona od nowa dla pierwszych danych.
+        # Jest to najprostszy sposób, by zachować dane, gdyby skrypt był
+        # uruchamiany na nowo, ale po wcześniejszym usunięciu tabeli
+        # nie ma to już tak dużego znaczenia.
+        df.to_sql(table_name, engine, if_exists='append', index=False, method='multi')
         logging.info(f"Pomyślnie zapisano {len(df)} wierszy do tabeli '{table_name}'.")
     except Exception as e:
         logging.error(f"Błąd podczas zapisu do bazy danych dla tabeli '{table_name}': {e}")
@@ -225,8 +247,15 @@ if __name__ == '__main__':
     DATABASE_URL = os.environ.get("DATABASE_URL")
     if not DATABASE_URL:
         logging.error("Zmienna środowiskowa 'DATABASE_URL' nie jest ustawiona. Nie można połączyć się z bazą danych.")
-        # Możesz tutaj rzucić wyjątek lub zakończyć skrypt, jeśli DB jest wymagana
-        exit(1) # Zakończ skrypt, jeśli nie ma bazy danych
+        exit(1)
+
+    # [ZMIANA] Krok 0: Przygotowanie bazy danych
+    # Uruchomienie tej funkcji na początku skryptu gwarantuje czystą tabelę.
+    try:
+        setup_database(DATABASE_URL)
+    except Exception:
+        logging.error("Nie udało się przygotować bazy danych. Zakończono skrypt.")
+        exit(1)
 
     # 1. Pobieranie listy spółek z WIG
     logging.info("Rozpoczynam pobieranie listy spółek z indeksu WIG.")
@@ -245,17 +274,12 @@ if __name__ == '__main__':
         try:
             df = get_historical_data(company)
             if not df.empty:
-                # Dodaj kolumnę z nazwą spółki do DataFrame, aby wiedzieć,
-                # której spółki dotyczą dane w bazie.
-                df['company_name'] = company 
-                save_df_to_db(df, 'historical_stock_data', DATABASE_URL) # Nazwa tabeli: historical_stock_data
+                # Dodaj kolumnę z nazwą spółki do DataFrame
+                df['company_name'] = company
+                save_df_to_db(df, 'historical_stock_data', DATABASE_URL)
             else:
                 logging.warning(f"Brak danych do zapisu dla spółki: {company}.")
         except Exception as e:
             logging.error(f"Błąd podczas przetwarzania danych dla spółki {company}: {e}")
-
-        # Wskazówka: Możesz dodać krótkie opóźnienie między żądaniami dla każdej spółki,
-        # aby nie przeciążać serwerów GPW.
-        # time.sleep(0.5) 
 
     logging.info("Zakończono działanie skryptu scraper.py i zapis danych do bazy.")
