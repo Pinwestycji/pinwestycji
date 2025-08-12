@@ -13,6 +13,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 app = Flask(__name__)
 CORS(app)
 
+# app.py
+
 @app.route('/api/data/<ticker>', methods=['GET'])
 def get_stooq_data(ticker):
     """
@@ -24,28 +26,30 @@ def get_stooq_data(ticker):
         return jsonify({"error": "Brak symbolu spółki"}), 400
 
     try:
-        # Konstruowanie URL do pobierania danych historycznych ze Stooq.pl
         stooq_url = f"https://stooq.pl/q/d/l/?s={ticker.lower()}&i=d"
         logging.info(f"Pobieranie danych z URL: {stooq_url}")
         
-        # Pobieranie danych z URL
-        response = requests.get(stooq_url)
+        # === POCZĄTEK ZMIANY ===
+        # Dodajemy nagłówek User-Agent, aby symulować zapytanie z przeglądarki
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
         
-        # Sprawdzenie, czy odpowiedź jest poprawna
+        # Używamy nagłówków w zapytaniu GET
+        response = requests.get(stooq_url, headers=headers)
+        # === KONIEC ZMIANY ===
+        
         if response.status_code != 200 or "Nie ma takiego symbolu" in response.text:
             logging.error(f"Błąd: Nie udało się pobrać danych dla symbolu {ticker}. Sprawdź, czy symbol jest poprawny.")
             return jsonify({"error": f"Nie znaleziono danych dla symbolu: {ticker}"}), 404
         
-        # Wczytywanie danych CSV do DataFrame za pomocą Pandas
         csv_data = io.StringIO(response.text)
         df = pd.read_csv(csv_data)
         
-        # Sprawdzenie, czy DataFrame nie jest pusty
         if df.empty:
             logging.warning(f"Otrzymano pusty zbiór danych dla {ticker}")
             return jsonify({"error": f"Brak danych dla symbolu: {ticker}"}), 404
 
-        # Zmiana nazw kolumn na zgodne z LightweightCharts
         df.rename(columns={
             'Data': 'time',
             'Otwarcie': 'open',
@@ -54,20 +58,14 @@ def get_stooq_data(ticker):
             'Zamkniecie': 'close'
         }, inplace=True)
 
-        # Konwersja kolumny 'time' na format timestamp
         df['time'] = pd.to_datetime(df['time']).apply(lambda x: int(x.timestamp()))
-
-        # Upewnij się, że dane są posortowane chronologicznie
         df.sort_values('time', inplace=True)
         
-        # Konwersja kolumn numerycznych na odpowiedni typ
         for col in ['open', 'high', 'low', 'close']:
             df[col] = pd.to_numeric(df[col], errors='coerce')
         
-        # Usunięcie wierszy z brakującymi danymi
         df.dropna(inplace=True)
         
-        # Zwracanie danych jako JSON
         data_json = df[['time', 'open', 'high', 'low', 'close']].to_dict('records')
         logging.info(f"Pomyślnie przetworzono {len(data_json)} rekordów dla {ticker}")
         return jsonify(data_json)
@@ -75,7 +73,6 @@ def get_stooq_data(ticker):
     except Exception as e:
         logging.error(f"Błąd podczas pobierania lub przetwarzania danych dla {ticker}: {e}", exc_info=True)
         return jsonify({"error": "Wystąpił wewnętrzny błąd serwera."}), 500
-
 
 @app.route('/api/search', methods=['GET'])
 def search_stock():
