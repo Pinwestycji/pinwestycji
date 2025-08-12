@@ -51,4 +51,7 @@
         "gulp-uglify": "3.0.2",
         "merge-stream": "2.0.0"
     }
+    "engines": {
+      "node": ">=18.18.0 <19.0.0"
+    }
 }
