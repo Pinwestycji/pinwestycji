@@ -73,7 +73,6 @@ def get_stooq_data(ticker):
     except Exception as e:
         logging.error(f"Błąd podczas pobierania lub przetwarzania danych dla {ticker}: {e}", exc_info=True)
         return jsonify({"error": "Wystąpił wewnętrzny błąd serwera."}), 500
-
 @app.route('/api/search', methods=['GET'])
 def search_stock():
     """
