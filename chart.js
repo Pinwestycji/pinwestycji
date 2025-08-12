@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     // URL twojego API na Render.com
-    const API_URL = 'https://pinwestycji.onrender.com';
+    const API_URL = 'https://pinwestycji.pythonanywhere.com/';
 
     // Inicjalizacja wykresu
     const chartContainer = document.getElementById('tvchart');
