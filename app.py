@@ -12,10 +12,9 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 app = Flask(__name__)
 
-# UWAGA: Ta konfiguracja jest tylko do celów testowych!
-# Zezwala na dostęp z dowolnej domeny.
-CORS(app, resources={r"/api/*": {"origins": "*"}})
-
+# Zamiast prostego CORS(app), skonfiguruj go bardziej szczegółowo
+# Pozwoli to na dostęp do API tylko z Twojej strony na GitHub Pages
+CORS(app, resources={r"/api/*": {"origins": "https://pinwestycji.github.io"}})
 # app.py
 
 @app.route('/api/data/<ticker>', methods=['GET'])
