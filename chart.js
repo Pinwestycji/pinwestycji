@@ -25,8 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // === POCZĄTEK ZMIAN ===
 
     // 1. Dodaj serię świecową (candlestick series)
-    // Dodaj serię świecową (candlestick series)
-            const candlestickSeries = chart.addCandlestickSeries();
+    const candlestickSeries = chart.addSeries(LightweightCharts.CandlestickSeries);
 
     // 2. Dodaj serię histogramu dla wolumenu
     const volumeSeries = chart.addHistogramSeries({
