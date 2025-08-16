@@ -21,14 +21,39 @@ document.addEventListener('DOMContentLoaded', function() {
         rightPriceScale: { borderColor: '#cccccc' },
         timeScale: { borderColor: '#cccccc', timeVisible: true, secondsVisible: false },
     });
+   
+   // === POCZĄTEK ZMIAN ===
+   // Twoja obecna, poprawna składnia tworzenia serii
+    const candlestickSeries = chart.addCandlestickSeries();
+    const volumeSeries = chart.addHistogramSeries();
 
-    // === POCZĄTEK ZMIAN ===
+    // ROZWIĄZANIE: Dodajemy konfigurację za pomocą applyOptions
+    
+    // 1. Opcje dla wykresu świecowego (kolory)
+    candlestickSeries.applyOptions({
+        upColor: 'rgba(0, 150, 136, 1)',      // Zielony
+        downColor: 'rgba(255, 82, 82, 1)',    // Czerwony
+        borderDownColor: 'rgba(255, 82, 82, 1)',
+        borderUpColor: 'rgba(0, 150, 136, 1)',
+        wickDownColor: 'rgba(255, 82, 82, 1)',
+        wickUpColor: 'rgba(0, 150, 136, 1)',
+    });
 
-    // 1. Dodaj serię świecową (candlestick series)
-    const candlestickSeries = chart.addSeries(LightweightCharts.CandlestickSeries);
-
-    // 2. Dodaj serię histogramu dla wolumenu
-    const volumeSeries = chart.addSeries(LightweightCharts.HistogramSeries);
+    // 2. Opcje dla wolumenu (osobny panel i skala)
+    volumeSeries.applyOptions({
+        priceFormat: {
+            type: 'volume',
+        },
+        // --- TO JEST KLUCZOWY ELEMENT ---
+        // Puste ID odłącza serię od głównej skali cenowej i tworzy dla niej nowy panel
+        priceScaleId: '', 
+        // ---------------------------------
+        scaleMargins: {
+            top: 0.8, // 80% miejsca od góry na wykres cenowy
+            bottom: 0,  // 20% miejsca na dole dla wolumenu
+        },
+    });
+    
     // === KONIEC ZMIAN ===
 
 
