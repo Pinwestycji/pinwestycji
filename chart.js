@@ -1,7 +1,7 @@
 // Plik: chart.js
 
 document.addEventListener('DOMContentLoaded', function() {
-    // URL twojego API na Render.com - upewnij się, że jest poprawny
+    // URL twojego API na Render.com
     const API_URL = 'https://pinwestycji.onrender.com';
 
     // Inicjalizacja wykresu
@@ -21,40 +21,36 @@ document.addEventListener('DOMContentLoaded', function() {
         rightPriceScale: { borderColor: '#cccccc' },
         timeScale: { borderColor: '#cccccc', timeVisible: true, secondsVisible: false },
     });
-   
-   // === POCZĄTEK ZMIAN ===
-   // Twoja obecna, poprawna składnia tworzenia serii
+
+    // === POCZĄTEK FINALNYCH POPRAWEK ===
+
+    // Używamy Twojej poprawnej składni do stworzenia serii
     const candlestickSeries = chart.addSeries(LightweightCharts.CandlestickSeries);
     const volumeSeries = chart.addSeries(LightweightCharts.HistogramSeries);
 
-    // ROZWIĄZANIE: Dodajemy konfigurację za pomocą applyOptions
-    
-    // 1. Opcje dla wykresu świecowego (kolory)
+    // Stosujemy opcje do serii świecowej, aby nadać jej kolory
     candlestickSeries.applyOptions({
-        upColor: 'rgba(0, 150, 136, 1)',      // Zielony
-        downColor: 'rgba(255, 82, 82, 1)',    // Czerwony
+        upColor: 'rgba(0, 150, 136, 1)',
+        downColor: 'rgba(255, 82, 82, 1)',
         borderDownColor: 'rgba(255, 82, 82, 1)',
         borderUpColor: 'rgba(0, 150, 136, 1)',
         wickDownColor: 'rgba(255, 82, 82, 1)',
         wickUpColor: 'rgba(0, 150, 136, 1)',
     });
 
-    // 2. Opcje dla wolumenu (osobny panel i skala)
+    // KLUCZOWE: Stosujemy opcje do serii wolumenu, aby umieścić ją w osobnym panelu
     volumeSeries.applyOptions({
         priceFormat: {
-            type: 'volume',
+            type: 'volume', // Poprawia wyświetlanie dużych liczb (np. "3.5M")
         },
-        // --- TO JEST KLUCZOWY ELEMENT ---
-        // Puste ID odłącza serię od głównej skali cenowej i tworzy dla niej nowy panel
-        priceScaleId: '', 
-        // ---------------------------------
+        priceScaleId: '', // Puste ID ODŁĄCZA serię od głównej skali i tworzy nowy panel
         scaleMargins: {
-            top: 0.8, // 80% miejsca od góry na wykres cenowy
-            bottom: 0,  // 20% miejsca na dole dla wolumenu
+            top: 0.7,  // Główny wykres zajmuje górne 70% przestrzeni
+            bottom: 0, // Wykres wolumenu zajmuje dolne 30% przestrzeni
         },
     });
     
-    // === KONIEC ZMIAN ===
+    // === KONIEC FINALNYCH POPRAWEK ===
 
 
     // Referencje do elementów DOM
@@ -122,34 +118,27 @@ document.addEventListener('DOMContentLoaded', function() {
         const data = await fetchStockData(ticker);
         
         if (data && data.length > 0) {
-            // === POCZĄTEK ZMIAN ===
-
-            // Ustaw dane dla serii świecowej (bez zmian)
             candlestickSeries.setData(data);
 
-            // Przygotuj i ustaw dane dla serii wolumenu
             const volumeData = data.map(d => ({
                 time: d.time,
                 value: d.volume,
-                // Ustaw kolor słupka wolumenu w zależności od tego, czy świeca była wzrostowa czy spadkowa
                 color: d.close >= d.open ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)',
             }));
             volumeSeries.setData(volumeData);
-            
-            // === KONIEC ZMIAN ===
 
             chart.timeScale().fitContent();
             chartTitle.textContent = `Wykres świecowy dla: ${ticker.toUpperCase()}`;
             console.log(`Dane giełdowe dla ${ticker} załadowane pomyślnie.`);
         } else {
             candlestickSeries.setData([]);
-            volumeSeries.setData([]); // Czyścimy również dane wolumenu
+            volumeSeries.setData([]);
             chartTitle.textContent = `Brak danych do wyświetlenia dla: ${ticker.toUpperCase()}`;
             console.warn(`Brak danych do wyświetlenia dla symbolu ${ticker}.`);
         }
     }
 
-    // Obsługa zdarzeń
+    // Pozostała część pliku bez zmian...
     stockTickerInput.addEventListener('input', async () => {
         const query = stockTickerInput.value.trim().toUpperCase();
         if (query.length > 1) {
