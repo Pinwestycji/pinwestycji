@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const candlestickSeries = chart.addSeries(LightweightCharts.CandlestickSeries);
 
     // 2. Dodaj serię histogramu dla wolumenu
-    const candlestickSeries = chart.addSeries(LightweightCharts.HistogramSeries);
+    const volumeSeries = chart.addSeries(LightweightCharts.HistogramSeries);
     // === KONIEC ZMIAN ===
 
 
