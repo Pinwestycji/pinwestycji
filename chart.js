@@ -2,7 +2,7 @@
 
 document.addEventListener('DOMContentLoaded', function() {
     // URL twojego API na Render.com - upewnij się, że jest poprawny
-    const API_URL = 'https://pinwestycji-api.onrender.com';
+    const API_URL = 'https://pinwestycji.onrender.com';
 
     // Inicjalizacja wykresu
     const chartContainer = document.getElementById('tvchart');
@@ -28,18 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const candlestickSeries = chart.addSeries(LightweightCharts.CandlestickSeries);
 
     // 2. Dodaj serię histogramu dla wolumenu
-    const volumeSeries = chart.addHistogramSeries({
-        color: '#26a69a',
-        priceFormat: {
-            type: 'volume',
-        },
-        priceScaleId: '', // Ustawienie pustego ID umieszcza serię w osobnym panelu
-        scaleMargins: {
-            top: 0.8, // 80% miejsca od góry na wykres świecowy
-            bottom: 0,
-        },
-    });
-
+    const candlestickSeries = chart.addSeries(LightweightCharts.HistogramSeries);
     // === KONIEC ZMIAN ===
 
 
