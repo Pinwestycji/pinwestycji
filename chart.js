@@ -24,8 +24,8 @@ document.addEventListener('DOMContentLoaded', function() {
    
    // === POCZĄTEK ZMIAN ===
    // Twoja obecna, poprawna składnia tworzenia serii
-    const candlestickSeries = chart.addCandlestickSeries();
-    const volumeSeries = chart.addHistogramSeries();
+    const candlestickSeries = chart.addSeries(LightweightCharts.CandlestickSeries);
+    const volumeSeries = chart.addSeries(LightweightCharts.HistogramSeries);
 
     // ROZWIĄZANIE: Dodajemy konfigurację za pomocą applyOptions
     
