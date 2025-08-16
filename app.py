@@ -16,12 +16,12 @@ app = Flask(__name__)
 # Pozwoli to na dostęp do API tylko z Twojej strony na GitHub Pages
 CORS(app, resources={r"/api/*": {"origins": "https://pinwestycji.github.io"}})
 # app.py
+# Plik: app.py
 
 @app.route('/api/data/<ticker>', methods=['GET'])
 def get_stooq_data(ticker):
     """
-    Endpoint do pobierania danych historycznych dla wykresu ze Stooq.pl.
-    Pobiera dane w formacie CSV, przetwarza je i zwraca jako JSON.
+    Endpoint do pobierania danych historycznych (wraz z wolumenem) dla wykresu ze Stooq.pl.
     """
     logging.info(f"Odebrano zapytanie do /api/data/{ticker} ze Stooq.pl")
     if not ticker:
@@ -31,15 +31,11 @@ def get_stooq_data(ticker):
         stooq_url = f"https://stooq.pl/q/d/l/?s={ticker.lower()}&i=d"
         logging.info(f"Pobieranie danych z URL: {stooq_url}")
         
-        # === POCZĄTEK ZMIANY ===
-        # Dodajemy nagłówek User-Agent, aby symulować zapytanie z przeglądarki
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
         
-        # Używamy nagłówków w zapytaniu GET
         response = requests.get(stooq_url, headers=headers)
-        # === KONIEC ZMIANY ===
         
         if response.status_code != 200 or "Nie ma takiego symbolu" in response.text:
             logging.error(f"Błąd: Nie udało się pobrać danych dla symbolu {ticker}. Sprawdź, czy symbol jest poprawny.")
@@ -57,18 +53,22 @@ def get_stooq_data(ticker):
             'Otwarcie': 'open',
             'Najwyzszy': 'high',
             'Najnizszy': 'low',
-            'Zamkniecie': 'close'
+            'Zamkniecie': 'close',
+            'Wolumen': 'volume'  # <-- ZMIANA: Dodajemy mapowanie dla wolumenu
         }, inplace=True)
 
         df['time'] = pd.to_datetime(df['time']).apply(lambda x: int(x.timestamp()))
         df.sort_values('time', inplace=True)
         
-        for col in ['open', 'high', 'low', 'close']:
+        # <-- ZMIANA: Dodajemy 'volume' do listy kolumn numerycznych
+        for col in ['open', 'high', 'low', 'close', 'volume']:
             df[col] = pd.to_numeric(df[col], errors='coerce')
         
         df.dropna(inplace=True)
         
-        data_json = df[['time', 'open', 'high', 'low', 'close']].to_dict('records')
+        # <-- ZMIANA: Dołączamy 'volume' do finalnego JSONa
+        data_json = df[['time', 'open', 'high', 'low', 'close', 'volume']].to_dict('records')
+        
         logging.info(f"Pomyślnie przetworzono {len(data_json)} rekordów dla {ticker}")
         return jsonify(data_json)
 
