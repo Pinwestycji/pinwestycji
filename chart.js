@@ -25,14 +25,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // === POCZĄTEK ZMIAN ===
 
     // 1. Dodaj serię świecową (candlestick series)
-    const candlestickSeries = chart.addCandlestickSeries({
-        upColor: 'rgba(0, 150, 136, 1)', // Zielony
-        downColor: 'rgba(255, 82, 82, 1)', // Czerwony
-        borderDownColor: 'rgba(255, 82, 82, 1)',
-        borderUpColor: 'rgba(0, 150, 136, 1)',
-        wickDownColor: 'rgba(255, 82, 82, 1)',
-        wickUpColor: 'rgba(0, 150, 136, 1)',
-    });
+    // Dodaj serię świecową (candlestick series)
+            const candlestickSeries = chart.addCandlestickSeries();
 
     // 2. Dodaj serię histogramu dla wolumenu
     const volumeSeries = chart.addHistogramSeries({
