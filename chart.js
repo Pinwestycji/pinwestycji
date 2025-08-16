@@ -1,12 +1,14 @@
+// Plik: chart.js
+
 document.addEventListener('DOMContentLoaded', function() {
-    // URL twojego API na Render.com
-    const API_URL = 'https://pinwestycji.onrender.com';
+    // URL twojego API na Render.com - upewnij się, że jest poprawny
+    const API_URL = 'https://pinwestycji-api.onrender.com';
 
     // Inicjalizacja wykresu
     const chartContainer = document.getElementById('tvchart');
     const chart = LightweightCharts.createChart(chartContainer, {
         width: chartContainer.clientWidth,
-        height: 500, // Zwiększona wysokość dla lepszej widoczności
+        height: 500,
         layout: {
             backgroundColor: '#ffffff',
             textColor: '#333',
@@ -20,8 +22,33 @@ document.addEventListener('DOMContentLoaded', function() {
         timeScale: { borderColor: '#cccccc', timeVisible: true, secondsVisible: false },
     });
 
-    // Dodaj serię świecową (candlestick series)
-    const candlestickSeries = chart.addSeries(LightweightCharts.CandlestickSeries);
+    // === POCZĄTEK ZMIAN ===
+
+    // 1. Dodaj serię świecową (candlestick series)
+    const candlestickSeries = chart.addCandlestickSeries({
+        upColor: 'rgba(0, 150, 136, 1)', // Zielony
+        downColor: 'rgba(255, 82, 82, 1)', // Czerwony
+        borderDownColor: 'rgba(255, 82, 82, 1)',
+        borderUpColor: 'rgba(0, 150, 136, 1)',
+        wickDownColor: 'rgba(255, 82, 82, 1)',
+        wickUpColor: 'rgba(0, 150, 136, 1)',
+    });
+
+    // 2. Dodaj serię histogramu dla wolumenu
+    const volumeSeries = chart.addHistogramSeries({
+        color: '#26a69a',
+        priceFormat: {
+            type: 'volume',
+        },
+        priceScaleId: '', // Ustawienie pustego ID umieszcza serię w osobnym panelu
+        scaleMargins: {
+            top: 0.8, // 80% miejsca od góry na wykres świecowy
+            bottom: 0,
+        },
+    });
+
+    // === KONIEC ZMIAN ===
+
 
     // Referencje do elementów DOM
     const stockTickerInput = document.getElementById('stockTickerInput');
@@ -86,13 +113,30 @@ document.addEventListener('DOMContentLoaded', function() {
     async function loadChartData(ticker) {
         chartTitle.textContent = `Ładowanie danych dla ${ticker.toUpperCase()}...`;
         const data = await fetchStockData(ticker);
+        
         if (data && data.length > 0) {
+            // === POCZĄTEK ZMIAN ===
+
+            // Ustaw dane dla serii świecowej (bez zmian)
             candlestickSeries.setData(data);
-            chart.timeScale().fitContent(); // Automatycznie dopasuj widok
+
+            // Przygotuj i ustaw dane dla serii wolumenu
+            const volumeData = data.map(d => ({
+                time: d.time,
+                value: d.volume,
+                // Ustaw kolor słupka wolumenu w zależności od tego, czy świeca była wzrostowa czy spadkowa
+                color: d.close >= d.open ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)',
+            }));
+            volumeSeries.setData(volumeData);
+            
+            // === KONIEC ZMIAN ===
+
+            chart.timeScale().fitContent();
             chartTitle.textContent = `Wykres świecowy dla: ${ticker.toUpperCase()}`;
             console.log(`Dane giełdowe dla ${ticker} załadowane pomyślnie.`);
         } else {
             candlestickSeries.setData([]);
+            volumeSeries.setData([]); // Czyścimy również dane wolumenu
             chartTitle.textContent = `Brak danych do wyświetlenia dla: ${ticker.toUpperCase()}`;
             console.warn(`Brak danych do wyświetlenia dla symbolu ${ticker}.`);
         }
@@ -109,7 +153,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Ukrywanie sugestii po kliknięciu gdziekolwiek indziej
     document.addEventListener('click', function(event) {
         const isClickInside = stockTickerInput.contains(event.target) || searchDropdown.contains(event.target);
         if (!isClickInside) {
@@ -132,11 +175,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Ustawienie skalowania dla responsywności
     window.addEventListener('resize', () => {
         chart.applyOptions({ width: chartContainer.clientWidth });
     });
 
-    // Załaduj przykładowy wykres na starcie (opcjonalnie)
     loadChartData('JSW');
 });
