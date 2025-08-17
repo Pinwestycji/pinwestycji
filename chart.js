@@ -32,7 +32,10 @@ document.addEventListener('DOMContentLoaded', function() {
     volumeSeries.applyOptions({
         priceFormat: { type: 'volume' },
         priceScaleId: '',
-        scaleMargins: { top: 0.7, bottom: 0 },
+        scaleMargins: {
+            top: 0.65,  // <-- ZMIANA: Dajemy 65% miejsca wykresowi cen, a 35% wolumenowi
+            bottom: 0,
+        },
     });
 
     const stockTickerInput = document.getElementById('stockTickerInput');
