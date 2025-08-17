@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function() {
         priceFormat: { type: 'volume' },
         priceScaleId: '',
         scaleMargins: {
-            top: 0.65,  // <-- ZMIANA: Dajemy 65% miejsca wykresowi cen, a 35% wolumenowi
+            top: 0.95,  // <-- ZMIANA: Dajemy 65% miejsca wykresowi cen, a 35% wolumenowi
             bottom: 0,
         },
     });
