@@ -164,5 +164,5 @@ document.addEventListener('DOMContentLoaded', function() {
         chart.applyOptions({ width: chartContainer.clientWidth });
     });
 
-    loadChartData('JSW');
+    loadChartData('WIG20');
 });
