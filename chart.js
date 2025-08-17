@@ -39,7 +39,9 @@ document.addEventListener('DOMContentLoaded', function() {
         layout: { backgroundColor: '#ffffff', textColor: '#333' },
         grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } },
     });
-    const projectionSeries = projectionChart.addHistogramSeries({
+    const projectionSeries = projectionChart.addSeries(LightweightCharts.HistogramSeries);
+    
+    projectionSeries.applyOptions({
         color: 'rgba(33, 150, 243, 0.8)'
     });
 
