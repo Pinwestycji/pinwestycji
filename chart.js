@@ -1,34 +1,25 @@
-// Plik: chart.js
-
 document.addEventListener('DOMContentLoaded', function() {
-    // URL twojego API na Render.com
     const API_URL = 'https://pinwestycji.onrender.com';
 
-    // Inicjalizacja wykresu
+    // === POCZĄTEK ZMIAN ===
+    // Lista znanych tickerów, które są indeksami i nie powinny pokazywać wolumenu
+    const indexTickers = ['WIG20', 'WIG', 'MWIG40', 'SWIG80', 'WIG-UKRAIN'];
+    // === KONIEC ZMIAN ===
+
     const chartContainer = document.getElementById('tvchart');
     const chart = LightweightCharts.createChart(chartContainer, {
         width: chartContainer.clientWidth,
         height: 500,
-        layout: {
-            backgroundColor: '#ffffff',
-            textColor: '#333',
-        },
-        grid: {
-            vertLines: { color: '#f0f0f0' },
-            horzLines: { color: '#f0f0f0' },
-        },
+        layout: { backgroundColor: '#ffffff', textColor: '#333' },
+        grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } },
         crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
         rightPriceScale: { borderColor: '#cccccc' },
         timeScale: { borderColor: '#cccccc', timeVisible: true, secondsVisible: false },
     });
 
-    // === POCZĄTEK FINALNYCH POPRAWEK ===
-
-    // Używamy Twojej poprawnej składni do stworzenia serii
     const candlestickSeries = chart.addSeries(LightweightCharts.CandlestickSeries);
     const volumeSeries = chart.addSeries(LightweightCharts.HistogramSeries);
 
-    // Stosujemy opcje do serii świecowej, aby nadać jej kolory
     candlestickSeries.applyOptions({
         upColor: 'rgba(0, 150, 136, 1)',
         downColor: 'rgba(255, 82, 82, 1)',
@@ -38,28 +29,17 @@ document.addEventListener('DOMContentLoaded', function() {
         wickUpColor: 'rgba(0, 150, 136, 1)',
     });
 
-    // KLUCZOWE: Stosujemy opcje do serii wolumenu, aby umieścić ją w osobnym panelu
     volumeSeries.applyOptions({
-        priceFormat: {
-            type: 'volume', // Poprawia wyświetlanie dużych liczb (np. "3.5M")
-        },
-        priceScaleId: '', // Puste ID ODŁĄCZA serię od głównej skali i tworzy nowy panel
-        scaleMargins: {
-            top: 0.7,  // Główny wykres zajmuje górne 70% przestrzeni
-            bottom: 0, // Wykres wolumenu zajmuje dolne 30% przestrzeni
-        },
+        priceFormat: { type: 'volume' },
+        priceScaleId: '',
+        scaleMargins: { top: 0.7, bottom: 0 },
     });
-    
-    // === KONIEC FINALNYCH POPRAWEK ===
 
-
-    // Referencje do elementów DOM
     const stockTickerInput = document.getElementById('stockTickerInput');
     const searchButton = document.getElementById('searchButton');
     const searchDropdown = document.getElementById('searchDropdown');
     const chartTitle = document.getElementById('chart-title');
 
-    // Funkcja do pobierania danych giełdowych z API
     async function fetchStockData(ticker) {
         if (!ticker) return [];
         try {
@@ -75,7 +55,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return [];
         }
     }
-
     // Funkcja do pobierania propozycji wyszukiwania (autocomplete)
     async function fetchAutocomplete(query) {
         if (!query || query.length < 2) return [];
@@ -112,33 +91,43 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Funkcja do ładowania danych na wykres
+   // === POCZĄTEK ZMIAN w funkcji loadChartData ===
     async function loadChartData(ticker) {
         chartTitle.textContent = `Ładowanie danych dla ${ticker.toUpperCase()}...`;
         const data = await fetchStockData(ticker);
         
+        const isIndex = indexTickers.includes(ticker.toUpperCase());
+
         if (data && data.length > 0) {
             candlestickSeries.setData(data);
 
-            const volumeData = data.map(d => ({
-                time: d.time,
-                value: d.volume,
-                color: d.close >= d.open ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)',
-            }));
-            volumeSeries.setData(volumeData);
+            if (isIndex) {
+                // Jeśli to indeks, czyścimy dane wolumenu i ukrywamy serię
+                volumeSeries.setData([]);
+                volumeSeries.applyOptions({ visible: false });
+            } else {
+                // Jeśli to zwykła spółka, pokazujemy serię i ustawiamy dane wolumenu
+                volumeSeries.applyOptions({ visible: true });
+                const volumeData = data.map(d => ({
+                    time: d.time,
+                    value: d.volume,
+                    color: d.close >= d.open ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)',
+                }));
+                volumeSeries.setData(volumeData);
+            }
 
             chart.timeScale().fitContent();
-            chartTitle.textContent = `Wykres świecowy dla: ${ticker.toUpperCase()}`;
-            console.log(`Dane giełdowe dla ${ticker} załadowane pomyślnie.`);
+            chartTitle.textContent = `Wykres dla: ${ticker.toUpperCase()}`;
         } else {
             candlestickSeries.setData([]);
             volumeSeries.setData([]);
             chartTitle.textContent = `Brak danych do wyświetlenia dla: ${ticker.toUpperCase()}`;
-            console.warn(`Brak danych do wyświetlenia dla symbolu ${ticker}.`);
         }
     }
+    // === KONIEC ZMIAN w funkcji loadChartData ===
 
-    // Pozostała część pliku bez zmian...
+
+    // Reszta pliku bez zmian...
     stockTickerInput.addEventListener('input', async () => {
         const query = stockTickerInput.value.trim().toUpperCase();
         if (query.length > 1) {
