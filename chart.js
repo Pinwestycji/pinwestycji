@@ -247,7 +247,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     window.addEventListener('resize', () => {
-        chart.applyOptions({ width: chartContainer.clientWidth });
+        mainChart.applyOptions({ width: chartContainer.clientWidth });
     });
 
     loadChartData('WIG20');
