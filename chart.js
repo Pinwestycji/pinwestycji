@@ -19,8 +19,8 @@ document.addEventListener('DOMContentLoaded', function() {
         rightPriceScale: { borderColor: '#cccccc' },
         timeScale: { borderColor: '#cccccc', timeVisible: true, secondsVisible: false },
     });
-    const candlestickSeries = chart.addSeries(LightweightCharts.CandlestickSeries);
-    const volumeSeries = chart.addSeries(LightweightCharts.HistogramSeries);
+    const candlestickSeries = mainChart.addSeries(LightweightCharts.CandlestickSeries);
+    const volumeSeries = mainChart.addSeries(LightweightCharts.HistogramSeries);
     candlestickSeries.applyOptions({
         upColor: 'rgba(0, 150, 136, 1)', downColor: 'rgba(255, 82, 82, 1)',
         borderDownColor: 'rgba(255, 82, 82, 1)', borderUpColor: 'rgba(0, 150, 136, 1)',
