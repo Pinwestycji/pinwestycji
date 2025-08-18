@@ -54,7 +54,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const chartTitle = document.getElementById('chart-title');
     const valuationTable = document.getElementById('valuationTable').getElementsByTagName('tbody')[0];
     const projectionTable = document.getElementById('projectionTable');
-
+    // ZMIANA: Dodajemy referencję do całej sekcji kalkulatora
+    const valuationCalculatorSection = document.getElementById('valuationCalculatorSection');
 
     // =========================================================================
     // NOWA FUNKCJA DO AKTUALIZACJI DANYCH WYCENY
@@ -68,9 +69,18 @@ document.addEventListener('DOMContentLoaded', function() {
         projectionSeries.setData([]);
 
         if (isIndex || data.length === 0) {
-            // Jeśli to indeks lub brak danych, pozostawiamy sekcję pustą
+            // ZMIANA: Jeśli to indeks lub brak danych, UKRYWAMY całą sekcję i kończymy
+            valuationCalculatorSection.style.display = 'none';
             return;
         }
+
+        // ZMIANA: Jeśli to spółka, UPEWNIAMY SIĘ, że sekcja jest WIDOCZNA
+        // (Używamy 'flex', ponieważ Bootstrap dla klasy 'row' używa display: flex)
+        valuationCalculatorSection.style.display = 'flex';
+
+        // Czyszczenie i wypełnianie tabel (logika pozostaje bez zmian)
+        valuationTableBody.innerHTML = '';
+        projectionTableBody.innerHTML = '';
 
         // --- WYPEŁNIANIE LEWEJ TABELI (WYCENA) ---
         const lastPrice = data[data.length - 1].close; // Pobieramy ostatnią cenę zamknięcia
