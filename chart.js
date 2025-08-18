@@ -74,8 +74,8 @@ document.addEventListener('DOMContentLoaded', function() {
         valuationCalculatorSection.style.display = 'flex';
 
         // Czyszczenie i wypełnianie tabel (logika pozostaje bez zmian)
-        valuationTableBody.innerHTML = '';
-        projectionTableBody.innerHTML = '';
+        valuationTable.innerHTML = '';
+        projectionTable.innerHTML = '';
 
         // --- WYPEŁNIANIE LEWEJ TABELI (WYCENA) ---
         const lastPrice = data[data.length - 1].close; // Pobieramy ostatnią cenę zamknięcia
