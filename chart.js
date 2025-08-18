@@ -62,11 +62,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // =========================================================================
     function updateValuationData(ticker, data) {
         const isIndex = indexTickers.includes(ticker.toUpperCase());
-        
-        // Czyszczenie starych danych
-        valuationTable.innerHTML = '';
-        projectionTable.innerHTML = '';
-        projectionSeries.setData([]);
 
         if (isIndex || data.length === 0) {
             // ZMIANA: Jeśli to indeks lub brak danych, UKRYWAMY całą sekcję i kończymy
