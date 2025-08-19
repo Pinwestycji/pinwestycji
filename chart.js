@@ -23,16 +23,18 @@ document.addEventListener('DOMContentLoaded', function() {
         rightPriceScale: { borderColor: '#cccccc' },
         timeScale: { borderColor: '#cccccc', timeVisible: true, secondsVisible: false },
     });
-    const candlestickSeries = mainChart.addSeries({
+    const candlestickSeries = mainChart.addSeries(LightweightCharts.CandlestickSeries);
+    const volumeSeries = mainChart.addSeries(LightweightCharts.HistogramSeries);
+    candlestickSeries.applyOptions({
         upColor: 'rgba(0, 150, 136, 1)', downColor: 'rgba(255, 82, 82, 1)',
         borderDownColor: 'rgba(255, 82, 82, 1)', borderUpColor: 'rgba(0, 150, 136, 1)',
         wickDownColor: 'rgba(255, 82, 82, 1)', wickUpColor: 'rgba(0, 150, 136, 1)',
     });
-    const volumeSeries = mainChart.addSeries({
-        color: 'rgba(41, 98, 255, 0.5)',
-        priceScaleId: 'volume',
-        scaleMargins: { top: 0.8, bottom: 0 },
+    volumeSeries.applyOptions({
+        priceFormat: { type: 'volume' }, priceScaleId: '',
+        scaleMargins: { top: 0.65, bottom: 0 },
     });
+
     mainChart.priceScale('volume').applyOptions({
         scaleMargins: { top: 0.8, bottom: 0 },
         borderVisible: false,
