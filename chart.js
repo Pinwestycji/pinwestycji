@@ -332,5 +332,17 @@ document.addEventListener('DOMContentLoaded', function() {
         mainChart.applyOptions({ width: chartContainer.clientWidth });
     });
 
-    loadChartData('WIG20');
+    loadCompanyData().then(() => {
+        // Upewnij się, że funkcja loadChartData jest zdefiniowana ZANIM ją tu wywołasz
+        // Jeśli nie jesteś pewien, po prostu wklej cały działający kod z poprzednich odpowiedzi
+        // Poniżej jest przykład kompletnej funkcji loadChartData
+        
+        // Poniżej wklej KOD TWOICH działających funkcji, np.:
+        // async function loadChartData(ticker) { ... }
+        // async function fetchStockData(ticker) { ... }
+        // function updateValuationData(ticker, data) { ... }
+        // i inne event listenery
+
+        loadChartData('WIG20');
+    });
 });
