@@ -284,16 +284,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
 
-    // Reszta pliku bez zmian...
-    stockTickerInput.addEventListener('input', async () => {
-        const query = stockTickerInput.value.trim().toUpperCase();
-        if (query.length > 1) {
-            const suggestions = await fetchAutocomplete(query);
-            renderAutocomplete(suggestions);
-        } else {
-            searchDropdown.style.display = 'none';
-        }
-    });
+   
     
     document.addEventListener('click', function(event) {
         const isClickInside = stockTickerInput.contains(event.target) || searchDropdown.contains(event.target);
