@@ -3,6 +3,9 @@
 document.addEventListener('DOMContentLoaded', function() {
     const API_URL = 'https://pinwestycji.onrender.com';
     const indexTickers = ['WIG20', 'WIG', 'MWIG40', 'SWIG80', 'WIG-UKRAIN'];
+     
+    // === NOWA SEKCJA: Wczytywanie i przechowywanie danych spółek ===
+    let companyList = []; // Tutaj będziemy przechowywać listę spółek w formacie { nazwa, ticker }
 
     // =========================================================================
     // INICJALIZACJA WYKRESÓW
@@ -57,6 +60,89 @@ document.addEventListener('DOMContentLoaded', function() {
     const projectionTable = document.getElementById('projectionTable');
     // ZMIANA: Dodajemy referencję do całej sekcji kalkulatora
     const valuationCalculatorSection = document.getElementById('valuationCalculatorSection');
+
+     // Funkcja do wczytania i przetworzenia pliku CSV
+    async function loadCompanyData() {
+        try {
+            // Zakładamy, że plik CSV jest w tym samym folderze co index.html
+            const response = await fetch('wig_companies.csv');
+            const csvText = await response.text();
+            
+            // Proste parsowanie CSV
+            const rows = csvText.trim().split('\n').slice(1); // Pomiń nagłówek
+            companyList = rows.map(row => {
+                const [nazwa, ticker] = row.split(',');
+                return { nazwa: nazwa.trim(), ticker: ticker.trim() };
+            });
+            console.log(`Załadowano ${companyList.length} spółek.`);
+        } catch (error) {
+            console.error("Błąd podczas wczytywania pliku wig_companies.csv:", error);
+            // Można tu dodać informację dla użytkownika, że wyszukiwarka nie działa
+        }
+    }
+    // =====================================================================
+     // === ZAKTUALIZOWANA LOGIKA WYSZUKIWANIA ===
+
+    // Funkcja znajdująca pasujące spółki w naszej lokalnej liście
+    function findMatchingCompanies(query) {
+        if (!query || query.length < 2) return [];
+        const lowerCaseQuery = query.toLowerCase();
+        
+        return companyList.filter(company => {
+            const searchString = `${company.nazwa}-${company.ticker}`.toLowerCase();
+            return searchString.includes(lowerCaseQuery);
+        });
+    }
+
+    // Funkcja renderująca sugestie w dropdownie
+    function renderAutocomplete(suggestions) {
+        searchDropdown.innerHTML = '';
+        if (suggestions && suggestions.length > 0) {
+            suggestions.forEach(company => {
+                const item = document.createElement('a');
+                item.classList.add('list-group-item', 'list-group-item-action');
+                item.href = "#";
+                // Wyświetlamy połączoną nazwę i ticker
+                item.textContent = `${company.nazwa}-${company.ticker}`;
+                
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    stockTickerInput.value = item.textContent; // W polu zostaje pełna nazwa
+                    searchDropdown.style.display = 'none';
+                    // Do funkcji ładującej wykres przekazujemy TYLKO ticker
+                    loadChartData(company.ticker);
+                });
+                searchDropdown.appendChild(item);
+            });
+            searchDropdown.style.display = 'block';
+        } else {
+            searchDropdown.style.display = 'none';
+        }
+    }
+    
+    // Zaktualizowany Event Listener dla pola input
+    stockTickerInput.addEventListener('input', () => {
+        const query = stockTickerInput.value.trim();
+        const suggestions = findMatchingCompanies(query);
+        renderAutocomplete(suggestions);
+    });
+
+    // Zaktualizowany Event Listener dla przycisku wyszukiwania
+    searchButton.addEventListener('click', () => {
+        const inputValue = stockTickerInput.value.trim();
+        let tickerToLoad = inputValue.toUpperCase();
+
+        // Jeśli w polu jest format "Nazwa-Ticker", wyciągnij sam ticker
+        if (inputValue.includes('-')) {
+            const parts = inputValue.split('-');
+            tickerToLoad = parts[parts.length - 1].toUpperCase();
+        }
+        
+        if (tickerToLoad) {
+            loadChartData(tickerToLoad);
+            searchDropdown.style.display = 'none';
+        }
+    });
 
     // =========================================================================
     // NOWA FUNKCJA DO AKTUALIZACJI DANYCH WYCENY
