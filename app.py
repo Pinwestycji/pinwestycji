@@ -75,27 +75,7 @@ def get_stooq_data(ticker):
     except Exception as e:
         logging.error(f"Błąd podczas pobierania lub przetwarzania danych dla {ticker}: {e}", exc_info=True)
         return jsonify({"error": "Wystąpił wewnętrzny błąd serwera."}), 500
-@app.route('/api/search', methods=['GET'])
-def search_stock():
-    """
-    Endpoint do wyszukiwania spółek.
-    Stooq.pl nie oferuje prostego API do wyszukiwania, więc ten endpoint
-    zostanie uproszczony i zwróci listę popularnych symboli.
-    """
-    query = request.args.get('query', '').upper()
-    logging.info(f"Odebrano zapytanie do wyszukiwania: {query}")
-    
-    # Lista popularnych tickerów, którą będziemy filtrować
-    popular_tickers = [
-        "WIG20", "CDPROJEKT", "PKO", "PEKAO", "ORLEN", "KGHM",
-        "ALLEGRO", "JSW", "SANPL", "CCC", "MBANK", "INGBSK"
-    ]
-    
-    suggestions = [ticker for ticker in popular_tickers if query in ticker]
-    
-    return jsonify(suggestions)
-
-
+        
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=True, host='0.0.0.0', port=port)
