@@ -82,22 +82,35 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
 
             if (data.length > 0) {
-                const processedData = data.map(d => ({
-                    time: new Date(d.time).getTime() / 1000,
-                    open: d.open,
-                    high: d.high,
-                    low: d.low,
-                    close: d.close,
-                }));
-                const volumeData = data.map(d => ({
-                    time: new Date(d.time).getTime() / 1000,
-                    value: d.volume,
-                    color: d.close > d.open ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)'
-                }));
+            // Dodajemy walidację, aby upewnić się, że dane są poprawne
+            const validData = data.filter(d => 
+                d.time && d.open && d.high && d.low && d.close && d.volume
+            );
 
-                candlestickSeries.setData(processedData);
-                volumeSeries.setData(volumeData);
-                chartTitle.textContent = `Wykres cenowy dla ${ticker.toUpperCase()}`;
+            if (validData.length === 0) {
+                candlestickSeries.setData([]);
+                volumeSeries.setData([]);
+                chartTitle.textContent = `Brak poprawnych danych do wyświetlenia dla: ${ticker.toUpperCase()}`;
+                return;
+            }
+
+            const processedData = validData.map(d => ({
+                time: new Date(d.time).getTime() / 1000,
+                open: d.open,
+                high: d.high,
+                low: d.low,
+                close: d.close,
+            }));
+            const volumeData = validData.map(d => ({
+                time: new Date(d.time).getTime() / 1000,
+                value: d.volume,
+                color: d.close > d.open ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)'
+            }));
+
+            candlestickSeries.setData(processedData);
+            volumeSeries.setData(volumeData);
+            chartTitle.textContent = `Wykres cenowy dla ${ticker.toUpperCase()}`;
+        }
             } else {
                 candlestickSeries.setData([]);
                 volumeSeries.setData([]);
