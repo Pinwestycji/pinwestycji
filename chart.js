@@ -43,8 +43,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // =========================================================================
 
     // Funkcja do wczytywania danych z pliku CSV
+    // Funkcja do wczytywania danych z pliku CSV
     async function loadCompanyData() {
-        // Upewnij się, że używasz poprawnej ścieżki do pliku na GitHub Pages
         const csvUrl = 'https://pinwestycji.github.io/gpw-data-server/data/wig_companies.csv';
         try {
             const response = await fetch(csvUrl);
@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const name = cols[0] ? cols[0].replace(/"/g, '') : '';
                 const ticker = cols[1] ? cols[1].replace(/"/g, '') : '';
                 return { name, ticker };
-            }).filter(item => item.name && item.ticker);
+            }).filter(item => item.name && item.ticker); // Filtrujemy puste wiersze
 
             console.log("Pomyślnie załadowano dane spółek:", popularCompanies.length);
         } catch (error) {
