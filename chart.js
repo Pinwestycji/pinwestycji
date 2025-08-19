@@ -1,14 +1,18 @@
-// Plik: chart.js
-
+// Plik: chart(3).js
 document.addEventListener('DOMContentLoaded', function() {
     const API_URL = 'https://pinwestycji.onrender.com';
     const indexTickers = ['WIG20', 'WIG', 'MWIG40', 'SWIG80', 'WIG-UKRAIN'];
+    const stockTickerInput = document.getElementById('stockTickerInput');
+    const searchDropdown = document.getElementById('searchDropdown');
+    const searchButton = document.getElementById('searchButton');
+    
+    // Zmienna do przechowywania danych ze spółkami
+    let popularCompanies = [];
 
     // =========================================================================
     // INICJALIZACJA WYKRESÓW
     // =========================================================================
 
-    // Wykres 1: Historyczny wykres świecowy
     const chartContainer = document.getElementById('tvchart');
     const mainChart = LightweightCharts.createChart(chartContainer, {
         width: chartContainer.clientWidth,
@@ -19,159 +23,116 @@ document.addEventListener('DOMContentLoaded', function() {
         rightPriceScale: { borderColor: '#cccccc' },
         timeScale: { borderColor: '#cccccc', timeVisible: true, secondsVisible: false },
     });
-    const candlestickSeries = mainChart.addSeries(LightweightCharts.CandlestickSeries);
-    const volumeSeries = mainChart.addSeries(LightweightCharts.HistogramSeries);
-    candlestickSeries.applyOptions({
+    const candlestickSeries = mainChart.addSeries({
         upColor: 'rgba(0, 150, 136, 1)', downColor: 'rgba(255, 82, 82, 1)',
         borderDownColor: 'rgba(255, 82, 82, 1)', borderUpColor: 'rgba(0, 150, 136, 1)',
         wickDownColor: 'rgba(255, 82, 82, 1)', wickUpColor: 'rgba(0, 150, 136, 1)',
     });
-    volumeSeries.applyOptions({
-        priceFormat: { type: 'volume' }, priceScaleId: '',
-        scaleMargins: { top: 0.65, bottom: 0 },
+    const volumeSeries = mainChart.addSeries({
+        color: 'rgba(41, 98, 255, 0.5)',
+        priceScaleId: 'volume',
+        scaleMargins: { top: 0.8, bottom: 0 },
     });
-
- // Wykres 2: Wykres kolumnowy z prognozą cen
-    const projectionChartContainer = document.getElementById('projectionChart');
-    const projectionChart = LightweightCharts.createChart(projectionChartContainer, {
-        width: projectionChartContainer.clientWidth,
-        height: 300,
-        layout: { backgroundColor: '#ffffff', textColor: '#333' },
-        grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } },
+    mainChart.priceScale('volume').applyOptions({
+        scaleMargins: { top: 0.8, bottom: 0 },
+        borderVisible: false,
     });
-    const projectionSeries = projectionChart.addSeries(LightweightCharts.HistogramSeries);
     
-    projectionSeries.applyOptions({
-        color: 'rgba(33, 150, 243, 0.8)'
-    });
-
-
     // =========================================================================
-    // REFERENCJE DO ELEMENTÓW DOM
+    // FUNKCJE DO ŁADOWANIA DANYCH I WYSZUKIWANIA
     // =========================================================================
-    const stockTickerInput = document.getElementById('stockTickerInput');
-    const searchButton = document.getElementById('searchButton');
-    const chartTitle = document.getElementById('chart-title');
-    const valuationTable = document.getElementById('valuationTable').getElementsByTagName('tbody')[0];
-    const projectionTable = document.getElementById('projectionTable');
-    // ZMIANA: Dodajemy referencję do całej sekcji kalkulatora
-    const valuationCalculatorSection = document.getElementById('valuationCalculatorSection');
 
-    // =========================================================================
-    // NOWA FUNKCJA DO AKTUALIZACJI DANYCH WYCENY
-    // =========================================================================
-    function updateValuationData(ticker, data) {
-        const isIndex = indexTickers.includes(ticker.toUpperCase());
+    // Funkcja do wczytywania danych z pliku CSV
+    async function loadCompanyData() {
+        // Upewnij się, że używasz poprawnej ścieżki do pliku na GitHub Pages
+        const csvUrl = 'https://pinwestycji.github.io/gpw-data-server/data/wig_companies.csv';
+        try {
+            const response = await fetch(csvUrl);
+            const data = await response.text();
+            
+            // Parsowanie CSV i przygotowanie listy do wyszukiwania
+            const rows = data.split('\n').slice(1); // Pomijamy nagłówek
+            popularCompanies = rows.map(row => {
+                const cols = row.split(',');
+                // Upewnij się, że kolumny są w poprawnym indeksie
+                const name = cols[0] ? cols[0].replace(/"/g, '') : '';
+                const ticker = cols[1] ? cols[1].replace(/"/g, '') : '';
+                return { name, ticker };
+            }).filter(item => item.name && item.ticker);
 
-        if (isIndex || data.length === 0) {
-            // ZMIANA: Jeśli to indeks lub brak danych, UKRYWAMY całą sekcję i kończymy
-            valuationCalculatorSection.style.display = 'none';
-            return;
+            console.log("Pomyślnie załadowano dane spółek:", popularCompanies.length);
+        } catch (error) {
+            console.error("Błąd podczas ładowania danych spółek:", error);
         }
-
-        // ZMIANA: Jeśli to spółka, UPEWNIAMY SIĘ, że sekcja jest WIDOCZNA
-        // (Używamy 'flex', ponieważ Bootstrap dla klasy 'row' używa display: flex)
-        valuationCalculatorSection.style.display = 'flex';
-
-        // Czyszczenie i wypełnianie tabel (logika pozostaje bez zmian)
-        valuationTable.innerHTML = '';
-        projectionTable.innerHTML = '';
-
-        // --- WYPEŁNIANIE LEWEJ TABELI (WYCENA) ---
-        const lastPrice = data[data.length - 1].close; // Pobieramy ostatnią cenę zamknięcia
-        const valuationData = {
-            'Symbol': `<strong>${ticker.toUpperCase()}</strong>`,
-            'Aktualna Cena': `<strong>${lastPrice.toFixed(2)} zł</strong>`,
-            'EPS (zysk na akcję)': '5.20 zł',
-            'Aktualny C/Z': (lastPrice / 5.20).toFixed(2),
-            'Tempo wzrostu': '15%',
-            'Stopa zwrotu za 5 lat': '15%',
-            'Potencjalny C/Z za 5 lat': '30.00',
-            'Wycena Akcji': '120.50 zł',
-            'Dobra Cena': 'Tak' // W przyszłości tu będzie logika
-        };
-
-        for (const [key, value] of Object.entries(valuationData)) {
-            let row = valuationTable.insertRow();
-            let cell1 = row.insertCell(0);
-            let cell2 = row.insertCell(1);
-            cell1.innerHTML = key;
-            cell2.innerHTML = value;
-        }
-
-        // --- WYPEŁNIANIE PRAWEJ TABELI (PROJEKCJE) ---
-        // Nagłówek
-        let pHeader = projectionTable.createTHead().insertRow(0);
-        pHeader.insertCell(0).innerHTML = '';
-        for (let i = 0; i < 5; i++) {
-            pHeader.insertCell(i + 1).innerHTML = `<strong>${2026 + i}</strong>`;
-        }
-        // Wiersze
-        let pBody = projectionTable.createTBody();
-        const pEpsData = ['5.98', '6.88', '7.91', '9.10', '10.46']; // Testowe EPS
-        const pPriceData = [179.40, 206.40, 237.30, 273.00, 313.80]; // Testowe ceny
-        
-        let epsRow = pBody.insertRow();
-        epsRow.insertCell(0).innerHTML = '<strong>Zysk na akcję</strong>';
-        pEpsData.forEach(val => epsRow.insertCell().innerHTML = `${val} zł`);
-
-        let priceRow = pBody.insertRow();
-        priceRow.insertCell(0).innerHTML = '<strong>Cena Akcji</strong>';
-        pPriceData.forEach(val => priceRow.insertCell().innerHTML = `${val.toFixed(2)} zł`);
-
-        // --- AKTUALIZACJA WYKRESU PROGNOZ ---
-        const projectionChartData = pPriceData.map((price, index) => ({
-            time: `${2026 + index}-01-01`,
-            value: price,
-        }));
-        projectionSeries.setData(projectionChartData);
-        projectionChart.timeScale().fitContent();
     }
-
-
-    async function fetchStockData(ticker) {
-        if (!ticker) return [];
+    
+    // Funkcja pobierająca dane ze Stooq.pl przez nasz serwer
+    async function loadChartData(ticker) {
+        const chartTitle = document.getElementById('chartTitle');
+        chartTitle.textContent = `Ładowanie danych dla: ${ticker.toUpperCase()}...`;
+        
         try {
             const response = await fetch(`${API_URL}/api/data/${ticker}`);
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`Błąd HTTP ${response.status}: ${errorData.error}`);
+                if (response.status === 404) {
+                    throw new Error(`Błąd: Nie znaleziono danych dla tickera: ${ticker}.`);
+                }
+                throw new Error(`Wystąpił błąd serwera. Status: ${response.status}`);
             }
-            return await response.json();
+            const data = await response.json();
+
+            if (data.length > 0) {
+                const processedData = data.map(d => ({
+                    time: new Date(d.time).getTime() / 1000,
+                    open: d.open,
+                    high: d.high,
+                    low: d.low,
+                    close: d.close,
+                }));
+                const volumeData = data.map(d => ({
+                    time: new Date(d.time).getTime() / 1000,
+                    value: d.volume,
+                    color: d.close > d.open ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)'
+                }));
+
+                candlestickSeries.setData(processedData);
+                volumeSeries.setData(volumeData);
+                chartTitle.textContent = `Wykres cenowy dla ${ticker.toUpperCase()}`;
+            } else {
+                candlestickSeries.setData([]);
+                volumeSeries.setData([]);
+                chartTitle.textContent = `Brak danych do wyświetlenia dla: ${ticker.toUpperCase()}`;
+            }
         } catch (error) {
-            console.error("Błąd podczas pobierania danych giełdowych:", error);
-            alert(`Wystąpił błąd: ${error.message}. Sprawdź symbol spółki lub spróbuj ponownie.`);
-            return [];
-        }
-    }
-    // Funkcja do pobierania propozycji wyszukiwania (autocomplete)
-    async function fetchAutocomplete(query) {
-        if (!query || query.length < 2) return [];
-        try {
-            const response = await fetch(`${API_URL}/api/search?query=${query}`);
-            if (!response.ok) throw new Error(`Błąd HTTP: ${response.status}`);
-            return await response.json();
-        } catch (error) {
-            console.error("Błąd podczas pobierania propozycji wyszukiwania:", error);
-            return [];
+            console.error("Błąd podczas pobierania danych wykresu:", error);
+            candlestickSeries.setData([]);
+            volumeSeries.setData([]);
+            chartTitle.textContent = `Błąd: ${error.message}`;
         }
     }
 
-    // Funkcja do renderowania propozycji wyszukiwania
-    function renderAutocomplete(suggestions) {
+    // =========================================================================
+    // NOWA FUNKCJA WYSZUKIWANIA I AUTOUZUPEŁNIANIA
+    // =========================================================================
+
+    function filterCompanies(query) {
+        query = query.toLowerCase().trim();
+        return popularCompanies.filter(company => {
+            const name = company.name.toLowerCase();
+            const ticker = company.ticker.toLowerCase();
+            return name.includes(query) || ticker.includes(query);
+        });
+    }
+
+    function renderDropdown(companies) {
         searchDropdown.innerHTML = '';
-        if (suggestions && suggestions.length > 0) {
-            suggestions.forEach(suggestion => {
+        if (companies.length > 0) {
+            companies.slice(0, 10).forEach(company => {
                 const item = document.createElement('a');
+                item.href = '#';
                 item.classList.add('list-group-item', 'list-group-item-action');
-                item.href = "#";
-                item.textContent = suggestion;
-                item.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    stockTickerInput.value = suggestion;
-                    searchDropdown.style.display = 'none';
-                    loadChartData(suggestion);
-                });
+                item.textContent = `${company.name} - ${company.ticker}`;
+                item.dataset.ticker = company.ticker;
                 searchDropdown.appendChild(item);
             });
             searchDropdown.style.display = 'block';
@@ -180,70 +141,49 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
- 
     // =========================================================================
-    // GŁÓWNA FUNKCJA ŁADOWANIA DANYCH (ZAKTUALIZOWANA)
+    // OBSŁUGA ZDARZEŃ
     // =========================================================================
-    async function loadChartData(ticker) {
-        chartTitle.textContent = `Ładowanie danych dla ${ticker.toUpperCase()}...`;
-        const data = await fetchStockData(ticker);
-        
-        const isIndex = indexTickers.includes(ticker.toUpperCase());
-
-        if (data && data.length > 0) {
-            candlestickSeries.setData(data);
-
-            if (isIndex) {
-                volumeSeries.setData([]);
-                volumeSeries.applyOptions({ visible: false });
-            } else {
-                volumeSeries.applyOptions({ visible: true });
-                const volumeData = data.map(d => ({
-                    time: d.time, value: d.volume,
-                    color: d.close >= d.open ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)',
-                }));
-                volumeSeries.setData(volumeData);
-            }
-
-            mainChart.timeScale().fitContent();
-            chartTitle.textContent = `Wykres dla: ${ticker.toUpperCase()}`;
-        } else {
-            candlestickSeries.setData([]);
-            volumeSeries.setData([]);
-            chartTitle.textContent = `Brak danych do wyświetlenia dla: ${ticker.toUpperCase()}`;
-        }
-        
-        // WYWOŁANIE NOWEJ FUNKCJI
-        updateValuationData(ticker, data);
-    }
-
-
-    // Reszta pliku bez zmian...
-    stockTickerInput.addEventListener('input', async () => {
-        const query = stockTickerInput.value.trim().toUpperCase();
-        if (query.length > 1) {
-            const suggestions = await fetchAutocomplete(query);
-            renderAutocomplete(suggestions);
-        } else {
-            searchDropdown.style.display = 'none';
-        }
-    });
     
-    document.addEventListener('click', function(event) {
-        const isClickInside = stockTickerInput.contains(event.target) || searchDropdown.contains(event.target);
-        if (!isClickInside) {
+    // Obsługa wprowadzania tekstu
+    stockTickerInput.addEventListener('input', () => {
+        const query = stockTickerInput.value.trim();
+        if (query.length > 1) {
+            const matches = filterCompanies(query);
+            renderDropdown(matches);
+        } else {
             searchDropdown.style.display = 'none';
         }
     });
 
-    searchButton.addEventListener('click', () => {
-        const ticker = stockTickerInput.value.trim().toUpperCase();
-        if (ticker) {
+    // Obsługa kliknięcia na element w rozwijanej liście
+    searchDropdown.addEventListener('click', (event) => {
+        const selectedItem = event.target;
+        if (selectedItem.tagName === 'A') {
+            const ticker = selectedItem.dataset.ticker;
+            stockTickerInput.value = selectedItem.textContent; // Wstawia pełną nazwę do inputu
             loadChartData(ticker);
             searchDropdown.style.display = 'none';
         }
     });
+    
+    // Obsługa kliknięcia przycisku wyszukiwania
+    searchButton.addEventListener('click', () => {
+        const query = stockTickerInput.value.trim();
+        if (query) {
+            // Spróbuj znaleźć pełny ticker na podstawie tekstu w polu input
+            const foundCompany = popularCompanies.find(company => 
+                (company.name.toLowerCase() + '-' + company.ticker.toLowerCase()) === query.toLowerCase() ||
+                company.ticker.toLowerCase() === query.toLowerCase()
+            );
 
+            const tickerToSearch = foundCompany ? foundCompany.ticker : query;
+            loadChartData(tickerToSearch);
+            searchDropdown.style.display = 'none';
+        }
+    });
+
+    // Obsługa wciśnięcia klawisza Enter
     stockTickerInput.addEventListener('keypress', (event) => {
         if (event.key === 'Enter') {
             event.preventDefault();
@@ -251,9 +191,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Ukrywanie listy po kliknięciu poza nią
+    document.addEventListener('click', function(event) {
+        if (!stockTickerInput.contains(event.target) && !searchDropdown.contains(event.target)) {
+            searchDropdown.style.display = 'none';
+        }
+    });
+
+    // Obsługa zmiany rozmiaru okna
     window.addEventListener('resize', () => {
         mainChart.applyOptions({ width: chartContainer.clientWidth });
     });
 
-    loadChartData('WIG20');
+    // Inicjalne załadowanie danych po załadowaniu DOM
+    loadCompanyData().then(() => {
+        // Po załadowaniu danych spółek, ładujemy domyślny wykres
+        loadChartData('WIG20');
+    });
 });
