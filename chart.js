@@ -221,18 +221,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return [];
         }
     }
-    // Funkcja do pobierania propozycji wyszukiwania (autocomplete)
-    async function fetchAutocomplete(query) {
-        if (!query || query.length < 2) return [];
-        try {
-            const response = await fetch(`${API_URL}/api/search?query=${query}`);
-            if (!response.ok) throw new Error(`Błąd HTTP: ${response.status}`);
-            return await response.json();
-        } catch (error) {
-            console.error("Błąd podczas pobierania propozycji wyszukiwania:", error);
-            return [];
-        }
-    }
+    
 
     // Funkcja do renderowania propozycji wyszukiwania
     function renderAutocomplete(suggestions) {
