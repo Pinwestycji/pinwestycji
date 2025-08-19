@@ -1,89 +1,56 @@
 // Plik: chart.js
 
 document.addEventListener('DOMContentLoaded', function() {
-    const API_URL = 'https://pinwestycji.onrender.com';
-    const indexTickers = ['WIG20', 'WIG', 'MWIG40', 'SWIG80', 'WIG-UKRAIN'];
-     
-    // === NOWA SEKCJA: Wczytywanie i przechowywanie danych spółek ===
-    let companyList = []; // Tutaj będziemy przechowywać listę spółek w formacie { nazwa, ticker }
+     // === NOWA SEKCJA: Wczytywanie i przechowywanie danych spółek ===
+    let companyList = []; // Tutaj przechowujemy listę spółek w formacie { nazwa, ticker }
 
-    // =========================================================================
-    // INICJALIZACJA WYKRESÓW
-    // =========================================================================
-
-    // Wykres 1: Historyczny wykres świecowy
-    const chartContainer = document.getElementById('tvchart');
-    const mainChart = LightweightCharts.createChart(chartContainer, {
-        width: chartContainer.clientWidth,
-        height: 500,
-        layout: { backgroundColor: '#ffffff', textColor: '#333' },
-        grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } },
-        crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-        rightPriceScale: { borderColor: '#cccccc' },
-        timeScale: { borderColor: '#cccccc', timeVisible: true, secondsVisible: false },
-    });
-    
-    const candlestickSeries = mainChart.addSeries(LightweightCharts.CandlestickSeries);
-    const volumeSeries = mainChart.addSeries(LightweightCharts.HistogramSeries);
-    candlestickSeries.applyOptions({
-        upColor: 'rgba(0, 150, 136, 1)', downColor: 'rgba(255, 82, 82, 1)',
-        borderDownColor: 'rgba(255, 82, 82, 1)', borderUpColor: 'rgba(0, 150, 136, 1)',
-        wickDownColor: 'rgba(255, 82, 82, 1)', wickUpColor: 'rgba(0, 150, 136, 1)',
-    });
-    volumeSeries.applyOptions({
-        priceFormat: { type: 'volume' }, priceScaleId: '',
-        scaleMargins: { top: 0.65, bottom: 0 },
-    });
-
- // Wykres 2: Wykres kolumnowy z prognozą cen
-    const projectionChartContainer = document.getElementById('projectionChart');
-    const projectionChart = LightweightCharts.createChart(projectionChartContainer, {
-        width: projectionChartContainer.clientWidth,
-        height: 300,
-        layout: { backgroundColor: '#ffffff', textColor: '#333' },
-        grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } },
-    });
-    const projectionSeries = projectionChart.addSeries(LightweightCharts.HistogramSeries);
-    
-    projectionSeries.applyOptions({
-        color: 'rgba(33, 150, 243, 0.8)'
-    });
-
-
-    // =========================================================================
-    // REFERENCJE DO ELEMENTÓW DOM
-    // =========================================================================
-    const stockTickerInput = document.getElementById('stockTickerInput');
-    const searchButton = document.getElementById('searchButton');
-    const chartTitle = document.getElementById('chart-title');
-    const valuationTable = document.getElementById('valuationTable').getElementsByTagName('tbody')[0];
-    const projectionTable = document.getElementById('projectionTable');
-    // ZMIANA: Dodajemy referencję do całej sekcji kalkulatora
-    const valuationCalculatorSection = document.getElementById('valuationCalculatorSection');
-
-     // Funkcja do wczytania i przetworzenia pliku CSV
+    // Funkcja do wczytania i przetworzenia pliku CSV
     async function loadCompanyData() {
         try {
-            // Zakładamy, że plik CSV jest w tym samym folderze co index.html
             const response = await fetch('wig_companies.csv');
             const csvText = await response.text();
             
-            // Proste parsowanie CSV
-            const rows = csvText.trim().split('\n').slice(1); // Pomiń nagłówek
+            const rows = csvText.trim().split('\n').slice(1);
             companyList = rows.map(row => {
                 const [nazwa, ticker] = row.split(',');
-                return { nazwa: nazwa.trim(), ticker: ticker.trim() };
-            });
+                // Upewniamy się, że nie ma pustych wierszy
+                if (nazwa && ticker) {
+                    return { nazwa: nazwa.trim(), ticker: ticker.trim() };
+                }
+                return null;
+            }).filter(company => company !== null); // Usuwamy puste wiersze
+
             console.log(`Załadowano ${companyList.length} spółek.`);
         } catch (error) {
             console.error("Błąd podczas wczytywania pliku wig_companies.csv:", error);
-            // Można tu dodać informację dla użytkownika, że wyszukiwarka nie działa
         }
     }
     // =====================================================================
-     // === ZAKTUALIZOWANA LOGIKA WYSZUKIWANIA ===
 
-    // Funkcja znajdująca pasujące spółki w naszej lokalnej liście
+    const API_URL = 'https://pinwestycji.onrender.com';
+    const indexTickers = ['WIG20', 'WIG', 'MWIG40', 'SWIG80', 'WIG-UKRAIN'];
+
+    // Inicjalizacja wykresów...
+    const chartContainer = document.getElementById('tvchart');
+    const mainChart = LightweightCharts.createChart(chartContainer, { /* ...opcje... */ });
+    const candlestickSeries = mainChart.addCandlestickSeries();
+    const volumeSeries = mainChart.addHistogramSeries();
+    candlestickSeries.applyOptions({ /* ...opcje... */ });
+    volumeSeries.applyOptions({ /* ...opcje... */ });
+    const projectionChartContainer = document.getElementById('projectionChart');
+    const projectionChart = LightweightCharts.createChart(projectionChartContainer, { /* ...opcje... */ });
+    const projectionSeries = projectionChart.addHistogramSeries({ color: 'rgba(33, 150, 243, 0.8)' });
+
+    // Referencje do elementów DOM...
+    const stockTickerInput = document.getElementById('stockTickerInput');
+    const searchButton = document.getElementById('searchButton');
+    const searchDropdown = document.getElementById('searchDropdown');
+    const chartTitle = document.getElementById('chart-title');
+    const valuationCalculatorSection = document.getElementById('valuationCalculatorSection');
+
+
+    // === NOWA LOGIKA WYSZUKIWANIA (BEZ ODWOŁANIA DO SERWERA) ===
+
     function findMatchingCompanies(query) {
         if (!query || query.length < 2) return [];
         const lowerCaseQuery = query.toLowerCase();
@@ -94,7 +61,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Funkcja renderująca sugestie w dropdownie
     function renderAutocomplete(suggestions) {
         searchDropdown.innerHTML = '';
         if (suggestions && suggestions.length > 0) {
@@ -102,14 +68,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 const item = document.createElement('a');
                 item.classList.add('list-group-item', 'list-group-item-action');
                 item.href = "#";
-                // Wyświetlamy połączoną nazwę i ticker
                 item.textContent = `${company.nazwa}-${company.ticker}`;
                 
                 item.addEventListener('click', (e) => {
                     e.preventDefault();
-                    stockTickerInput.value = item.textContent; // W polu zostaje pełna nazwa
+                    stockTickerInput.value = item.textContent;
                     searchDropdown.style.display = 'none';
-                    // Do funkcji ładującej wykres przekazujemy TYLKO ticker
                     loadChartData(company.ticker);
                 });
                 searchDropdown.appendChild(item);
@@ -120,19 +84,18 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Zaktualizowany Event Listener dla pola input
+    // ZAKTUALIZOWANY EVENT LISTENER DLA POLA INPUT
     stockTickerInput.addEventListener('input', () => {
         const query = stockTickerInput.value.trim();
-        const suggestions = findMatchingCompanies(query);
+        const suggestions = findMatchingCompanies(query); // Używa nowej funkcji
         renderAutocomplete(suggestions);
     });
 
-    // Zaktualizowany Event Listener dla przycisku wyszukiwania
+    // ZAKTUALIZOWANY EVENT LISTENER DLA PRZYCISKU
     searchButton.addEventListener('click', () => {
         const inputValue = stockTickerInput.value.trim();
         let tickerToLoad = inputValue.toUpperCase();
 
-        // Jeśli w polu jest format "Nazwa-Ticker", wyciągnij sam ticker
         if (inputValue.includes('-')) {
             const parts = inputValue.split('-');
             tickerToLoad = parts[parts.length - 1].toUpperCase();
@@ -143,6 +106,7 @@ document.addEventListener('DOMContentLoaded', function() {
             searchDropdown.style.display = 'none';
         }
     });
+
 
     // =========================================================================
     // NOWA FUNKCJA DO AKTUALIZACJI DANYCH WYCENY
