@@ -32,14 +32,40 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Inicjalizacja wykresów...
     const chartContainer = document.getElementById('tvchart');
-    const mainChart = LightweightCharts.createChart(chartContainer, { /* ...opcje... */ });
-    const candlestickSeries = mainChart.addCandlestickSeries();
-    const volumeSeries = mainChart.addHistogramSeries();
-    candlestickSeries.applyOptions({ /* ...opcje... */ });
-    volumeSeries.applyOptions({ /* ...opcje... */ });
+    const mainChart = LightweightCharts.createChart(chartContainer, {
+        width: chartContainer.clientWidth,
+        height: 500,
+        layout: { backgroundColor: '#ffffff', textColor: '#333' },
+        grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } },
+        crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+        rightPriceScale: { borderColor: '#cccccc' },
+        timeScale: { borderColor: '#cccccc', timeVisible: true, secondsVisible: false },
+    });
+    
+    const candlestickSeries = mainChart.addSeries(LightweightCharts.CandlestickSeries);
+    const volumeSeries = mainChart.addSeries(LightweightCharts.HistogramSeries);
+    candlestickSeries.applyOptions({
+        upColor: 'rgba(0, 150, 136, 1)', downColor: 'rgba(255, 82, 82, 1)',
+        borderDownColor: 'rgba(255, 82, 82, 1)', borderUpColor: 'rgba(0, 150, 136, 1)',
+        wickDownColor: 'rgba(255, 82, 82, 1)', wickUpColor: 'rgba(0, 150, 136, 1)',
+    });
+    volumeSeries.applyOptions({
+        priceFormat: { type: 'volume' }, priceScaleId: '',
+        scaleMargins: { top: 0.65, bottom: 0 },
+    });
+     // Wykres 2: Wykres kolumnowy z prognozą cen
     const projectionChartContainer = document.getElementById('projectionChart');
-    const projectionChart = LightweightCharts.createChart(projectionChartContainer, { /* ...opcje... */ });
-    const projectionSeries = projectionChart.addHistogramSeries({ color: 'rgba(33, 150, 243, 0.8)' });
+    const projectionChart = LightweightCharts.createChart(projectionChartContainer, {
+        width: projectionChartContainer.clientWidth,
+        height: 300,
+        layout: { backgroundColor: '#ffffff', textColor: '#333' },
+        grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } },
+    });
+    const projectionSeries = projectionChart.addSeries(LightweightCharts.HistogramSeries);
+    
+    projectionSeries.applyOptions({
+        color: 'rgba(33, 150, 243, 0.8)'
+    });
 
     // Referencje do elementów DOM...
     const stockTickerInput = document.getElementById('stockTickerInput');
