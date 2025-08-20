@@ -8,7 +8,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetch('wig_companies.csv');
             const csvText = await response.text();
             
-            const rows = csvText.trim().split('\n').slice(1);
+            // Poprawiona, odporna wersja
+            const rows = csvText.trim().split(/\r?\n/).slice(1);
             companyList = rows.map(row => {
                 const [nazwa, ticker] = row.split(',');
                 if (nazwa && ticker) {
