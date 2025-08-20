@@ -27,6 +27,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     // =====================================================================
 
+    loadCompanyData().then(() => {
+        // Upewnij się, że funkcja loadChartData jest zdefiniowana ZANIM ją tu wywołasz
+        // Jeśli nie jesteś pewien, po prostu wklej cały działający kod z poprzednich odpowiedzi
+        // Poniżej jest przykład kompletnej funkcji loadChartData
+        
+        // Poniżej wklej KOD TWOICH działających funkcji, np.:
+        // async function loadChartData(ticker) { ... }
+        // async function fetchStockData(ticker) { ... }
+        // function updateValuationData(ticker, data) { ... }
+        // i inne event listenery
+
+         
     const API_URL = 'https://pinwestycji.onrender.com';
     const indexTickers = ['WIG20', 'WIG', 'MWIG40', 'SWIG80', 'WIG-UKRAIN'];
 
@@ -312,17 +324,6 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('resize', () => {
         mainChart.applyOptions({ width: chartContainer.clientWidth });
     });
-
-    loadCompanyData().then(() => {
-        // Upewnij się, że funkcja loadChartData jest zdefiniowana ZANIM ją tu wywołasz
-        // Jeśli nie jesteś pewien, po prostu wklej cały działający kod z poprzednich odpowiedzi
-        // Poniżej jest przykład kompletnej funkcji loadChartData
-        
-        // Poniżej wklej KOD TWOICH działających funkcji, np.:
-        // async function loadChartData(ticker) { ... }
-        // async function fetchStockData(ticker) { ... }
-        // function updateValuationData(ticker, data) { ... }
-        // i inne event listenery
 
         loadChartData('WIG20');
     });
