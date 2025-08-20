@@ -82,6 +82,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const lowerCaseQuery = query.toLowerCase();
         
         return companyList.filter(company => {
+            console.log(company.nazwa);
             const searchString = `${company.nazwa}-${company.ticker}`.toLowerCase();
             return searchString.includes(lowerCaseQuery);
         });
