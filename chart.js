@@ -53,31 +53,67 @@ document.addEventListener('DOMContentLoaded', function() {
     const projectionTableBody = document.getElementById('projectionTableBody');
     const valuationCalculatorSection = document.getElementById('valuationCalculatorSection');
 
-    function updateValuationData(ticker, data) {
+    // === POCZĄTEK NOWEJ SEKCJI: Funkcja do pobierania wskaźników z API ===
+    async function fetchIndicatorData(ticker) {
+        try {
+            const response = await fetch(`${API_URL}/api/indicators/${ticker}`);
+            if (!response.ok) {
+                // Jeśli serwer zwróci błąd (np. 404), zwróć pusty obiekt
+                console.warn(`Nie udało się pobrać wskaźników dla ${ticker}, status: ${response.status}`);
+                return {}; 
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("Błąd podczas pobierania danych wskaźnikowych:", error);
+            return {}; // Zwróć pusty obiekt w razie błędu sieciowego
+        }
+    }
+    // === KONIEC NOWEJ SEKCJI ===
+
+    // === POCZĄTEK ZMIAN: Znacznie rozbudowana funkcja `updateValuationData` ===
+    async function updateValuationData(ticker, data) {
         const isIndex = indexTickers.includes(ticker.toUpperCase());
+        
+        // Czyścimy zawartość przed każdym nowym załadowaniem
+        valuationTableBody.innerHTML = '';
+        projectionTableBody.innerHTML = '';
+        projectionSeries.setData([]);
+        
         if (isIndex || data.length === 0) {
             valuationCalculatorSection.style.display = 'none';
             return;
         }
+
         valuationCalculatorSection.style.display = 'flex';
-        valuationTableBody.innerHTML = '';
-        projectionTableBody.innerHTML = '';
-        
+
+        // POBIERAMY NOWE DANE WSKAŹNIKOWE
+        const indicators = await fetchIndicatorData(ticker);
         const lastPrice = data[data.length - 1].close;
+
+        // Definiujemy dane do tabeli, używając pobranych wskaźników lub tekstu zastępczego
         const valuationData = {
             'Symbol': `<strong>${ticker.toUpperCase()}</strong>`,
             'Aktualna Cena': `<strong>${lastPrice.toFixed(2)} zł</strong>`,
-            'EPS (zysk na akcję)': '5.20 zł', 'Aktualny C/Z': (lastPrice / 5.20).toFixed(2),
-            'Tempo wzrostu': '15%', 'Stopa zwrotu za 5 lat': '15%',
-            'Potencjalny C/Z za 5 lat': '30.00', 'Wycena Akcji': '120.50 zł',
-            'Dobra Cena': 'Tak'
+            'EPS (zysk na akcję)': indicators.latest_eps ? `${indicators.latest_eps} zł` : 'Brak danych',
+            'Aktualny C/Z': indicators.latest_cz ? indicators.latest_cz : 'Brak danych',
+            'Średni EPS': indicators.avg_eps ? `${indicators.avg_eps} zł` : 'Brak danych',
+            'Średni C/Z': indicators.avg_cz ? indicators.avg_cz : 'Brak danych',
+            'Tempo wzrostu': '15%', // Wartość testowa
+            'Stopa zwrotu za 5 lat': '15%', // Wartość testowa
+            'Potencjalny C/Z za 5 lat': '30.00', // Wartość testowa
+            'Wycena Akcji': '120.50 zł', // Wartość testowa
+            'Dobra Cena': 'Tak' // Wartość testowa
         };
+
         for (const [key, value] of Object.entries(valuationData)) {
             let row = valuationTableBody.insertRow();
-            let cell1 = row.insertCell(0); let cell2 = row.insertCell(1);
-            cell1.innerHTML = key; cell2.innerHTML = value;
+            let cell1 = row.insertCell(0);
+            let cell2 = row.insertCell(1);
+            cell1.innerHTML = key;
+            cell2.innerHTML = value;
         }
 
+        // Prawa tabela i wykres (na razie bez zmian, z danymi testowymi)
         const pHeaderData = ['', '2026', '2027', '2028', '2029', '2030'];
         const pEpsData = ['<strong>Zysk na akcję</strong>', '5.98 zł', '6.88 zł', '7.91 zł', '9.10 zł', '10.46 zł'];
         const pPriceData = ['<strong>Cena Akcji</strong>', 179.40, 206.40, 237.30, 273.00, 313.80];
@@ -95,6 +131,7 @@ document.addEventListener('DOMContentLoaded', function() {
         projectionSeries.setData(projectionChartData);
         projectionChart.timeScale().fitContent();
     }
+    // === KONIEC ZMIAN ===
     
     async function loadChartData(ticker) {
         chartTitle.textContent = `Ładowanie danych dla ${ticker.toUpperCase()}...`;
