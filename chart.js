@@ -156,14 +156,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+     // === POCZĄTEK ZMIANY: ULEPSZONA FUNKCJA FILTRUJĄCA ===
     function findMatchingCompanies(query) {
-        if (!query || query.length < 2) return [];
+        if (!query || query.length < 1) return []; // Zmieniono na 1, aby wyszukiwać od pierwszej litery
         const lowerCaseQuery = query.toLowerCase();
+        
+        // Nowa, bardziej precyzyjna logika filtrowania
         return companyList.filter(company => {
-            const searchString = `${company.nazwa}-${company.ticker}`.toLowerCase();
-            return searchString.includes(lowerCaseQuery);
+            const lowerCaseNazwa = company.nazwa.toLowerCase();
+            const lowerCaseTicker = company.ticker.toLowerCase();
+            
+            // Zwróć prawdę, jeśli NAZWA lub TICKER ZACZYNA SIĘ OD wpisanego tekstu
+            return lowerCaseNazwa.startsWith(lowerCaseQuery) || lowerCaseTicker.startsWith(lowerCaseQuery);
         });
     }
+    // === KONIEC ZMIANY ===
 
     function renderAutocomplete(suggestions) {
         searchDropdown.innerHTML = '';
