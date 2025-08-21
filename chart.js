@@ -13,7 +13,11 @@ document.addEventListener('DOMContentLoaded', function() {
             companyList = rows.map(row => {
                 const [nazwa, ticker] = row.split(',');
                 if (nazwa && ticker) {
-                    return { nazwa: nazwa.trim(), ticker: ticker.trim() };
+                    // Nowy kod usuwa cudzysłów z początku i końca, a następnie przycina białe znaki
+                    return { 
+                        nazwa: nazwa.replace(/^"|"$/g, '').trim(), 
+                        ticker: ticker.replace(/^"|"$/g, '').trim() 
+                    };
                 }
                 return null;
             }).filter(company => company !== null);
