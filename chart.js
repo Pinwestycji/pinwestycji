@@ -172,10 +172,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     searchButton.addEventListener('click', () => {
         const inputValue = stockTickerInput.value.trim();
-        let tickerToLoad = inputValue.toLowerCase();
+        let tickerToLoad = inputValue.toUpperCase();
         if (inputValue.includes('-')) {
             const parts = inputValue.split('-');
-            tickerToLoad = parts[parts.length - 1].toLowerCase();
+            tickerToLoad = parts[parts.length - 1].toUpperCase();
         }
         if (tickerToLoad) {
             loadChartData(tickerToLoad);
