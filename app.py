@@ -35,7 +35,7 @@ def get_stooq_data(ticker):
     try:
         stooq_url = f"https://stooq.pl/q/d/l/?s={ticker.lower()}&i=d"
         headers = {
-            'User-Agent': 'Mozilla/5.0'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
         response = requests.get(stooq_url, headers=headers)
         if response.status_code != 200 or "Nie ma takiego symbolu" in response.text:
