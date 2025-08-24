@@ -1,4 +1,4 @@
-# Plik: app.py - Wersja z nowym endpointem do wskaźników
+# Plik: app.py - Wersja z mapowaniem Ticker -> Nazwa Spółki
 
 import pandas as pd
 from flask import Flask, jsonify, request
@@ -6,7 +6,7 @@ from flask_cors import CORS
 import io
 import requests
 import logging
-import numpy as np # Będziemy potrzebować numpy do obsługi danych
+import numpy as np
 import os
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -14,36 +14,51 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-# === POCZĄTEK NOWEJ SEKCJI: Wczytywanie i cachowanie danych wskaźnikowych ===
-# Wczytujemy plik CSV tylko raz przy starcie aplikacji, co jest znacznie wydajniejsze
+# === POCZĄTEK ZMIAN: Wczytujemy OBA pliki CSV przy starcie ===
+
+indicators_df = None
+ticker_to_name_map = {}
+
 try:
+    # Wczytaj dane wskaźnikowe
     indicators_df = pd.read_csv('wig_indicators.csv')
     logging.info("Plik wig_indicators.csv załadowany pomyślnie.")
-except FileNotFoundError:
-    indicators_df = None
-    logging.error("Błąd: Nie znaleziono pliku wig_indicators.csv!")
-# === KONIEC NOWEJ SEKCJI ===
+    
+    # Wczytaj dane spółek, aby stworzyć mapowanie
+    companies_df = pd.read_csv('wig_companies.csv', header=None, names=['Nazwa', 'Ticker'])
+    
+    # Usuń cudzysłowy i białe znaki, tak jak w JS
+    companies_df['Nazwa'] = companies_df['Nazwa'].str.replace('"', '').str.strip()
+    companies_df['Ticker'] = companies_df['Ticker'].str.replace('"', '').str.strip()
+    
+    # Stwórz słownik/mapę: klucz to Ticker, wartość to Nazwa
+    # Używamy to_dict(), co jest wydajnym sposobem
+    ticker_to_name_map = pd.Series(companies_df.Nazwa.values, index=companies_df.Ticker).to_dict()
+    logging.info(f"Stworzono mapowanie dla {len(ticker_to_name_map)} spółek (Ticker -> Nazwa).")
+
+except FileNotFoundError as e:
+    logging.error(f"Krytyczny błąd: Nie znaleziono pliku CSV! {e.filename}")
+except Exception as e:
+    logging.error(f"Wystąpił nieoczekiwany błąd podczas wczytywania plików CSV: {e}")
+
+# === KONIEC ZMIAN ===
 
 
-# Endpoint do danych historycznych (bez zmian)
 @app.route('/api/data/<ticker>', methods=['GET'])
 def get_stooq_data(ticker):
-    # ... ta funkcja pozostaje bez zmian ...
+    # Ta funkcja pozostaje bez zmian
+    # ...
     logging.info(f"Odebrano zapytanie do /api/data/{ticker} ze Stooq.pl")
-    if not ticker:
-        return jsonify({"error": "Brak symbolu spółki"}), 400
+    if not ticker: return jsonify({"error": "Brak symbolu spółki"}), 400
     try:
         stooq_url = f"https://stooq.pl/q/d/l/?s={ticker.lower()}&i=d"
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
+        headers = {'User-Agent': 'Mozilla/5.0'}
         response = requests.get(stooq_url, headers=headers)
         if response.status_code != 200 or "Nie ma takiego symbolu" in response.text:
             return jsonify({"error": f"Nie znaleziono danych dla symbolu: {ticker}"}), 404
         csv_data = io.StringIO(response.text)
         df = pd.read_csv(csv_data)
-        if df.empty:
-            return jsonify({"error": f"Brak danych dla symbolu: {ticker}"}), 404
+        if df.empty: return jsonify({"error": f"Brak danych dla symbolu: {ticker}"}), 404
         df.rename(columns={'Data': 'time', 'Otwarcie': 'open', 'Najwyzszy': 'high','Najnizszy': 'low', 'Zamkniecie': 'close', 'Wolumen': 'volume'}, inplace=True)
         df['time'] = pd.to_datetime(df['time']).apply(lambda x: int(x.timestamp()))
         df.sort_values('time', inplace=True)
@@ -57,40 +72,37 @@ def get_stooq_data(ticker):
         return jsonify({"error": "Wewnętrzny błąd serwera."}), 500
 
 
-# === POCZĄTEK NOWEJ SEKCJI: Endpoint do obliczania wskaźników ===
+# === POCZĄTEK ZMIAN: Zaktualizowana funkcja do wskaźników ===
 @app.route('/api/indicators/<ticker>', methods=['GET'])
 def get_company_indicators(ticker):
     if indicators_df is None:
         return jsonify({"error": "Dane wskaźnikowe są niedostępne na serwerze."}), 500
 
     try:
-        # 1. Filtruj dane dla konkretnej spółki
-        company_df = indicators_df[indicators_df['Ticker'] == ticker.upper()].copy()
+        # 1. Użyj mapy, aby znaleźć PEŁNĄ NAZWĘ spółki na podstawie TICKERA
+        company_name = ticker_to_name_map.get(ticker.upper())
+        
+        if not company_name:
+            return jsonify({"error": f"Nie znaleziono nazwy dla tickera: {ticker}"}), 404
+
+        # 2. Filtruj dane wskaźnikowe używając PEŁNEJ NAZWY i poprawnej kolumny "Spółka"
+        company_df = indicators_df[indicators_df['Spółka'] == company_name].copy()
+        
         if company_df.empty:
-            return jsonify({"error": f"Nie znaleziono wskaźników dla spółki: {ticker}"}), 404
+            return jsonify({"error": f"Nie znaleziono wskaźników dla spółki: {company_name}"}), 404
 
-        # Słownik na wyniki
+        # Reszta logiki obliczeniowej pozostaje taka sama
         results = {}
-
-        # 2. Przetwarzaj wskaźniki: EPS i C/Z
         for indicator_name in ["EPS(akcjonariuszy większościowych)", "C/Z"]:
-            # Filtruj wiersz dla danego wskaźnika
             indicator_row = company_df[company_df['Wskaźnik/Okres'] == indicator_name]
             
             if not indicator_row.empty:
-                # Wybierz tylko kolumny z danymi (zazwyczaj od 3 kolumny)
                 values_only = indicator_row.iloc[:, 2:].replace('null', np.nan).astype(float)
-                
-                # Usuń kolumny, które są całkowicie puste (NaN)
                 values_only.dropna(axis=1, how='all', inplace=True)
                 
-                # Oblicz średnią, ignorując puste wartości
                 avg_value = values_only.mean(axis=1).iloc[0]
-                
-                # Znajdź ostatnią (najnowszą) niepustą wartość
                 latest_value = values_only.iloc[0].dropna().iloc[-1] if not values_only.iloc[0].dropna().empty else None
 
-                # Zapisz wyniki
                 if indicator_name == "EPS(akcjonariuszy większościowych)":
                     results['avg_eps'] = round(avg_value, 2) if pd.notna(avg_value) else None
                     results['latest_eps'] = round(latest_value, 2) if pd.notna(latest_value) else None
@@ -103,7 +115,7 @@ def get_company_indicators(ticker):
     except Exception as e:
         logging.error(f"Błąd w get_company_indicators dla {ticker}: {e}", exc_info=True)
         return jsonify({"error": "Wewnętrzny błąd serwera podczas przetwarzania wskaźników."}), 500
-# === KONIEC NOWEJ SEKCJI ===
+# === KONIEC ZMIAN ===
 
 
 if __name__ == '__main__':
