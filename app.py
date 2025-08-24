@@ -24,8 +24,8 @@ try:
     indicators_df = pd.read_csv('wig_indicators.csv')
     logging.info("Plik wig_indicators.csv załadowany pomyślnie.")
     
-    # Wczytaj dane spółek, aby stworzyć mapowanie
-    companies_df = pd.read_csv('wig_companies.csv', header=None, names=['Nazwa', 'Ticker'])
+    # Poprawiona, standardowa wersja
+    companies_df = pd.read_csv('wig_companies.csv')
     
     # Usuń cudzysłowy i białe znaki, tak jak w JS
     companies_df['Nazwa'] = companies_df['Nazwa'].str.replace('"', '').str.strip()
