@@ -87,7 +87,7 @@ def get_company_indicators(ticker):
             return jsonify({"error": f"Nie znaleziono wskaźników dla spółki: {company_name}"}), 404
         results = {}
         for indicator_name in ["EPS(akcjonariuszy większościowych)", "C/Z"]:
-            indicator_row = company_df[company_df['Wskaźnik/Okres'] == indicator_name]
+            indicator_row = company_df[company_df['Wskażnik/Okres'] == indicator_name]
             if not indicator_row.empty:
                 values_only = indicator_row.iloc[:, 2:].replace('null', np.nan).astype(float)
                 values_only.dropna(axis=1, how='all', inplace=True)
