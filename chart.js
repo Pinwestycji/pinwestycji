@@ -80,16 +80,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-   // === POCZĄTEK POPRAWKI w funkcji `updateValuationData` ===
-    async function updateValuationData(ticker, data) {
+  async function updateValuationData(ticker, data) {
         const isIndex = indexTickers.includes(ticker.toUpperCase());
 
-        // Ukrywamy całą sekcję na start, aby uniknąć mrugania starymi danymi
         valuationCalculatorSection.style.display = 'none';
-        valuationCalculatorSection.innerHTML = ''; // Czyścimy zawartość na wypadek starych komunikatów o błędach
+        valuationCalculatorSection.innerHTML = ''; 
 
         if (isIndex || data.length === 0) {
-            return; // Dla indeksów i braku danych po prostu nic nie pokazujemy
+            return; 
         }
         
         const indicatorResponse = await fetchIndicatorData(ticker);
@@ -104,7 +102,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (indicators.latest_eps === null || indicators.latest_eps === undefined) {
                 message = `Brak danych EPS bądź C/Z ze strony https://www.stockwatch.pl/ dla spółki '${ticker.toUpperCase()}'.`;
             } else {
-                // --- SUKCES: Mamy dane, budujemy HTML kalkulatora ---
+                // --- SUKCES: Mamy dane, budujemy HTML kalkulatora z szablonu ---
+                valuationCalculatorSection.innerHTML = document.getElementById('kalkulator-template').innerHTML;
+                
                 const lastPrice = data[data.length - 1].close;
                 let currentCZ = (indicators.latest_eps > 0) ? (lastPrice / indicators.latest_eps).toFixed(2) : 'Brak danych';
 
@@ -120,10 +120,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Dobra Cena': 'Tak'
                 };
 
-                // Odtwarzamy HTML kalkulatora
-                valuationCalculatorSection.innerHTML = document.getElementById('kalkulator-template').innerHTML;
-                
-                // Wypełniamy tabele nowymi danymi
                 const valTableBody = valuationCalculatorSection.querySelector('#valuationTableBody');
                 for (const [key, value] of Object.entries(valuationData)) {
                     let row = valTableBody.insertRow();
@@ -131,40 +127,33 @@ document.addEventListener('DOMContentLoaded', function() {
                     row.insertCell(1).innerHTML = value;
                 }
                 
-                // ... (logika dla prawej tabeli i wykresu prognoz) ...
-                 const projTableBody = valuationCalculatorSection.querySelector('#projectionTableBody');
-                 const projChartContainer = valuationCalculatorSection.querySelector('#projectionChart');
-
-                 const pHeaderData = ['', '2026', '2027', '2028', '2029', '2030'];
-                 const pEpsData = ['<strong>Zysk na akcję</strong>', '5.98 zł', '6.88 zł', '7.91 zł', '9.10 zł', '10.46 zł'];
-                 const pPriceData = ['<strong>Cena Akcji</strong>', 179.40, 206.40, 237.30, 273.00, 313.80];
-                 let headerRow = projTableBody.insertRow();
-                 pHeaderData.forEach(text => headerRow.insertCell().innerHTML = `<strong>${text}</strong>`);
-                 let epsRow = projTableBody.insertRow();
-                 pEpsData.forEach(text => epsRow.insertCell().innerHTML = text);
-                 let priceRow = projTableBody.insertRow();
-                 pPriceData.forEach(text => priceRow.insertCell().innerHTML = typeof text === 'number' ? `${text.toFixed(2)} zł` : text);
+                const projTableBody = valuationCalculatorSection.querySelector('#projectionTableBody');
+                const pHeaderData = ['', '2026', '2027', '2028', '2029', '2030'];
+                const pEpsData = ['<strong>Zysk na akcję</strong>', '5.98 zł', '6.88 zł', '7.91 zł', '9.10 zł', '10.46 zł'];
+                const pPriceData = ['<strong>Cena Akcji</strong>', 179.40, 206.40, 237.30, 273.00, 313.80];
+                let headerRow = projTableBody.insertRow();
+                pHeaderData.forEach(text => headerRow.insertCell().innerHTML = `<strong>${text}</strong>`);
+                let epsRow = projTableBody.insertRow();
+                pEpsData.forEach(text => epsRow.insertCell().innerHTML = text);
+                let priceRow = projTableBody.insertRow();
+                pPriceData.forEach(text => priceRow.insertCell().innerHTML = typeof text === 'number' ? `${text.toFixed(2)} zł` : text);
                  
-                 // Ponowna inicjalizacja wykresu prognoz, ponieważ odtworzyliśmy jego kontener
-                 projectionChart.remove(); // Usuwamy stary wykres
-                
-                 const projectionChart = LightweightCharts.createChart(projectionChartContainer, { width: projectionChartContainer.clientWidth, height: 300, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } } });
-                 const projectionSeries =  projectionSeries.addSeries(LightweightCharts.HistogramSeries);
-                 ProjectionSeries.applyOptions({
-                    color: 'rgba(33, 150, 243, 0.8)'
-                 });
-                 const projectionChartData = pPriceData.slice(1).map((price, index) => ({ time: `${2026 + index}-01-01`, value: price }));
-                 newProjectionSeries.setData(projectionChartData);
-                 newProjectionChart.timeScale().fitContent();
+                const projChartContainer = valuationCalculatorSection.querySelector('#projectionChart');
+                if (projChartContainer) {
+                    projectionChart = LightweightCharts.createChart(projChartContainer, { width: projChartContainer.clientWidth, height: 300, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } } });
+                    projectionSeries = projectionChart.addHistogramSeries({ color: 'rgba(33, 150, 243, 0.8)' });
+                    const projectionChartData = pPriceData.slice(1).map((price, index) => ({ time: `${2026 + index}-01-01`, value: price }));
+                    projectionSeries.setData(projectionChartData);
+                    projectionChart.timeScale().fitContent();
+                }
 
-                valuationCalculatorSection.style.display = 'flex'; // Pokaż całą sekcję
-                return; // Zakończ pomyślnie
+                valuationCalculatorSection.style.display = 'block';
+                return; 
             }
         }
         
-        // Jeśli wystąpił jakikolwiek błąd, wyświetl komunikat
         valuationCalculatorSection.innerHTML = `<div class="col-12 text-center text-muted p-5"><i class="fas fa-exclamation-triangle fa-2x mb-2"></i><br>${message}</div>`;
-        valuationCalculatorSection.style.display = 'flex';
+        valuationCalculatorSection.style.display = 'block';
     }
     // === KONIEC POPRAWKI ===
     
