@@ -154,7 +154,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 return; 
             }
         }
-        
+
+      
         valuationCalculatorSection.innerHTML = `<div class="col-12 text-center text-muted p-5"><i class="fas fa-exclamation-triangle fa-2x mb-2"></i><br>${message}</div>`;
         valuationCalculatorSection.style.display = 'block';
     }
