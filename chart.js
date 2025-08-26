@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', function() {
                  // Ponowna inicjalizacja wykresu prognoz, ponieważ odtworzyliśmy jego kontener
                  projectionChart.remove(); // Usuwamy stary wykres
                 
-                 const newProjectionChart = LightweightCharts.createChart(newProjectionChart, { width: newProjectionChart.clientWidth, height: 300, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } } });
+                 const newProjectionChart = LightweightCharts.createChart(projectionChartContainer, { width: projectionChartContainer.clientWidth, height: 300, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } } });
                  const newProjectionSeries =  newProjectionChart.addSeries(LightweightCharts.HistogramSeries);
                  newProjectionSeries.applyOptions({
                     color: 'rgba(33, 150, 243, 0.8)'
