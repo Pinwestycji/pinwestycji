@@ -1,13 +1,72 @@
 // Plik: chart.js - Wersja z poprawionym wyświetlaniem sugestii
 
 document.addEventListener('DOMContentLoaded', function() {
-    // ... (sekcje companyList, loadCompanyData, API_URL, indexTickers, inicjalizacja wykresów - bez zmian) ...
-    let companyList = [];
-    async function loadCompanyData() { /* ... bez zmian ... */ }
+    async function loadCompanyData() {
+        try {
+            const response = await fetch('wig_companies.csv');
+            const csvText = await response.text();
+            
+            // Poprawiona, odporna wersja
+            const rows = csvText.trim().split(/\r?\n/).slice(1);
+            companyList = rows.map(row => {
+                const [nazwa, ticker] = row.split(',');
+                if (nazwa && ticker) {
+                    // Nowy kod usuwa cudzysłów z początku i końca, a następnie przycina białe znaki
+                    return { 
+                        nazwa: nazwa.replace(/^"|"$/g, '').trim(), 
+                        ticker: ticker.replace(/^"|"$/g, '').trim() 
+                    };
+                }
+                return null;
+            }).filter(company => company !== null);
+
+            console.log(`Załadowano ${companyList.length} spółek.`);
+        } catch (error) {
+            console.error("Błąd podczas wczytywania pliku wig_companies.csv:", error);
+        }
+    }
+
     const API_URL = 'https://pinwestycji.onrender.com';
     const indexTickers = ['WIG20', 'WIG', 'MWIG40', 'SWIG80', 'WIG-UKRAIN'];
-    // ... reszta inicjalizacji i referencji do DOM bez zmian ...
+
+    const chartContainer = document.getElementById('tvchart');
+    const mainChart = LightweightCharts.createChart(chartContainer, { width: chartContainer.clientWidth, height: 500, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } }, crosshair: { mode: LightweightCharts.CrosshairMode.Normal }, rightPriceScale: { borderColor: '#cccccc' }, timeScale: { borderColor: '#cccccc', timeVisible: true, secondsVisible: false } });
+    const candlestickSeries = mainChart.addSeries(LightweightCharts.CandlestickSeries);
+    const volumeSeries = mainChart.addSeries(LightweightCharts.HistogramSeries);
+    candlestickSeries.applyOptions({ upColor: 'rgba(0, 150, 136, 1)', downColor: 'rgba(255, 82, 82, 1)', borderDownColor: 'rgba(255, 82, 82, 1)', borderUpColor: 'rgba(0, 150, 136, 1)', wickDownColor: 'rgba(255, 82, 82, 1)', wickUpColor: 'rgba(0, 150, 136, 1)' });
+    volumeSeries.applyOptions({ priceFormat: { type: 'volume' }, priceScaleId: '', scaleMargins: { top: 0.65, bottom: 0 } });
+
+    const projectionChartContainer = document.getElementById('projectionChart');
+    const projectionChart = LightweightCharts.createChart(projectionChartContainer, { width: projectionChartContainer.clientWidth, height: 300, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } } });
+    const projectionSeries = projectionChart.addSeries(LightweightCharts.HistogramSeries);
+    projectionSeries.applyOptions({
+        color: 'rgba(33, 150, 243, 0.8)'
+    });
+
+    const stockTickerInput = document.getElementById('stockTickerInput');
+    const searchButton = document.getElementById('searchButton');
+    const searchDropdown = document.getElementById('searchDropdown');
+    const chartTitle = document.getElementById('chart-title');
+    const valuationTableBody = document.getElementById('valuationTableBody');
+    const projectionTableBody = document.getElementById('projectionTableBody');
     const valuationCalculatorSection = document.getElementById('valuationCalculatorSection');
+
+    // === POCZĄTEK NOWEJ SEKCJI: Funkcja do pobierania wskaźników z API ===
+    async function fetchIndicatorData(ticker) {
+        try {
+            const response = await fetch(`${API_URL}/api/indicators/${ticker}`);
+            if (!response.ok) {
+                // Jeśli serwer zwróci błąd (np. 404), zwróć pusty obiekt
+                console.warn(`Nie udało się pobrać wskaźników dla ${ticker}, status: ${response.status}`);
+                return {}; 
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("Błąd podczas pobierania danych wskaźnikowych:", error);
+            return {}; // Zwróć pusty obiekt w razie błędu sieciowego
+        }
+    }
+    // === KONIEC NOWEJ SEKCJI ===
 
     // Funkcja do pobierania gotowych wskaźników (bez zmian w wywołaniu)
     async function fetchIndicatorData(ticker) {
