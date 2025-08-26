@@ -297,6 +297,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     loadCompanyData().then(() => {
-        loadChartData('WIG20');
+        loadChartData('WIG');
     });
 });
