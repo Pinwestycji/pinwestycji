@@ -80,101 +80,89 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // === POCZĄTEK ZMIAN: Całkowicie nowa logika w `updateValuationData` ===
+   // === POCZĄTEK POPRAWKI w funkcji `updateValuationData` ===
     async function updateValuationData(ticker, data) {
         const isIndex = indexTickers.includes(ticker.toUpperCase());
-        const calculatorContent = valuationCalculatorSection.querySelector('.row'); // Znajdź wewnętrzny kontener
-        
-        // Stwórz lub znajdź element na komunikaty o błędach
-        let errorDiv = valuationCalculatorSection.querySelector('.valuation-error');
-        if (!errorDiv) {
-            errorDiv = document.createElement('div');
-            errorDiv.className = 'col-12 text-center text-muted p-5 valuation-error';
-            valuationCalculatorSection.insertBefore(errorDiv, calculatorContent);
-        }
-        errorDiv.style.display = 'none'; // Domyślnie ukryj
-        
-        if (isIndex || data.length === 0) {
-            valuationCalculatorSection.style.display = 'none';
-            return;
-        }
 
-        // Pokaż sekcję kalkulatora, ale ukryj główną treść na czas ładowania
-        valuationCalculatorSection.style.display = 'block';
-        calculatorContent.style.display = 'none';
+        // Ukrywamy całą sekcję na start, aby uniknąć mrugania starymi danymi
+        valuationCalculatorSection.style.display = 'none';
+        valuationCalculatorSection.innerHTML = ''; // Czyścimy zawartość na wypadek starych komunikatów o błędach
+
+        if (isIndex || data.length === 0) {
+            return; // Dla indeksów i braku danych po prostu nic nie pokazujemy
+        }
         
         const indicatorResponse = await fetchIndicatorData(ticker);
+        let message = '';
 
-        // --- ZAAWANSOWANA OBSŁUGA BŁĘDÓW ---
         if (!indicatorResponse || !indicatorResponse.ok) {
-            const message = indicatorResponse && indicatorResponse.status === 404
+            message = indicatorResponse && indicatorResponse.status === 404
                 ? `Nie znaleziono spółki '${ticker.toUpperCase()}' w bazie wskaźników.`
                 : 'Błąd serwera podczas pobierania wskaźników.';
-            errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle fa-2x mb-2"></i><br>${message}`;
-            errorDiv.style.display = 'block';
-            return;
-        }
+        } else {
+            const indicators = await indicatorResponse.json();
+            if (indicators.latest_eps === null || indicators.latest_eps === undefined) {
+                message = `Brak danych EPS bądź C/Z ze strony https://www.stockwatch.pl/ dla spółki '${ticker.toUpperCase()}'.`;
+            } else {
+                // --- SUKCES: Mamy dane, budujemy HTML kalkulatora ---
+                const lastPrice = data[data.length - 1].close;
+                let currentCZ = (indicators.latest_eps > 0) ? (lastPrice / indicators.latest_eps).toFixed(2) : 'Brak danych';
 
-        const indicators = await indicatorResponse.json();
+                const valuationData = {
+                    'Symbol': `<strong>${ticker.toUpperCase()}</strong>`,
+                    'Aktualna Cena': `<strong>${lastPrice.toFixed(2)} zł</strong>`,
+                    'EPS (zysk na akcję)': `${indicators.latest_eps} zł`,
+                    'Aktualny C/Z': currentCZ,
+                    'Średni EPS': indicators.avg_eps ? `${indicators.avg_eps} zł` : 'Brak danych',
+                    'Średni C/Z': indicators.avg_cz ? `${indicators.avg_cz} zł` : 'Brak danych',
+                    'Tempo wzrostu': '15%', 'Stopa zwrotu za 5 lat': '15%',
+                    'Potencjalny C/Z za 5 lat': '30.00', 'Wycena Akcji': '120.50 zł',
+                    'Dobra Cena': 'Tak'
+                };
 
-        // Sprawdź, czy mamy kluczowe dane (EPS)
-        if (indicators.latest_eps === null || indicators.latest_eps === undefined) {
-             errorDiv.innerHTML = `<i class="fas fa-info-circle fa-2x mb-2"></i><br>Brak danych EPS bądź C/Z ze strony https://www.stockwatch.pl/ dla spółki '${ticker.toUpperCase()}'.`;
-             errorDiv.style.display = 'block';
-             return;
+                // Odtwarzamy HTML kalkulatora
+                valuationCalculatorSection.innerHTML = document.getElementById('kalkulator-template').innerHTML;
+                
+                // Wypełniamy tabele nowymi danymi
+                const valTableBody = valuationCalculatorSection.querySelector('#valuationTableBody');
+                for (const [key, value] of Object.entries(valuationData)) {
+                    let row = valTableBody.insertRow();
+                    row.insertCell(0).innerHTML = key;
+                    row.insertCell(1).innerHTML = value;
+                }
+                
+                // ... (logika dla prawej tabeli i wykresu prognoz) ...
+                 const projTableBody = valuationCalculatorSection.querySelector('#projectionTableBody');
+                 const projChartContainer = valuationCalculatorSection.querySelector('#projectionChart');
+
+                 const pHeaderData = ['', '2026', '2027', '2028', '2029', '2030'];
+                 const pEpsData = ['<strong>Zysk na akcję</strong>', '5.98 zł', '6.88 zł', '7.91 zł', '9.10 zł', '10.46 zł'];
+                 const pPriceData = ['<strong>Cena Akcji</strong>', 179.40, 206.40, 237.30, 273.00, 313.80];
+                 let headerRow = projTableBody.insertRow();
+                 pHeaderData.forEach(text => headerRow.insertCell().innerHTML = `<strong>${text}</strong>`);
+                 let epsRow = projTableBody.insertRow();
+                 pEpsData.forEach(text => epsRow.insertCell().innerHTML = text);
+                 let priceRow = projTableBody.insertRow();
+                 pPriceData.forEach(text => priceRow.insertCell().innerHTML = typeof text === 'number' ? `${text.toFixed(2)} zł` : text);
+                 
+                 // Ponowna inicjalizacja wykresu prognoz, ponieważ odtworzyliśmy jego kontener
+                 projectionChart.remove(); // Usuwamy stary wykres
+                 const newProjectionChart = LightweightCharts.createChart(projChartContainer, { /* ...opcje... */ });
+                 const newProjectionSeries = newProjectionChart.addHistogramSeries({ color: 'rgba(33, 150, 243, 0.8)' });
+                 const projectionChartData = pPriceData.slice(1).map((price, index) => ({ time: `${2026 + index}-01-01`, value: price }));
+                 newProjectionSeries.setData(projectionChartData);
+                 newProjectionChart.timeScale().fitContent();
+
+                valuationCalculatorSection.style.display = 'flex'; // Pokaż całą sekcję
+                return; // Zakończ pomyślnie
+            }
         }
         
-        // Jeśli wszystko OK, pokaż treść kalkulatora
-        calculatorContent.style.display = 'flex';
-        
-        // --- OBLICZENIA I PRZYGOTOWANIE DANYCH ---
-        const lastPrice = data[data.length - 1].close;
-        let currentCZ = 'Brak danych';
-        // Oblicz C/Z tylko jeśli EPS jest dodatni
-        if (indicators.latest_eps > 0) {
-            currentCZ = (lastPrice / indicators.latest_eps).toFixed(2);
-        }
-
-        const valuationData = {
-            'Symbol': `<strong>${ticker.toUpperCase()}</strong>`,
-            'Aktualna Cena': `<strong>${lastPrice.toFixed(2)} zł</strong>`,
-            'EPS (zysk na akcję)': `${indicators.latest_eps} zł`,
-            'Aktualny C/Z': currentCZ,
-            'Średni EPS': indicators.avg_eps ? `${indicators.avg_eps} zł` : 'Brak danych',
-            'Średni C/Z': indicators.avg_cz ? `${indicators.avg_cz} zł` : 'Brak danych',
-            'Tempo wzrostu': '15%',
-            'Stopa zwrotu za 5 lat': '15%',
-            'Potencjalny C/Z za 5 lat': '30.00',
-            'Wycena Akcji': '120.50 zł',
-            'Dobra Cena': 'Tak'
-        };
-
-        valuationTableBody.innerHTML = ''; // Czyścimy tabelę przed wypełnieniem
-        for (const [key, value] of Object.entries(valuationData)) {
-            let row = valuationTableBody.insertRow();
-            let cell1 = row.insertCell(0);
-            let cell2 = row.insertCell(1);
-            cell1.innerHTML = key;
-            cell2.innerHTML = value;
-        }
-
-        // Prawa tabela (bez zmian)
-        projectionTableBody.innerHTML = '';
-        projectionSeries.setData([]);
-        const pHeaderData = ['', '2026', '2027', '2028', '2029', '2030'];
-        const pEpsData = ['<strong>Zysk na akcję</strong>', '5.98 zł', '6.88 zł', '7.91 zł', '9.10 zł', '10.46 zł'];
-        const pPriceData = ['<strong>Cena Akcji</strong>', 179.40, 206.40, 237.30, 273.00, 313.80];
-        let headerRow = projectionTableBody.insertRow();
-        pHeaderData.forEach(text => headerRow.insertCell().innerHTML = `<strong>${text}</strong>`);
-        let epsRow = projectionTableBody.insertRow();
-        pEpsData.forEach(text => epsRow.insertCell().innerHTML = text);
-        let priceRow = projectionTableBody.insertRow();
-        pPriceData.forEach(text => priceRow.insertCell().innerHTML = typeof text === 'number' ? `${text.toFixed(2)} zł` : text);
-        const projectionChartData = pPriceData.slice(1).map((price, index) => ({ time: `${2026 + index}-01-01`, value: price }));
-        projectionSeries.setData(projectionChartData);
-        projectionChart.timeScale().fitContent();
+        // Jeśli wystąpił jakikolwiek błąd, wyświetl komunikat
+        valuationCalculatorSection.innerHTML = `<div class="col-12 text-center text-muted p-5"><i class="fas fa-exclamation-triangle fa-2x mb-2"></i><br>${message}</div>`;
+        valuationCalculatorSection.style.display = 'flex';
     }
-    // === KONIEC ZMIAN ===
+    // === KONIEC POPRAWKI ===
     
     async function loadChartData(ticker) {
         chartTitle.textContent = `Ładowanie danych dla ${ticker.toUpperCase()}...`;
