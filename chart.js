@@ -140,8 +140,11 @@ document.addEventListener('DOMContentLoaded', function() {
                  
                 const projChartContainer = valuationCalculatorSection.querySelector('#projectionChart');
                 if (projChartContainer) {
-                    projectionChart = LightweightCharts.createChart(projChartContainer, { width: projChartContainer.clientWidth, height: 300, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } } });
-                    projectionSeries = projectionChart.addHistogramSeries({ color: 'rgba(33, 150, 243, 0.8)' });
+                    const projectionChart = LightweightCharts.createChart(projectionChartContainer, { width: projectionChartContainer.clientWidth, height: 300, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } } });
+                    const projectionSeries = projectionChart.addSeries(LightweightCharts.HistogramSeries);
+                    projectionSeries.applyOptions({
+                        color: 'rgba(33, 150, 243, 0.8)'
+                    });
                     const projectionChartData = pPriceData.slice(1).map((price, index) => ({ time: `${2026 + index}-01-01`, value: price }));
                     projectionSeries.setData(projectionChartData);
                     projectionChart.timeScale().fitContent();
