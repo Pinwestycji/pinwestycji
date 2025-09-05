@@ -114,7 +114,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     'EPS (zysk na akcję)': `${indicators.latest_eps} zł`,
                     'Aktualny C/Z': currentCZ,
                     'Średni C/Z': indicators.avg_cz ? `${indicators.avg_cz} zł` : 'Brak danych',
-                    'Tempo wzrostu': indicators.avg_eps ? `${indicators.avg_eps} %` , 'Stopa zwrotu za 5 lat': '15%',
+                    'Tempo wzrostu': indicators.avg_eps ? `${indicators.avg_eps} %`,
+                    'Stopa zwrotu za 5 lat': '15%',
                     'Wycena Akcji': '120.50 zł',
                     'Dobra Cena': 'Tak'
                 };
