@@ -43,13 +43,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const priceSeries = projectionChart.addSeries(LightweightCharts.LineSeries); // Używamy koloru niebieskiego
     priceSeries.applyOptions({color: '#007bff'});
 
-    const stockTickerInput = document.getElementById('stockTickerInput');
-    const searchButton = document.getElementById('searchButton');
-    const searchDropdown = document.getElementById('searchDropdown');
-    const chartTitle = document.getElementById('chart-title');
-    const valuationTableBody = document.getElementById('valuationTableBody');
-    const projectionTableBody = document.getElementById('projectionTableBody');
-    const valuationCalculatorSection = document.getElementById('valuationCalculatorSection');
+    
 
     async function updateValuationData(ticker, lastPrice, indicators) {
         const valuationCalculatorSection = document.getElementById('valuationCalculatorSection');
@@ -135,6 +129,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchButton = document.getElementById('searchButton');
     // Upewnij się, że poniższe elementy istnieją w Twoim HTML, jeśli nie, usuń lub zakomentuj te linie
     // const companyCard = document.getElementById('companyCard'); 
+    const chartTitle = document.getElementById('chart-title');
+    const valuationTableBody = document.getElementById('valuationTableBody');
+    const projectionTableBody = document.getElementById('projectionTableBody');
     const valuationCalculatorSection = document.getElementById('valuationCalculatorSection');
     
     // Funkcja do renderowania sugestii (bez zmian)
