@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Tworzenie tylko jednej serii - dla prognozowanych cen
     const priceSeries = projectionChart.addSeries(LightweightCharts.LineSeries);
-    projectionSeries.applyOptions({
+    priceSeries.applyOptions({
         color: '#007bff'
     });
 
