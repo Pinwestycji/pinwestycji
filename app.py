@@ -3,8 +3,6 @@
 import pandas as pd
 from flask import Flask, jsonify
 from flask_cors import CORS
-import io
-import requests
 import logging
 import numpy as np
 import os
@@ -18,39 +16,31 @@ CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 indicators_summary_df = None
 try:
-    # Wczytujemy plik i ustawiamy 'Ticker' jako indeks dla szybkiego wyszukiwania
-    indicators_summary_df = pd.read_csv('wig_indicators_summary.csv')
+    # Wczytujemy plik wig_company_forecasts.csv
+    indicators_summary_df = pd.read_csv('wig_company_forecasts.csv')
+    # Ustawiamy 'Ticker' jako indeks dla szybkiego wyszukiwania
     indicators_summary_df.set_index('Ticker', inplace=True)
-    logging.info("Plik wig_indicators_summary.csv załadowany pomyślnie.")
+    logging.info("Plik wig_company_forecasts.csv załadowany pomyślnie.")
 except FileNotFoundError:
-    logging.error("Krytyczny błąd: Nie znaleziono pliku wig_indicators_summary.csv!")
+    logging.error("Krytyczny błąd: Nie znaleziono pliku wig_company_forecasts.csv!")
 except Exception as e:
     logging.error(f"Wystąpił nieoczekiwany błąd podczas wczytywania pliku CSV: {e}")
 
 # === KONIEC ZMIAN ===
 
-
 @app.route('/api/data/<ticker>', methods=['GET'])
 def get_stooq_data(ticker):
     # Ta funkcja pozostaje bez zmian
     # ...
-    logging.info(f"Odebrano zapytanie do /api/data/{ticker} ze Stooq.pl")
-    if not ticker: return jsonify({"error": "Brak symbolu spółki"}), 400
+    logging.info(f"Odebrano zapytanie do /api/data/{ticker} ze Stooq.")
+    stooq_url = f"https://stooq.pl/q/d/?s={ticker.lower()}"
     try:
-        stooq_url = f"https://stooq.pl/q/d/l/?s={ticker.lower()}&i=d"
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get(stooq_url, headers=headers)
-        if response.status_code != 200 or "Nie ma takiego symbolu" in response.text:
-            return jsonify({"error": f"Nie znaleziono danych dla symbolu: {ticker}"}), 404
-        csv_data = io.StringIO(response.text)
-        df = pd.read_csv(csv_data)
-        if df.empty: return jsonify({"error": f"Brak danych dla symbolu: {ticker}"}), 404
-        df.rename(columns={'Data': 'time', 'Otwarcie': 'open', 'Najwyzszy': 'high','Najnizszy': 'low', 'Zamkniecie': 'close', 'Wolumen': 'volume'}, inplace=True)
-        df['time'] = pd.to_datetime(df['time']).apply(lambda x: int(x.timestamp()))
-        df.sort_values('time', inplace=True)
-        for col in ['open', 'high', 'low', 'close', 'volume']:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
-        df.dropna(subset=['open', 'high', 'low', 'close'], inplace=True)
+        df = pd.read_csv(stooq_url)
+        df.rename(columns={'Data': 'time', 'Otwarcie': 'open', 'Najwyzszy': 'high', 'Najnizszy': 'low', 'Zamkniecie': 'close', 'Wolumen': 'volume'}, inplace=True)
+        # Formatowanie kolumny 'time' na YYYY-MM-DD
+        df['time'] = pd.to_datetime(df['time']).dt.strftime('%Y-%m-%d')
+        df.sort_values(by='time', inplace=True)
+
         data_json = df.to_dict('records')
         return jsonify(data_json)
     except Exception as e:
@@ -81,9 +71,10 @@ def get_company_indicators(ticker):
         return jsonify({"error": "Wewnętrzny błąd serwera podczas przetwarzania wskaźników."}), 500
 # === KONIEC ZMIAN ===
 
-# Endpoint /api/status nie jest już potrzebny do diagnozy, ale można go zostawić
-# ...
-
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(debug=True, host='0.0.0.0', port=port)
+    # Aby uruchomić lokalnie:
+    # app.run(debug=True, port=5001)
+
+    # Aby uruchomić na serwerze Render:
+    port = int(os.environ.get("PORT", 5001))
+    app.run(host='0.0.0.0', port=port)
