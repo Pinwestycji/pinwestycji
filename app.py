@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-# === POCZĄTEK ZMIAN: Wczytujemy gotowy plik z podsumowaniem wskaźników ===
+# === POCZĄTEK ZMIAN: Wczytujemy plik wig_company_forecasts.csv ===
 
 indicators_summary_df = None
 try:
@@ -31,24 +31,15 @@ except Exception as e:
 @app.route('/api/data/<ticker>', methods=['GET'])
 def get_stooq_data(ticker):
     # Ta funkcja pozostaje bez zmian
-    # ...
-    logging.info(f"Odebrano zapytanie do /api/data/{ticker} ze Stooq.pl")
-    if not ticker: return jsonify({"error": "Brak symbolu spółki"}), 400
+    logging.info(f"Odebrano zapytanie do /api/data/{ticker} ze Stooq.")
+    stooq_url = f"https://stooq.pl/q/d/?s={ticker.lower()}"
     try:
-        stooq_url = f"https://stooq.pl/q/d/l/?s={ticker.lower()}&i=d"
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get(stooq_url, headers=headers)
-        if response.status_code != 200 or "Nie ma takiego symbolu" in response.text:
-            return jsonify({"error": f"Nie znaleziono danych dla symbolu: {ticker}"}), 404
-        csv_data = io.StringIO(response.text)
-        df = pd.read_csv(csv_data)
-        if df.empty: return jsonify({"error": f"Brak danych dla symbolu: {ticker}"}), 404
-        df.rename(columns={'Data': 'time', 'Otwarcie': 'open', 'Najwyzszy': 'high','Najnizszy': 'low', 'Zamkniecie': 'close', 'Wolumen': 'volume'}, inplace=True)
-        df['time'] = pd.to_datetime(df['time']).apply(lambda x: int(x.timestamp()))
-        df.sort_values('time', inplace=True)
-        for col in ['open', 'high', 'low', 'close', 'volume']:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
-        df.dropna(subset=['open', 'high', 'low', 'close'], inplace=True)
+        df = pd.read_csv(stooq_url)
+        df.rename(columns={'Data': 'time', 'Otwarcie': 'open', 'Najwyzszy': 'high', 'Najnizszy': 'low', 'Zamkniecie': 'close', 'Wolumen': 'volume'}, inplace=True)
+        # Formatowanie kolumny 'time' na YYYY-MM-DD
+        df['time'] = pd.to_datetime(df['time']).dt.strftime('%Y-%m-%d')
+        df.sort_values(by='time', inplace=True)
+
         data_json = df.to_dict('records')
         return jsonify(data_json)
     except Exception as e:
@@ -56,7 +47,7 @@ def get_stooq_data(ticker):
         return jsonify({"error": "Wewnętrzny błąd serwera."}), 500
 
 
-# === POCZĄTEK ZMIAN: Uproszczona funkcja do serwowania gotowych wskaźników ===
+# === POCZĄTEK ZMIAN: Funkcja jest już zgodna z nowym plikiem CSV ===
 @app.route('/api/indicators/<ticker>', methods=['GET'])
 def get_company_indicators(ticker):
     if indicators_summary_df is None:
@@ -68,6 +59,7 @@ def get_company_indicators(ticker):
         indicator_data = indicators_summary_df.loc[ticker.upper()]
         
         # Konwertujemy wynik do słownika i zwracamy jako JSON
+        # Ta część kodu jest uniwersalna i będzie działać poprawnie z nowymi kolumnami
         result = indicator_data.to_dict()
         return jsonify(result)
         
