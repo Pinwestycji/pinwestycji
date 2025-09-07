@@ -50,6 +50,10 @@ document.addEventListener('DOMContentLoaded', function() {
         color: '#007bff'
     });
 
+    const searchDropdown = document.getElementById('searchDropdown');
+    const stockTickerInput = document.getElementById('stockTickerInput');
+    const searchButton = document.getElementById('searchButton');
+
     // === POCZĄTEK ZMIAN: CAŁKOWICIE PRZEBUDOWANA FUNKCJA ===
     async function updateValuationData(ticker, lastPrice, indicators) {
         const valuationCalculatorSection = document.getElementById('valuationCalculatorSection');
@@ -142,69 +146,98 @@ document.addEventListener('DOMContentLoaded', function() {
     // === KONIEC ZMIAN ===
     
     async function loadChartData(ticker) {
-        if (!ticker) return;
-        ticker = ticker.toUpperCase();
+        chartTitle.textContent = `Ładowanie danych dla ${ticker.toUpperCase()}...`;
+        const data = await fetchStockData(ticker);
+        const isIndex = indexTickers.includes(ticker.toUpperCase());
 
-        try {
-            // Równoległe pobieranie danych
-            const [stooqResponse, indicatorsResponse] = await Promise.all([
-                fetch(`${API_URL}/api/data/${ticker}`),
-                fetch(`${API_URL}/api/indicators/${ticker}`)
-            ]);
-
-            if (!stooqResponse.ok) throw new Error(`Błąd pobierania danych Stooq dla ${ticker}: ${stooqResponse.statusText}`);
-            if (!indicatorsResponse.ok) throw new Error(`Błąd pobierania wskaźników dla ${ticker}: ${indicatorsResponse.statusText}`);
-
-            const stooqData = await stooqResponse.json();
-            const indicatorsData = await indicatorsResponse.json();
-
-            // Aktualizacja wykresu świecowego
-            const candlestickData = stooqData.map(d => ({ time: d.time, open: d.open, high: d.high, low: d.low, close: d.close }));
-            const volumeData = stooqData.map(d => ({ time: d.time, value: d.volume, color: d.close > d.open ? 'rgba(0, 150, 136, 0.8)' : 'rgba(255, 82, 82, 0.8)' }));
-            
-            candlestickSeries.setData(candlestickData);
-            volumeSeries.setData(volumeData);
-            mainChart.timeScale().fitContent();
-            
-            document.getElementById('chart-title').textContent = `Wykres Świecowy - ${ticker}`;
-
-            // Aktualizacja sekcji wyceny i projekcji
-            if (candlestickData.length > 0) {
-                const lastPrice = candlestickData[candlestickData.length - 1].close;
-                updateValuationData(ticker, lastPrice, indicatorsData);
+        if (data && data.length > 0) {
+            candlestickSeries.setData(data);
+            if (isIndex) {
+                volumeSeries.setData([]);
+                volumeSeries.applyOptions({ visible: false });
+            } else {
+                volumeSeries.applyOptions({ visible: true });
+                const volumeData = data.map(d => ({
+                    time: d.time, value: d.volume,
+                    color: d.close >= d.open ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)',
+                }));
+                volumeSeries.setData(volumeData);
             }
+            mainChart.timeScale().fitContent();
+            chartTitle.textContent = `Wykres dla: ${ticker.toUpperCase()}`;
+        } else {
+            candlestickSeries.setData([]);
+            volumeSeries.setData([]);
+            chartTitle.textContent = `Brak danych do wyświetlenia dla: ${ticker.toUpperCase()}`;
+        }
+        updateValuationData(ticker, data);
+    }
 
+    async function fetchStockData(ticker) {
+        // === POCZĄTEK BLOKU DIAGNOSTYCZNEGO ===
+        // Wklej ten fragment na samym początku funkcji
+        console.log("--- Diagnostyka Tickera ---");
+        console.log("Otrzymany ticker:", ticker);
+        console.log("Długość tickera:", ticker.length);
+    
+        // Sprawdzamy kody poszczególnych znaków
+        let codes = [];
+        for (let i = 0; i < ticker.length; i++) {
+            codes.push(ticker.charCodeAt(i));
+        }
+        console.log("Kody znaków (ASCII):", codes.join(', '));
+        console.log("--------------------------");
+        // === KONIEC BLOKU DIAGNOSTYCZNEGO ===
+    
+        if (!ticker) return [];
+    
+        try {
+            const response = await fetch(`${API_URL}/api/data/${ticker}`);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Błąd HTTP ${response.status}: ${errorData.error || 'Nieznany błąd serwera'}`);
+            }
+            return await response.json();
         } catch (error) {
-            console.error(`Błąd w loadChartData dla ${ticker}:`, error);
-            alert(`Nie udało się załadować danych dla ${ticker}. Sprawdź konsolę, aby uzyskać więcej informacji.`);
+            console.error("Błąd podczas pobierania danych giełdowych:", error);
+            alert(`Wystąpił błąd: ${error.message}. Sprawdź symbol spółki lub spróbuj ponownie.`);
+            return [];
         }
     }
     
-    const searchDropdown = document.getElementById('searchDropdown');
-    const stockTickerInput = document.getElementById('stockTickerInput');
-    const searchButton = document.getElementById('searchButton');
-    
+     // === POCZĄTEK ZMIANY: ULEPSZONA FUNKCJA FILTRUJĄCA ===
     function findMatchingCompanies(query) {
-        if (!query) return [];
-        return companyList.filter(company => 
-            company.nazwa.toLowerCase().includes(query.toLowerCase()) || 
-            company.ticker.toLowerCase().includes(query.toLowerCase())
-        );
+        if (!query || query.length < 1) return []; // Zmieniono na 1, aby wyszukiwać od pierwszej litery
+        const lowerCaseQuery = query.toLowerCase();
+        
+        // Nowa, bardziej precyzyjna logika filtrowania
+        return companyList.filter(company => {
+            const lowerCaseNazwa = company.nazwa.toLowerCase();
+            const lowerCaseTicker = company.ticker.toLowerCase();
+            
+            // Zwróć prawdę, jeśli NAZWA lub TICKER ZACZYNA SIĘ OD wpisanego tekstu
+            return lowerCaseNazwa.startsWith(lowerCaseQuery) || lowerCaseTicker.startsWith(lowerCaseQuery);
+        });
     }
-    
+    // === KONIEC ZMIANY ===
+
     function renderAutocomplete(suggestions) {
         searchDropdown.innerHTML = '';
-        if (suggestions.length > 0) {
-            suggestions.slice(0, 10).forEach(company => {
+        if (suggestions && suggestions.length > 0) {
+            suggestions.forEach(suggestion => {
                 const item = document.createElement('a');
+                item.classList.add('list-group-item', 'list-group-item-action');
                 item.href = "#";
-                item.textContent = `${company.nazwa} (${company.ticker})`;
-                item.className = "dropdown-item";
-                item.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    stockTickerInput.value = company.ticker;
-                    loadChartData(company.ticker);
+                // === POCZĄTEK POPRAWKI ===
+                // Składamy tekst z właściwości obiektu, zamiast wstawiać cały obiekt
+                item.textContent = `${suggestion.nazwa}-${suggestion.ticker}`;
+                // === KONIEC POPRAWKI ===
+                
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    stockTickerInput.value = item.textContent;
                     searchDropdown.style.display = 'none';
+                    loadChartData(suggestion.ticker);
                 });
                 searchDropdown.appendChild(item);
             });
@@ -228,7 +261,12 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     searchButton.addEventListener('click', () => {
-        const tickerToLoad = stockTickerInput.value.trim().toUpperCase();
+        const inputValue = stockTickerInput.value.trim();
+        let tickerToLoad = inputValue.toUpperCase();
+        if (inputValue.includes('-')) {
+            const parts = inputValue.split('-');
+            tickerToLoad = parts[parts.length - 1].toUpperCase();
+        }
         if (tickerToLoad) {
             loadChartData(tickerToLoad);
             searchDropdown.style.display = 'none';
@@ -243,6 +281,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     loadCompanyData().then(() => {
-        loadChartData('CDR'); // Ładujemy domyślną spółkę po załadowaniu listy
+        loadChartData('WIG');
     });
 });
