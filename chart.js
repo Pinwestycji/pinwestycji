@@ -43,6 +43,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const priceSeries = projectionChart.addSeries(LightweightCharts.LineSeries); // Używamy koloru niebieskiego
     priceSeries.applyOptions({color: '#007bff'});
 
+    const stockTickerInput = document.getElementById('stockTickerInput');
+    const searchButton = document.getElementById('searchButton');
+    const searchDropdown = document.getElementById('searchDropdown');
+    const chartTitle = document.getElementById('chart-title');
+    const valuationTableBody = document.getElementById('valuationTableBody');
+    const projectionTableBody = document.getElementById('projectionTableBody');
+    const valuationCalculatorSection = document.getElementById('valuationCalculatorSection');
+
     async function updateValuationData(ticker, lastPrice, indicators) {
         const valuationCalculatorSection = document.getElementById('valuationCalculatorSection');
         const valuationTableBody = valuationCalculatorSection.querySelector('#valuationTableBody');
