@@ -1,12 +1,13 @@
 # Plik: app.py - Wersja serwująca przetworzone dane z pliku CSV
 
 import pandas as pd
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
+import io
+import requests
 import logging
-import numpy as np
+from datetime import datetime
 import os
-import requests 
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
