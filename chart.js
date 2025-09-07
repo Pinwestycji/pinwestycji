@@ -40,7 +40,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const projectionChart = LightweightCharts.createChart(projectionChartContainer, { width: projectionChartContainer.clientWidth, height: 300, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } }, crosshair: { mode: LightweightCharts.CrosshairMode.Normal }, rightPriceScale: { borderColor: '#cccccc' }, timeScale: { borderColor: '#cccccc', timeVisible: true, secondsVisible: false } });
     
     // Tworzenie tylko jednej serii - dla prognozowanych cen
-    const priceSeries = projectionChart.addSeries({ type: 'line', color: '#007bff' }); // Używamy koloru niebieskiego
+    const priceSeries = projectionChart.addSeries(LightweightCharts.LineSeries); // Używamy koloru niebieskiego
+    priceSeries.applyOptions(color: '#007bff');
 
     async function updateValuationData(ticker, lastPrice, indicators) {
         const valuationCalculatorSection = document.getElementById('valuationCalculatorSection');
