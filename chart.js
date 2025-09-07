@@ -1,6 +1,10 @@
-// Plik: chart.js - Wersja z poprawionym wyświetlaniem sugestii
+// Plik: chart.js - Wersja z poprawionym wyświetlaniem sugestii, nową logiką wyceny i działającym wykresem projekcji
 
 document.addEventListener('DOMContentLoaded', function() {
+    // === POCZĄTEK ZMIAN: Dodajemy zmienną globalną na listę spółek ===
+    let companyList = []; 
+    // === KONIEC ZMIAN ===
+
     async function loadCompanyData() {
         try {
             const response = await fetch('wig_companies.csv');
@@ -27,6 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const API_URL = 'https://pinwestycji.onrender.com';
+    // const API_URL = 'http://127.0.0.1:5001'; // Lokalny adres do testów
     const indexTickers = ['WIG20', 'WIG', 'MWIG40', 'SWIG80', 'WIG-UKRAIN'];
 
     const chartContainer = document.getElementById('tvchart');
@@ -35,46 +40,49 @@ document.addEventListener('DOMContentLoaded', function() {
     const volumeSeries = mainChart.addSeries(LightweightCharts.HistogramSeries);
     candlestickSeries.applyOptions({ upColor: 'rgba(0, 150, 136, 1)', downColor: 'rgba(255, 82, 82, 1)', borderDownColor: 'rgba(255, 82, 82, 1)', borderUpColor: 'rgba(0, 150, 136, 1)', wickDownColor: 'rgba(255, 82, 82, 1)', wickUpColor: 'rgba(0, 150, 136, 1)' });
     volumeSeries.applyOptions({ priceFormat: { type: 'volume' }, priceScaleId: '', scaleMargins: { top: 0.65, bottom: 0 } });
-
+    
     const projectionChartContainer = document.getElementById('projectionChart');
     const projectionChart = LightweightCharts.createChart(projectionChartContainer, { width: projectionChartContainer.clientWidth, height: 300, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } }, crosshair: { mode: LightweightCharts.CrosshairMode.Normal }, rightPriceScale: { borderColor: '#cccccc' }, timeScale: { borderColor: '#cccccc', timeVisible: true, secondsVisible: false } });
-    
+
     // Tworzenie tylko jednej serii - dla prognozowanych cen
-    const priceSeries = projectionChart.addSeries(LightweightCharts.LineSeries); // Używamy koloru niebieskiego
-    priceSeries.applyOptions({color: '#007bff'});
+    const priceSeries = projectionChart.addSeries(LightweightCharts.HistogramSeries);
+    projectionSeries.applyOptions({
+        color: '#007bff'
+    });
 
-    
-
+    // === POCZĄTEK ZMIAN: CAŁKOWICIE PRZEBUDOWANA FUNKCJA ===
     async function updateValuationData(ticker, lastPrice, indicators) {
         const valuationCalculatorSection = document.getElementById('valuationCalculatorSection');
         const valuationTableBody = valuationCalculatorSection.querySelector('#valuationTableBody');
         
-        // Funkcje pomocnicze
-        const getValue = (key) => indicators[key] || 'Brak danych';
-        const parseValue = (value) => parseFloat(String(value).replace(/,/g, ''));
-        const calculateRate = (future, present) => {
-            const parsedFuture = parseValue(future);
-            const parsedPresent = parseValue(present);
-            return (parsedFuture / parsedPresent - 1) * 100;
+        // Funkcja pomocnicza do bezpiecznego parsowania wartości
+        const parseValue = (value) => {
+            if (value === null || value === undefined || String(value).trim().toLowerCase() === 'n/a') {
+                return null;
+            }
+            const num = parseFloat(String(value).replace(',', '.'));
+            return isNaN(num) ? null : num;
         };
-        
-        const aktualnyEps = parseValue(getValue('Aktualny EPS'));
-        const sredniCZ = parseValue(getValue('Średni wskaźnik C/Z'));
-        const tempoWzrostu = parseValue(getValue('Średnia stopa wzrostu EPS r/r')) / 100; // Konwersja na ułamek
-        const prognozaCena = parseValue(getValue('Prognoza ceny akcji na następny rok'));
-        
-        const currentCZ = (lastPrice / aktualnyEps).toFixed(2);
-        const returnRate = calculateRate(prognozaCena, lastPrice).toFixed(2);
+
+        // Pobieranie i parsowanie danych z obiektu 'indicators'
+        const aktualnyEps = parseValue(indicators['Aktualny EPS']);
+        const sredniCZ = parseValue(indicators['Średni wskaźnik C/Z']);
+        const tempoWzrostu = parseValue(indicators['Średnia stopa wzrostu EPS r/r']);
+        const prognozaCena = parseValue(indicators['Prognoza ceny akcji na następny rok']);
+
+        // Obliczenia
+        const currentCZ = (aktualnyEps && lastPrice) ? (lastPrice / aktualnyEps).toFixed(2) : 'Brak danych';
+        const returnRate = (prognozaCena && lastPrice) ? (((prognozaCena / lastPrice) - 1) * 100).toFixed(2) : 'Brak danych';
         
         const valuationData = {
             'Symbol': `<strong>${ticker.toUpperCase()}</strong>`,
             'Aktualna Cena': `<strong>${lastPrice.toFixed(2)} zł</strong>`,
-            'Aktualny EPS (zysk na akcję)': `${aktualnyEps.toFixed(2)} zł`,
+            'Aktualny EPS (zysk na akcję)': aktualnyEps !== null ? `${aktualnyEps.toFixed(2)} zł` : 'Brak danych',
             'Aktualny C/Z': currentCZ,
-            'Średni C/Z': sredniCZ ? `${sredniCZ.toFixed(2)}` : 'Brak danych',
-            'Tempo wzrostu': tempoWzrostu ? `${(tempoWzrostu * 100).toFixed(2)} %` : 'Brak danych',
-            'Stopa zwrotu na marzec/kwiecień 2026 rok': returnRate + '%',
-            'Wycena Akcji na marzec/kwiecień 2026 rok': prognozaCena ? `${prognozaCena.toFixed(2)} zł` : 'Brak danych',
+            'Średni C/Z': sredniCZ !== null ? sredniCZ.toFixed(2) : 'Brak danych',
+            'Tempo wzrostu': tempoWzrostu !== null ? `${tempoWzrostu.toFixed(2)} %` : 'Brak danych',
+            'Stopa zwrotu na marzec/kwiecień 2026 rok': returnRate !== 'Brak danych' ? `${returnRate} %` : 'Brak danych',
+            'Wycena Akcji na marzec/kwiecień 2026 rok': prognozaCena !== null ? `${prognozaCena.toFixed(2)} zł` : 'Brak danych',
             'Dobra Cena': 'Tak' // Tu na razie bez zmian
         };
 
@@ -85,56 +93,105 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         valuationTableBody.innerHTML = valuationHtml;
         
-        // === POCZĄTEK MODYFIKACJI TABELI PROJEKCJI ===
-        
+        // Modyfikacja tabeli projekcji
         const projTableBody = valuationCalculatorSection.querySelector('#projectionTableBody');
         const pHeaderData = ['', '2026', '2027', '2028', '2029', '2030'];
         
         const pEpsData = ['<strong>Zysk na akcję</strong>'];
         const pPriceData = ['<strong>Cena Akcji</strong>'];
-        
-        // Dane dla wykresu - tylko dla cen
         const priceChartData = [];
         
         const currentYear = new Date().getFullYear();
         
-        for (let i = 1; i <= 5; i++) {
-            const year = currentYear + i;
-            // Obliczenie EPS na dany rok
-            const prognozaEps = aktualnyEps * Math.pow((1 + tempoWzrostu), i);
-            pEpsData.push(`${prognozaEps.toFixed(2)} zł`);
-            
-            // Obliczenie Ceny Akcji na dany rok
-            const prognozaPrice = prognozaEps * sredniCZ;
-            pPriceData.push(prognozaPrice.toFixed(2));
+        // Sprawdzamy, czy mamy potrzebne dane do prognoz
+        if (aktualnyEps !== null && tempoWzrostu !== null && sredniCZ !== null) {
+            const tempoWzrostuDecimal = tempoWzrostu / 100;
 
-            // Dodajemy do danych wykresu tylko cenę
-            priceChartData.push({ time: year, value: prognozaPrice });
+            for (let i = 1; i <= 5; i++) {
+                const year = currentYear + i;
+                
+                // Obliczenie prognozowanego EPS
+                const prognozaEps = aktualnyEps * Math.pow((1 + tempoWzrostuDecimal), i);
+                pEpsData.push(`${prognozaEps.toFixed(2)} zł`);
+                
+                // Obliczenie prognozowanej ceny akcji
+                const prognozaPrice = prognozaEps * sredniCZ;
+                pPriceData.push(`${prognozaPrice.toFixed(2)} zł`);
+
+                // Dodajemy dane do wykresu w formacie YYYY-MM-DD
+                priceChartData.push({ time: `${year}-03-15`, value: prognozaPrice });
+            }
+        } else {
+             // Jeśli brakuje danych, wypełniamy tabelę informacją o braku danych
+            for (let i = 1; i <= 5; i++) {
+                pEpsData.push('Brak danych');
+                pPriceData.push('Brak danych');
+            }
         }
         
         // Tworzenie tabeli projekcji
         let projHtml = `<tr><th>${pHeaderData[0]}</th>` + pHeaderData.slice(1).map(year => `<th>${year}</th>`).join('') + `</tr>`;
         projHtml += `<tr><td>${pEpsData[0]}</td>` + pEpsData.slice(1).map(eps => `<td>${eps}</td>`).join('') + `</tr>`;
-        projHtml += `<tr><td>${pPriceData[0]}</td>` + pPriceData.slice(1).map(price => `<td>${price} zł</td>`).join('') + `</tr>`;
+        projHtml += `<tr><td>${pPriceData[0]}</td>` + pPriceData.slice(1).map(price => `<td>${price}</td>`).join('') + `</tr>`;
         projTableBody.innerHTML = projHtml;
         
-        // Aktualizacja wykresu - tylko jedna seria
-        projectionChart.timeScale().fitContent();
+        // Aktualizacja wykresu
         priceSeries.setData(priceChartData);
+        projectionChart.timeScale().fitContent();
+    }
+    // === KONIEC ZMIAN ===
+    
+    async function loadChartData(ticker) {
+        if (!ticker) return;
+        ticker = ticker.toUpperCase();
+
+        try {
+            // Równoległe pobieranie danych
+            const [stooqResponse, indicatorsResponse] = await Promise.all([
+                fetch(`${API_URL}/api/data/${ticker}`),
+                fetch(`${API_URL}/api/indicators/${ticker}`)
+            ]);
+
+            if (!stooqResponse.ok) throw new Error(`Błąd pobierania danych Stooq dla ${ticker}: ${stooqResponse.statusText}`);
+            if (!indicatorsResponse.ok) throw new Error(`Błąd pobierania wskaźników dla ${ticker}: ${indicatorsResponse.statusText}`);
+
+            const stooqData = await stooqResponse.json();
+            const indicatorsData = await indicatorsResponse.json();
+
+            // Aktualizacja wykresu świecowego
+            const candlestickData = stooqData.map(d => ({ time: d.time, open: d.open, high: d.high, low: d.low, close: d.close }));
+            const volumeData = stooqData.map(d => ({ time: d.time, value: d.volume, color: d.close > d.open ? 'rgba(0, 150, 136, 0.8)' : 'rgba(255, 82, 82, 0.8)' }));
+            
+            candlestickSeries.setData(candlestickData);
+            volumeSeries.setData(volumeData);
+            mainChart.timeScale().fitContent();
+            
+            document.getElementById('chart-title').textContent = `Wykres Świecowy - ${ticker}`;
+
+            // Aktualizacja sekcji wyceny i projekcji
+            if (candlestickData.length > 0) {
+                const lastPrice = candlestickData[candlestickData.length - 1].close;
+                updateValuationData(ticker, lastPrice, indicatorsData);
+            }
+
+        } catch (error) {
+            console.error(`Błąd w loadChartData dla ${ticker}:`, error);
+            alert(`Nie udało się załadować danych dla ${ticker}. Sprawdź konsolę, aby uzyskać więcej informacji.`);
+        }
     }
     
-    // Pozostała część kodu bez zmian
     const searchDropdown = document.getElementById('searchDropdown');
     const stockTickerInput = document.getElementById('stockTickerInput');
     const searchButton = document.getElementById('searchButton');
-    // Upewnij się, że poniższe elementy istnieją w Twoim HTML, jeśli nie, usuń lub zakomentuj te linie
-    // const companyCard = document.getElementById('companyCard'); 
-    const chartTitle = document.getElementById('chart-title');
-    const valuationTableBody = document.getElementById('valuationTableBody');
-    const projectionTableBody = document.getElementById('projectionTableBody');
-    const valuationCalculatorSection = document.getElementById('valuationCalculatorSection');
     
-    // Funkcja do renderowania sugestii (bez zmian)
+    function findMatchingCompanies(query) {
+        if (!query) return [];
+        return companyList.filter(company => 
+            company.nazwa.toLowerCase().includes(query.toLowerCase()) || 
+            company.ticker.toLowerCase().includes(query.toLowerCase())
+        );
+    }
+    
     function renderAutocomplete(suggestions) {
         searchDropdown.innerHTML = '';
         if (suggestions.length > 0) {
@@ -156,81 +213,7 @@ document.addEventListener('DOMContentLoaded', function() {
             searchDropdown.style.display = 'none';
         }
     }
-    async function loadChartData(ticker) {
-        chartTitle.textContent = `Ładowanie danych dla ${ticker.toUpperCase()}...`;
-        const data = await fetchStockData(ticker);
-        const isIndex = indexTickers.includes(ticker.toUpperCase());
-
-        if (data && data.length > 0) {
-            candlestickSeries.setData(data);
-            if (isIndex) {
-                volumeSeries.setData([]);
-                volumeSeries.applyOptions({ visible: false });
-            } else {
-                volumeSeries.applyOptions({ visible: true });
-                const volumeData = data.map(d => ({
-                    time: d.time, value: d.volume,
-                    color: d.close >= d.open ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)',
-                }));
-                volumeSeries.setData(volumeData);
-            }
-            mainChart.timeScale().fitContent();
-            chartTitle.textContent = `Wykres dla: ${ticker.toUpperCase()}`;
-        } else {
-            candlestickSeries.setData([]);
-            volumeSeries.setData([]);
-            chartTitle.textContent = `Brak danych do wyświetlenia dla: ${ticker.toUpperCase()}`;
-        }
-        updateValuationData(ticker, data);
-    }
-
-    async function fetchStockData(ticker) {
-        // === POCZĄTEK BLOKU DIAGNOSTYCZNEGO ===
-        // Wklej ten fragment na samym początku funkcji
-        console.log("--- Diagnostyka Tickera ---");
-        console.log("Otrzymany ticker:", ticker);
-        console.log("Długość tickera:", ticker.length);
     
-        // Sprawdzamy kody poszczególnych znaków
-        let codes = [];
-        for (let i = 0; i < ticker.length; i++) {
-            codes.push(ticker.charCodeAt(i));
-        }
-        console.log("Kody znaków (ASCII):", codes.join(', '));
-        console.log("--------------------------");
-        // === KONIEC BLOKU DIAGNOSTYCZNEGO ===
-    
-        if (!ticker) return [];
-    
-        try {
-            const response = await fetch(`${API_URL}/api/data/${ticker}`);
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`Błąd HTTP ${response.status}: ${errorData.error || 'Nieznany błąd serwera'}`);
-            }
-            return await response.json();
-        } catch (error) {
-            console.error("Błąd podczas pobierania danych giełdowych:", error);
-            alert(`Wystąpił błąd: ${error.message}. Sprawdź symbol spółki lub spróbuj ponownie.`);
-            return [];
-        }
-    }
-    
-     // === POCZĄTEK ZMIANY: ULEPSZONA FUNKCJA FILTRUJĄCA ===
-    function findMatchingCompanies(query) {
-        if (!query || query.length < 1) return []; // Zmieniono na 1, aby wyszukiwać od pierwszej litery
-        const lowerCaseQuery = query.toLowerCase();
-        
-        // Nowa, bardziej precyzyjna logika filtrowania
-        return companyList.filter(company => {
-            const lowerCaseNazwa = company.nazwa.toLowerCase();
-            const lowerCaseTicker = company.ticker.toLowerCase();
-            
-            // Zwróć prawdę, jeśli NAZWA lub TICKER ZACZYNA SIĘ OD wpisanego tekstu
-            return lowerCaseNazwa.startsWith(lowerCaseQuery) || lowerCaseTicker.startsWith(lowerCaseQuery);
-        });
-    }
-    // === KONIEC ZMIANY ===
     stockTickerInput.addEventListener('input', () => {
         const query = stockTickerInput.value.trim();
         const suggestions = findMatchingCompanies(query);
@@ -245,12 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     searchButton.addEventListener('click', () => {
-        const inputValue = stockTickerInput.value.trim();
-        let tickerToLoad = inputValue.toUpperCase();
-        if (inputValue.includes('-')) {
-            const parts = inputValue.split('-');
-            tickerToLoad = parts[parts.length - 1].toUpperCase();
-        }
+        const tickerToLoad = stockTickerInput.value.trim().toUpperCase();
         if (tickerToLoad) {
             loadChartData(tickerToLoad);
             searchDropdown.style.display = 'none';
@@ -265,6 +243,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     loadCompanyData().then(() => {
-        loadChartData('WIG');
+        loadChartData('CDR'); // Ładujemy domyślną spółkę po załadowaniu listy
     });
 });
