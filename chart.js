@@ -50,9 +50,13 @@ document.addEventListener('DOMContentLoaded', function() {
         color: '#007bff'
     });
 
-    const searchDropdown = document.getElementById('searchDropdown');
     const stockTickerInput = document.getElementById('stockTickerInput');
     const searchButton = document.getElementById('searchButton');
+    const searchDropdown = document.getElementById('searchDropdown');
+    const chartTitle = document.getElementById('chart-title');
+    const valuationTableBody = document.getElementById('valuationTableBody');
+    const projectionTableBody = document.getElementById('projectionTableBody');
+    const valuationCalculatorSection = document.getElementById('valuationCalculatorSection');
 
     // === POCZĄTEK ZMIAN: CAŁKOWICIE PRZEBUDOWANA FUNKCJA ===
     async function updateValuationData(ticker, lastPrice, indicators) {
