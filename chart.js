@@ -151,7 +151,81 @@ document.addEventListener('DOMContentLoaded', function() {
             searchDropdown.style.display = 'none';
         }
     }
+    async function loadChartData(ticker) {
+        chartTitle.textContent = `Ładowanie danych dla ${ticker.toUpperCase()}...`;
+        const data = await fetchStockData(ticker);
+        const isIndex = indexTickers.includes(ticker.toUpperCase());
+
+        if (data && data.length > 0) {
+            candlestickSeries.setData(data);
+            if (isIndex) {
+                volumeSeries.setData([]);
+                volumeSeries.applyOptions({ visible: false });
+            } else {
+                volumeSeries.applyOptions({ visible: true });
+                const volumeData = data.map(d => ({
+                    time: d.time, value: d.volume,
+                    color: d.close >= d.open ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)',
+                }));
+                volumeSeries.setData(volumeData);
+            }
+            mainChart.timeScale().fitContent();
+            chartTitle.textContent = `Wykres dla: ${ticker.toUpperCase()}`;
+        } else {
+            candlestickSeries.setData([]);
+            volumeSeries.setData([]);
+            chartTitle.textContent = `Brak danych do wyświetlenia dla: ${ticker.toUpperCase()}`;
+        }
+        updateValuationData(ticker, data);
+    }
+
+    async function fetchStockData(ticker) {
+        // === POCZĄTEK BLOKU DIAGNOSTYCZNEGO ===
+        // Wklej ten fragment na samym początku funkcji
+        console.log("--- Diagnostyka Tickera ---");
+        console.log("Otrzymany ticker:", ticker);
+        console.log("Długość tickera:", ticker.length);
     
+        // Sprawdzamy kody poszczególnych znaków
+        let codes = [];
+        for (let i = 0; i < ticker.length; i++) {
+            codes.push(ticker.charCodeAt(i));
+        }
+        console.log("Kody znaków (ASCII):", codes.join(', '));
+        console.log("--------------------------");
+        // === KONIEC BLOKU DIAGNOSTYCZNEGO ===
+    
+        if (!ticker) return [];
+    
+        try {
+            const response = await fetch(`${API_URL}/api/data/${ticker}`);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Błąd HTTP ${response.status}: ${errorData.error || 'Nieznany błąd serwera'}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("Błąd podczas pobierania danych giełdowych:", error);
+            alert(`Wystąpił błąd: ${error.message}. Sprawdź symbol spółki lub spróbuj ponownie.`);
+            return [];
+        }
+    }
+    
+     // === POCZĄTEK ZMIANY: ULEPSZONA FUNKCJA FILTRUJĄCA ===
+    function findMatchingCompanies(query) {
+        if (!query || query.length < 1) return []; // Zmieniono na 1, aby wyszukiwać od pierwszej litery
+        const lowerCaseQuery = query.toLowerCase();
+        
+        // Nowa, bardziej precyzyjna logika filtrowania
+        return companyList.filter(company => {
+            const lowerCaseNazwa = company.nazwa.toLowerCase();
+            const lowerCaseTicker = company.ticker.toLowerCase();
+            
+            // Zwróć prawdę, jeśli NAZWA lub TICKER ZACZYNA SIĘ OD wpisanego tekstu
+            return lowerCaseNazwa.startsWith(lowerCaseQuery) || lowerCaseTicker.startsWith(lowerCaseQuery);
+        });
+    }
+    // === KONIEC ZMIANY ===
     stockTickerInput.addEventListener('input', () => {
         const query = stockTickerInput.value.trim();
         const suggestions = findMatchingCompanies(query);
