@@ -38,8 +38,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const projectionChartContainer = document.getElementById('projectionChart');
     const projectionChart = LightweightCharts.createChart(projectionChartContainer, { width: projectionChartContainer.clientWidth, height: 300, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } }, crosshair: { mode: LightweightCharts.CrosshairMode.Normal }, rightPriceScale: { borderColor: '#cccccc' }, timeScale: { borderColor: '#cccccc', timeVisible: true, secondsVisible: false } });
-    const priceSeries = projectionChart.addSeries({ type: 'line' });
-    const epsSeries = projectionChart.addSeries({ type: 'bar' });
+    
+    // Tworzenie tylko jednej serii - dla prognozowanych cen
+    const priceSeries = projectionChart.addSeries({ type: 'line', color: '#007bff' }); // Używamy koloru niebieskiego
 
     async function updateValuationData(ticker, lastPrice, indicators) {
         const valuationCalculatorSection = document.getElementById('valuationCalculatorSection');
@@ -89,7 +90,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const pEpsData = ['<strong>Zysk na akcję</strong>'];
         const pPriceData = ['<strong>Cena Akcji</strong>'];
         
-        const epsChartData = [];
+        // Dane dla wykresu - tylko dla cen
         const priceChartData = [];
         
         const currentYear = new Date().getFullYear();
@@ -104,8 +105,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const prognozaPrice = prognozaEps * sredniCZ;
             pPriceData.push(prognozaPrice.toFixed(2));
 
-            // Dane dla wykresu
-            epsChartData.push({ time: year, value: prognozaEps });
+            // Dodajemy do danych wykresu tylko cenę
             priceChartData.push({ time: year, value: prognozaPrice });
         }
         
@@ -115,10 +115,9 @@ document.addEventListener('DOMContentLoaded', function() {
         projHtml += `<tr><td>${pPriceData[0]}</td>` + pPriceData.slice(1).map(price => `<td>${price} zł</td>`).join('') + `</tr>`;
         projTableBody.innerHTML = projHtml;
         
-        // Aktualizacja wykresu
+        // Aktualizacja wykresu - tylko jedna seria
         projectionChart.timeScale().fitContent();
         priceSeries.setData(priceChartData);
-        epsSeries.setData(epsChartData);
     }
     
     // Pozostała część kodu bez zmian
