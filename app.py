@@ -6,6 +6,7 @@ from flask_cors import CORS
 import logging
 import numpy as np
 import os
+import requests 
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
