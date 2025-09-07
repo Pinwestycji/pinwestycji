@@ -32,15 +32,23 @@ except Exception as e:
 def get_stooq_data(ticker):
     # Ta funkcja pozostaje bez zmian
     # ...
-    logging.info(f"Odebrano zapytanie do /api/data/{ticker} ze Stooq.")
-    stooq_url = f"https://stooq.pl/q/d/?s={ticker.lower()}"
+    logging.info(f"Odebrano zapytanie do /api/data/{ticker} ze Stooq.pl")
+    if not ticker: return jsonify({"error": "Brak symbolu spółki"}), 400
     try:
-        df = pd.read_csv(stooq_url)
-        df.rename(columns={'Data': 'time', 'Otwarcie': 'open', 'Najwyzszy': 'high', 'Najnizszy': 'low', 'Zamkniecie': 'close', 'Wolumen': 'volume'}, inplace=True)
-        # Formatowanie kolumny 'time' na YYYY-MM-DD
-        df['time'] = pd.to_datetime(df['time']).dt.strftime('%Y-%m-%d')
-        df.sort_values(by='time', inplace=True)
-
+        stooq_url = f"https://stooq.pl/q/d/l/?s={ticker.lower()}&i=d"
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(stooq_url, headers=headers)
+        if response.status_code != 200 or "Nie ma takiego symbolu" in response.text:
+            return jsonify({"error": f"Nie znaleziono danych dla symbolu: {ticker}"}), 404
+        csv_data = io.StringIO(response.text)
+        df = pd.read_csv(csv_data)
+        if df.empty: return jsonify({"error": f"Brak danych dla symbolu: {ticker}"}), 404
+        df.rename(columns={'Data': 'time', 'Otwarcie': 'open', 'Najwyzszy': 'high','Najnizszy': 'low', 'Zamkniecie': 'close', 'Wolumen': 'volume'}, inplace=True)
+        df['time'] = pd.to_datetime(df['time']).apply(lambda x: int(x.timestamp()))
+        df.sort_values('time', inplace=True)
+        for col in ['open', 'high', 'low', 'close', 'volume']:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+        df.dropna(subset=['open', 'high', 'low', 'close'], inplace=True)
         data_json = df.to_dict('records')
         return jsonify(data_json)
     except Exception as e:
