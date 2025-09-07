@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Tworzenie tylko jednej serii - dla prognozowanych cen
     const priceSeries = projectionChart.addSeries(LightweightCharts.LineSeries); // Używamy koloru niebieskiego
-    priceSeries.applyOptions(color: '#007bff');
+    priceSeries.applyOptions({color: '#007bff'});
 
     async function updateValuationData(ticker, lastPrice, indicators) {
         const valuationCalculatorSection = document.getElementById('valuationCalculatorSection');
