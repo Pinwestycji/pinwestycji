@@ -148,34 +148,67 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     // === KONIEC ZMIAN ===
     
+     // === POCZĄTEK ZMIAN: Wersja DIAGNOSTYCZNA funkcji loadChartData ===
     async function loadChartData(ticker) {
-        chartTitle.textContent = `Ładowanie danych dla ${ticker.toUpperCase()}...`;
-        const data = await fetchStockData(ticker);
-        const isIndex = indexTickers.includes(ticker.toUpperCase());
+        if (!ticker) return;
+        ticker = ticker.toUpperCase();
+        console.log(`--- Rozpoczynam ładowanie danych dla: ${ticker} ---`);
 
-        if (data && data.length > 0) {
-            candlestickSeries.setData(data);
-            if (isIndex) {
-                volumeSeries.setData([]);
-                volumeSeries.applyOptions({ visible: false });
-            } else {
-                volumeSeries.applyOptions({ visible: true });
-                const volumeData = data.map(d => ({
-                    time: d.time, value: d.volume,
-                    color: d.close >= d.open ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)',
-                }));
-                volumeSeries.setData(volumeData);
+        try {
+            const [stooqResponse, indicatorsResponse] = await Promise.all([
+                fetch(`${API_URL}/api/data/${ticker}`),
+                fetch(`${API_URL}/api/indicators/${ticker}`)
+            ]);
+
+            console.log("Odpowiedź ze Stooq (ceny):", { ok: stooqResponse.ok, status: stooqResponse.status });
+            console.log("Odpowiedź ze wskaźnikami:", { ok: indicatorsResponse.ok, status: indicatorsResponse.status });
+
+            if (!stooqResponse.ok) {
+                throw new Error(`Błąd pobierania danych Stooq dla ${ticker}: ${stooqResponse.statusText}`);
             }
-            mainChart.timeScale().fitContent();
-            chartTitle.textContent = `Wykres dla: ${ticker.toUpperCase()}`;
-        } else {
-            candlestickSeries.setData([]);
-            volumeSeries.setData([]);
-            chartTitle.textContent = `Brak danych do wyświetlenia dla: ${ticker.toUpperCase()}`;
-        }
-        updateValuationData(ticker, data);
-    }
 
+            const stooqData = await stooqResponse.json();
+            const candlestickData = stooqData.map(d => ({ time: d.time, open: d.open, high: d.high, low: d.low, close: d.close }));
+            const volumeData = stooqData.map(d => ({ time: d.time, value: d.volume, color: d.close > d.open ? 'rgba(0, 150, 136, 0.8)' : 'rgba(255, 82, 82, 0.8)' }));
+            
+            candlestickSeries.setData(candlestickData);
+            volumeSeries.setData(volumeData);
+            mainChart.timeScale().fitContent();
+            document.getElementById('chart-title').textContent = `Wykres Świecowy - ${ticker}`;
+
+            if (indicatorsResponse.ok && candlestickData.length > 0) {
+                console.log("Odpowiedź ze wskaźnikami jest OK. Próbuję przetworzyć JSON.");
+                
+                // Zanim sparsujemy JSON, pobierzemy odpowiedź jako tekst, żeby zobaczyć, co serwer faktycznie zwrócił
+                const rawText = await indicatorsResponse.text();
+                console.log("Surowa odpowiedź tekstowa z serwera wskaźników:", rawText);
+
+                // Teraz próbujemy parsować ten tekst jako JSON
+                const indicatorsData = JSON.parse(rawText);
+                console.log("Przetworzone dane wskaźników (JSON):", indicatorsData);
+
+                if (!indicatorsData) {
+                    throw new Error("Dane wskaźników po przetworzeniu są puste (null lub undefined).");
+                }
+                
+                const lastPrice = candlestickData[candlestickData.length - 1].close;
+                
+                valuationCalculatorSection.style.display = '';
+                console.log("Przekazuję dane do updateValuationData. Wszystko powinno być w porządku.");
+                updateValuationData(ticker, lastPrice, indicatorsData);
+
+            } else {
+                console.warn(`Odpowiedź ze wskaźnikami NIE jest OK (status: ${indicatorsResponse.status}) lub brak danych cenowych. Ukrywam sekcję wyceny.`);
+                valuationCalculatorSection.style.display = 'none';
+            }
+
+        } catch (error) {
+            console.error(`!!! Krytyczny błąd w loadChartData dla ${ticker}:`, error);
+            valuationCalculatorSection.style.display = 'none';
+            alert(`Wystąpił krytyczny błąd podczas ładowania danych dla ${ticker}. Sprawdź konsolę (F12), aby uzyskać więcej informacji.`);
+        }
+    }
+    // === KONIEC ZMIAN ===
     async function fetchStockData(ticker) {
         // === POCZĄTEK BLOKU DIAGNOSTYCZNEGO ===
         // Wklej ten fragment na samym początku funkcji
