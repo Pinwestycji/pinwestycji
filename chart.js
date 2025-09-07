@@ -185,6 +185,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     loadCompanyData().then(() => {
-        loadChartData('WIG');
+        loadChartData('CDR');
     });
 });
