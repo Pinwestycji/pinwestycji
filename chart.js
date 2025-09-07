@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const projectionChart = LightweightCharts.createChart(projectionChartContainer, { width: projectionChartContainer.clientWidth, height: 300, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } }, crosshair: { mode: LightweightCharts.CrosshairMode.Normal }, rightPriceScale: { borderColor: '#cccccc' }, timeScale: { borderColor: '#cccccc', timeVisible: true, secondsVisible: false } });
 
     // Tworzenie tylko jednej serii - dla prognozowanych cen
-    const priceSeries = projectionChart.addSeries(LightweightCharts.LineSeries);
+    const priceSeries = projectionChart.addSeries(LightweightCharts.HistogramSeries);
     priceSeries.applyOptions({
         color: '#007bff'
     });
