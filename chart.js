@@ -122,10 +122,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Pozostała część kodu bez zmian
-    const searchDropdown = document.getElementById('search-results');
-    const stockTickerInput = document.getElementById('stock-ticker-input');
-    const searchButton = document.getElementById('search-button');
-    const companyCard = document.getElementById('companyCard');
+    const searchDropdown = document.getElementById('searchDropdown');
+    const stockTickerInput = document.getElementById('stockTickerInput');
+    const searchButton = document.getElementById('searchButton');
+    // Upewnij się, że poniższe elementy istnieją w Twoim HTML, jeśli nie, usuń lub zakomentuj te linie
+    // const companyCard = document.getElementById('companyCard'); 
     const valuationCalculatorSection = document.getElementById('valuationCalculatorSection');
     
     // Funkcja do renderowania sugestii (bez zmian)
