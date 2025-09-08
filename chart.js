@@ -73,6 +73,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Pobieranie i parsowanie danych z obiektu 'indicators'
         const aktualnyEps = parseValue(indicators['Aktualny EPS']);
+        const poprzedniEps = parseValue(indicators['EPS za poprzedni rok']);
         const sredniCZ = parseValue(indicators['Średni wskaźnik C/Z']);
         const tempoWzrostu = parseValue(indicators['Średnia stopa wzrostu EPS r/r']);
         const prognozaCena = parseValue(indicators['Prognoza ceny akcji na następny rok']);
@@ -85,6 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'Symbol': `<strong>${ticker.toUpperCase()}</strong>`,
             'Aktualna Cena': `<strong>${lastPrice.toFixed(2)} zł</strong>`,
             'Aktualny EPS (zysk na akcję)': aktualnyEps !== null ? `${aktualnyEps.toFixed(2)} zł` : 'Brak danych',
+            'EPS za poprzedni rok': poprzedniEps !== null ? `${poprzedniEps.toFixed(2)} zł` : 'Brak danych',
             'Aktualny C/Z': currentCZ,
             'Średni C/Z': sredniCZ !== null ? sredniCZ.toFixed(2) : 'Brak danych',
             'Tempo wzrostu': tempoWzrostu !== null ? `${tempoWzrostu.toFixed(2)} %` : 'Brak danych',
@@ -118,7 +120,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const year = currentYear + i;
                 
                 // Obliczenie prognozowanego EPS
-                const prognozaEps = aktualnyEps * Math.pow((1 + tempoWzrostuDecimal), i);
+                const prognozaEps = poprzedniEps * Math.pow((1 + tempoWzrostuDecimal), i);
                 pEpsData.push(`${prognozaEps.toFixed(2)} zł`);
                 
                 // Obliczenie prognozowanej ceny akcji
