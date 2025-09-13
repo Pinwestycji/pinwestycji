@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const projectionTableBody = document.getElementById('projectionTableBody');
 
 
-    // === POCZĄTEK ZMIAN: CAŁKOWICIE PRZEBUDOWANA FUNKCJA ===
+    // === POCZĄTEK ZMIAN: CAŁKOWICIE PRZEBUDOWANA FUNKCJA Z DODANĄ LOGIKĄ REKOMENDACJI ===
     async function updateValuationData(ticker, lastPrice, indicators) {
         const valuationCalculatorSection = document.getElementById('valuationCalculatorSection');
         const valuationTableBody = valuationCalculatorSection.querySelector('#valuationTableBody');
@@ -74,10 +74,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Pobieranie i parsowanie danych z obiektu 'indicators'
         const aktualnyEps = parseValue(indicators['Aktualny EPS']);
         const poprzedniEps = parseValue(indicators['EPS za poprzedni rok']);
+        const EPSnastepnyrok = parseValue(indicators['Prognoza EPS na kolejny rok']);
         const sredniCZ = parseValue(indicators['Średni wskaźnik C/Z']);
         const tempoWzrostu = parseValue(indicators['Średnia stopa wzrostu EPS r/r']);
         const prognozaCena = parseValue(indicators['Prognoza ceny akcji na następny rok']);
-
+        
         // Obliczenia
         const currentCZ = (aktualnyEps && lastPrice) ? (lastPrice / aktualnyEps).toFixed(2) : 'Brak danych';
         const returnRate = (prognozaCena && lastPrice) ? (((prognozaCena / lastPrice) - 1) * 100).toFixed(2) : 'Brak danych';
@@ -87,12 +88,12 @@ document.addEventListener('DOMContentLoaded', function() {
             'Aktualna Cena': `<strong>${lastPrice.toFixed(2)} zł</strong>`,
             'Aktualny EPS (zysk na akcję)': aktualnyEps !== null ? `${aktualnyEps.toFixed(2)} zł` : 'Brak danych',
             'EPS za poprzedni rok': poprzedniEps !== null ? `${poprzedniEps.toFixed(2)} zł` : 'Brak danych',
+            'EPS na następny rok': EPSnastepnyrok !== null ? `${EPSnastepnyrok.toFixed(2)} zł` : 'Brak danych',
             'Aktualny C/Z': currentCZ,
             'Średni C/Z': sredniCZ !== null ? sredniCZ.toFixed(2) : 'Brak danych',
             'Tempo wzrostu': tempoWzrostu !== null ? `${tempoWzrostu.toFixed(2)} %` : 'Brak danych',
             'Stopa zwrotu na marzec/kwiecień 2026 rok': returnRate !== 'Brak danych' ? `${returnRate} %` : 'Brak danych',
-            'Wycena Akcji na marzec/kwiecień 2026 rok': prognozaCena !== null ? `${prognozaCena.toFixed(2)} zł` : 'Brak danych',
-            'Dobra Cena': 'Tak' // Tu na razie bez zmian
+            'Wycena Akcji na marzec/kwiecień 2026 rok': prognozaCena !== null ? `${prognozaCena.toFixed(2)} zł` : 'Brak danych'
         };
 
         // Tworzenie tabeli wyceny
@@ -119,19 +120,15 @@ document.addEventListener('DOMContentLoaded', function() {
             for (let i = 1; i <= 5; i++) {
                 const year = currentYear + i;
                 
-                // Obliczenie prognozowanego EPS
                 const prognozaEps = poprzedniEps * Math.pow((1 + tempoWzrostuDecimal), i);
                 pEpsData.push(`${prognozaEps.toFixed(2)} zł`);
                 
-                // Obliczenie prognozowanej ceny akcji
                 const prognozaPrice = prognozaEps * sredniCZ;
                 pPriceData.push(`${prognozaPrice.toFixed(2)} zł`);
 
-                // Dodajemy dane do wykresu w formacie YYYY-MM-DD
                 priceChartData.push({ time: `${year}-03-15`, value: prognozaPrice });
             }
         } else {
-             // Jeśli brakuje danych, wypełniamy tabelę informacją o braku danych
             for (let i = 1; i <= 5; i++) {
                 pEpsData.push('Brak danych');
                 pPriceData.push('Brak danych');
@@ -147,8 +144,117 @@ document.addEventListener('DOMContentLoaded', function() {
         // Aktualizacja wykresu
         priceSeries.setData(priceChartData);
         projectionChart.timeScale().fitContent();
+
+        // =================================================================================
+        // === POCZĄTEK SEKCJI REKOMENDACJI - NOWY KOD ===
+        // =================================================================================
+        
+        let rec = {
+            title: '',
+            message: '',
+            color: '#cf0b04' // Domyślnie czerwony
+        };
+
+        // Warunek kluczowy: 'Prognoza ceny akcji na następny rok' nie może być N/A.
+        const canAnalyze = prognozaCena !== null;
+
+        if (!canAnalyze) {
+            rec.title = 'Rekomendacja: Analiza niemożliwa (Scenariusz Czerwony)';
+            rec.message = `Kalkulacja jest niemożliwa, ponieważ spółka odnotowuje straty (ujemny EPS) lub historycznie była wyceniana ujemnie. Wycena oparta na wskaźniku C/Z jest w tym przypadku bezcelowa. Proszę przeanalizować spółkę za pomocą innych wskaźników, takich jak P/BV (Cena do Wartości Księgowej) lub P/S (Cena do Sprzedaży).`;
+        } else {
+            // Obliczenia do oceny realności wzrostu
+            const now = new Date();
+            const targetDate = new Date(now.getFullYear() + 1, 3, 30); // 30 kwietnia następnego roku
+            const msInMonth = 1000 * 60 * 60 * 24 * 30.4375;
+            const liczbaMiesiecy = (targetDate - now) / msInMonth;
+            
+            const procentWzrostu = ((prognozaCena - lastPrice) / lastPrice) * 100;
+            const wymaganeRoczneTempoWzrostu = procentWzrostu / (liczbaMiesiecy / 12);
+
+            // Warunki logiczne
+            const isTrendWzrostowy = EPSnastepnyrok > poprzedniEps;
+            const isNiedowartosciowane = parseFloat(currentCZ) < sredniCZ;
+            const isAtrakcyjnaCena = lastPrice < prognozaCena;
+
+            // SCENARIUSZ BARDZO ZIELONY
+            if (isTrendWzrostowy && isNiedowartosciowane && isAtrakcyjnaCena && wymaganeRoczneTempoWzrostu <= 100) {
+                rec.title = 'Bardzo Zielony Scenariusz: Potencjalna Okazja Inwestycyjna';
+                rec.color = '#034d06';
+                rec.message = `Spółka wykazuje silne fundamenty i może być niedowartościowana. Jej zyski rosną zgodnie z historycznym trendem, a rynkowa wycena jest niższa niż jej długoterminowa średnia. Kalkulacja wskazuje, że aktualny kurs jest poniżej prognozowanej wartości, a wymagane roczne tempo wzrostu jest w realistycznym zakresie, co sugeruje duży potencjał wzrostu.`;
+            
+            // SCENARIUSZ ZIELONY
+            } else if ((isTrendWzrostowy || isNiedowartosciowane) && isAtrakcyjnaCena && wymaganeRoczneTempoWzrostu <= 200) {
+                rec.color = '#0bde12';
+                rec.title = 'Rekomendacja: Warta uwagi (Scenariusz Zielony)';
+                if (isTrendWzrostowy && isNiedowartosciowane) { // Wariant hybrydowy
+                    rec.message = `Spółka wykazuje cechy solidnej, wartościowej inwestycji. Jej zyski rosną zgodnie z historycznym trendem, a wycena jest atrakcyjna. Wycena wskazuje na atrakcyjny potencjał, choć wymaga on nieco szybszego wzrostu niż w najlepszym scenariuszu. To połączenie czynników czyni ją bardzo interesującą.<br><br><strong>Rekomendowana Cena Sprzedaży Akcji: ${prognozaCena.toFixed(2)} zł</strong>`;
+                } else if (isTrendWzrostowy) { // Wariant 1
+                    rec.message = `Spółka wykazuje solidny trend wzrostu zysków. Chociaż rynek nie wycenia jej poniżej historycznej średniej (C/Z), to prognozowany wzrost zysków sugeruje, że jej wartość może rosnąć w przyszłości. Potencjał wyceny jest w realistycznym zakresie.<br><br><strong>Rekomendowana Cena Sprzedaży Akcji: ${prognozaCena.toFixed(2)} zł</strong>`;
+                } else { // Wariant 2 (isNiedowartosciowane)
+                    rec.message = `Spółka wydaje się być niedowartościowana, ponieważ rynek wycenia ją poniżej jej historycznej normy (C/Z). Chociaż jej zyski nie wykazują silnego trendu wzrostowego, to obecna niska wycena może stanowić okazję. Potencjał wyceny jest w realistycznym zakresie.<br><br><strong>Rekomendowana Cena Sprzedaży Akcji: ${prognozaCena.toFixed(2)} zł</strong>`;
+                }
+            
+            // SCENARIUSZ ŻÓŁTY
+            } else if ((isTrendWzrostowy || isNiedowartosciowane) && isAtrakcyjnaCena && wymaganeRoczneTempoWzrostu > 200 && wymaganeRoczneTempoWzrostu <= 400) {
+                rec.color = '#faee05';
+                rec.title = 'Rekomendacja: Podwyższone ryzyko (Scenariusz Żółty)';
+                 if (isTrendWzrostowy && isNiedowartosciowane) { // Wariant hybrydowy
+                    rec.message = `Spółka wykazuje dobre cechy, które mogą sugerować potencjał wzrostu, jednak jej wycena wskazuje na wysokie ryzyko. Aby zrealizować wyliczoną wartość, cena akcji musiałaby rosnąć w bardzo szybkim tempie, które jest trudne do osiągnięcia. Taka sytuacja czyni inwestycję wysoce ryzykowną i wymaga pogłębionej analizy, ponieważ nie ma wystarczających fundamentalnych przesłanek, aby zakładać, że cena akcji osiągnie wyliczoną wartość w tak krótkim czasie.<br><br><strong>Rekomendowana Cena Sprzedaży Akcji: ${prognozaCena.toFixed(2)} zł</strong>`;
+                } else if (isTrendWzrostowy) { // Wariant 1
+                    rec.message = `Spółka wykazuje silny trend wzrostu zysków, ale jej wycena jest bardzo ryzykowna i wymaga ostrożności. Potencjał wyceny jest ekstremalnie wysoki i może być trudny do osiągnięcia, co czyni ją spekulacyjną inwestycją.<br><br><strong>Rekomendowana Cena Sprzedaży Akcji: ${prognozaCena.toFixed(2)} zł</strong>`;
+                } else { // Wariant 2 (isNiedowartosciowane)
+                    rec.message = `Spółka jest wyceniana poniżej jej historycznej średniej (C/Z), co może sugerować niedowartościowanie. Jednak potencjał wyceny jest ekstremalnie wysoki, a jego osiągnięcie jest bardzo mało prawdopodobne, co czyni inwestycję bardzo ryzykowną i spekulacyjną.<br><br><strong>Rekomendowana Cena Sprzedaży Akcji: ${prognozaCena.toFixed(2)} zł</strong>`;
+                }
+
+            // SCENARIUSZ POMARAŃCZOWY
+            } else if ((isTrendWzrostowy || isNiedowartosciowane) && isAtrakcyjnaCena && wymaganeRoczneTempoWzrostu > 400) {
+                rec.color = '#fa6f05';
+                rec.title = 'Rekomendacja: Wysokie ryzyko (Scenariusz Pomarańczowy)';
+                rec.message = `Wycena spółki wskazuje na ekstremalnie wysokie ryzyko, a wyliczony potencjał wzrostu jest bardzo mało prawdopodobny do osiągnięcia. Aby zrealizować wyliczoną wartość, cena akcji musiałaby rosnąć w tempie, które rzadko jest spotykane na rynku i jest obarczone dużą niepewnością. Rekomendacja ma charakter zdecydowanie negatywny. Wskazuje, że wycena z kalkulatora może być zniekształcona. Zakładanie, że akcja osiągnie tę wartość, jest spekulacją, a nie inwestowaniem.<br><br><strong>Rekomendowana Cena Sprzedaży Akcji: ${prognozaCena.toFixed(2)} zł</strong>`;
+
+            // SCENARIUSZE CZERWONE
+            } else {
+                 if (!isAtrakcyjnaCena) {
+                    rec.title = 'Rekomendacja: Spółka przewartościowana (Scenariusz Czerwony)';
+                    rec.message = 'Aktualna cena akcji jest wyższa niż jej prognozowana wartość, co sugeruje, że spółka może być przewartościowana. Wartość, którą wyliczył kalkulator, wskazuje, że cena powinna być niższa, a jej dalszy potencjał wzrostu jest ograniczony. Rekomendacja ma charakter negatywny, ponieważ sugeruje, że akcje są w tej chwili drogie.';
+                } else if (!isTrendWzrostowy && !isNiedowartosciowane) {
+                    rec.title = 'Rekomendacja: Brak fundamentalnych przesłanek (Scenariusz Czerwony)';
+                    rec.message = 'Spółka nie wykazuje kluczowych cech, które mogłyby uzasadnić potencjał wzrostu. Jej zyski nie mają trendu wzrostowego, a jej bieżąca wycena rynkowa (C/Z) nie wskazuje na niedowartościowanie w stosunku do historycznej średniej. Analiza wskazuje, że nie ma wystarczających przesłanek fundamentalnych do rekomendowania zakupu.';
+                } else {
+                    // Domyślny komunikat, jeśli żaden warunek nie został spełniony
+                    rec.title = 'Rekomendacja: Niejednoznaczny sygnał (Scenariusz Czerwony)';
+                    rec.message = 'Analiza fundamentalna spółki nie daje jednoznacznych sygnałów do podjęcia decyzji inwestycyjnej. Zalecana jest dalsza, pogłębiona analiza lub obserwacja.';
+                }
+            }
+        }
+        
+        // Renderowanie okienka rekomendacji
+        const recommendationContainer = document.getElementById('recommendationSection');
+        const isYellow = rec.color === '#faee05';
+        const textColor = isYellow ? 'text-dark' : 'text-white'; // Dla żółtego tła użyjemy czarnego tekstu
+
+        const recommendationHtml = `
+            <div class="card shadow mb-4">
+                <div class="card-header py-3" style="background-color: ${rec.color};">
+                    <h6 class="m-0 font-weight-bold ${textColor}">${rec.title}</h6>
+                </div>
+                <div class="card-body">
+                    <p>${rec.message}</p>
+                    <hr>
+                    <small class="text-muted" style="font-size: 0.7rem;">
+                        <strong>Ostrzeżenie: Zastrzeżenie prawne.</strong><br>
+                        Ten kalkulator oraz wygenerowane przez niego rekomendacje mają charakter wyłącznie poglądowy i edukacyjny. Nie stanowią one profesjonalnej porady inwestycyjnej ani oficjalnej rekomendacji w rozumieniu przepisów prawa. Wycena opiera się na uproszczonym modelu matematycznym, który nie uwzględnia wszystkich czynników rynkowych, makroekonomicznych, ani specyficznej sytuacji finansowej spółki. Każdy inwestor powinien przeprowadzić własną, dogłębną analizę i podejmować decyzje inwestycyjne na własne ryzyko. Odpowiedzialność za podjęte decyzje spoczywa wyłącznie na inwestorze.
+                    </small>
+                </div>
+            </div>`;
+        
+        recommendationContainer.innerHTML = recommendationHtml;
+        
+        // =================================================================================
+        // === KONIEC SEKCJI REKOMENDACJI ===
+        // =================================================================================
     }
-    // === KONIEC ZMIAN ===
+// === KONIEC ZMIAN ===
     
      // === POCZĄTEK ZMIAN: Wersja DIAGNOSTYCZNA funkcji loadChartData ===
     async function loadChartData(ticker) {
