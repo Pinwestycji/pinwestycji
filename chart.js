@@ -10,6 +10,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const mainChart = LightweightCharts.createChart(chartContainer, { width: chartContainer.clientWidth, height: 450, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } }, crosshair: { mode: LightweightCharts.CrosshairMode.Normal }, timeScale: { timeVisible: true, secondsVisible: false } });
     const candlestickSeries = mainChart.addSeries(LightweightCharts.CandlestickSeries, { upColor: 'rgba(0, 150, 136, 1)', downColor: 'rgba(255, 82, 82, 1)', borderDownColor: 'rgba(255, 82, 82, 1)', borderUpColor: 'rgba(0, 150, 136, 1)', wickDownColor: 'rgba(255, 82, 82, 1)', wickUpColor: 'rgba(0, 150, 136, 1)' });
 
+    const projectionChartContainer = document.getElementById('projectionChart');
+    const projectionChart = LightweightCharts.createChart(projectionChartContainer, { width: projectionChartContainer.clientWidth, height: 300, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } }, crosshair: { mode: LightweightCharts.CrosshairMode.Normal }, rightPriceScale: { borderColor: '#cccccc' }, timeScale: { borderColor: '#cccccc', timeVisible: true, secondsVisible: false } });
+
+    // Tworzenie tylko jednej serii - dla prognozowanych cen
+    const priceSeries = projectionChart.addSeries(LightweightCharts.HistogramSeries);
+    priceSeries.applyOptions({
+        color: '#007bff'
+    });
     // === WYKRESY WSKAŹNIKÓW (PANELE) ===
     const createIndicatorChart = (containerId, height) => {
         const container = document.getElementById(containerId);
