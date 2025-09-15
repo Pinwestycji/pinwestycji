@@ -201,23 +201,18 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!ticker) return;
         ticker = ticker.toUpperCase();
         console.log(`--- Rozpoczynam ładowanie danych dla: ${ticker} ---`);
-        
-        // ZMIANA: Ukrywamy obie sekcje na starcie, aby uniknąć migotania starych danych
+    
         const valuationSection = document.getElementById('valuationCalculatorSection');
         const recommendationSection = document.getElementById('recommendationSection');
+        
+        // Zawsze czyścimy i ukrywamy sekcje na starcie
         valuationSection.style.display = 'none';
         recommendationSection.innerHTML = '';
     
-    
         try {
-            const [stooqResponse, indicatorsResponse] = await Promise.all([
-                fetch(`${API_URL}/api/data/${ticker}`),
-                fetch(`${API_URL}/api/indicators/${ticker}`)
-            ]);
-    
-            console.log("Odpowiedź ze Stooq (ceny):", { ok: stooqResponse.ok, status: stooqResponse.status });
-            console.log("Odpowiedź ze wskaźnikami:", { ok: indicatorsResponse.ok, status: indicatorsResponse.status });
-    
+            // Pobieramy tylko dane cenowe, bo nie wiemy jeszcze, czy będziemy potrzebować wskaźników
+            const stooqResponse = await fetch(`${API_URL}/api/data/${ticker}`);
+            
             if (!stooqResponse.ok) {
                 throw new Error(`Błąd pobierania danych Stooq dla ${ticker}: ${stooqResponse.statusText}`);
             }
@@ -227,7 +222,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert(`Brak danych historycznych dla spółki ${ticker}.`);
                 return;
             }
-            
+    
             const candlestickData = stooqData.map(d => ({ time: d.time, open: d.open, high: d.high, low: d.low, close: d.close }));
             const volumeData = stooqData.map(d => ({ time: d.time, value: d.volume, color: d.close > d.open ? 'rgba(0, 150, 136, 0.8)' : 'rgba(255, 82, 82, 0.8)' }));
             
@@ -236,24 +231,42 @@ document.addEventListener('DOMContentLoaded', function() {
             mainChart.timeScale().fitContent();
             document.getElementById('chart-title').textContent = `Wykres Świecowy - ${ticker}`;
     
-            // ZMIANA: Uproszczona logika - po prostu pobierz JSON i przekaż go dalej.
-            // Funkcja updateValuationData sama zdecyduje, co z nim zrobić.
+            // === NOWA LOGIKA: SPRAWDZENIE CZY TICKER JEST INDEKSEM ===
+            if (indexTickers.includes(ticker)) {
+                console.log(`Wykryto indeks giełdowy (${ticker}). Kalkulator i rekomendacje nie będą wyświetlane.`);
+                // Upewniamy się, że wszystko jest ukryte i kończymy funkcję
+                valuationSection.style.display = 'none';
+                recommendationSection.innerHTML = '';
+                return; 
+            }
+    
+            // Jeśli to nie jest indeks, kontynuujemy i pobieramy wskaźniki
+            const indicatorsResponse = await fetch(`${API_URL}/api/indicators/${ticker}`);
+            const lastPrice = candlestickData[candlestickData.length - 1].close;
+    
             if (indicatorsResponse.ok) {
-                const indicatorsData = await indicatorsResponse.json();
-                const lastPrice = candlestickData[candlestickData.length - 1].close;
-                
-                // Przekazujemy dane do funkcji, która teraz zarządza logiką wyświetlania
-                updateValuationData(ticker, lastPrice, indicatorsData);
+                // === NOWA LOGIKA: BEZPIECZNE PARSOWANIE JSON ===
+                // Czasem serwer może odpowiedzieć OK (200), ale zwrócić tekst błędu zamiast JSON.
+                // Ten blok try-catch wyłapie taki błąd i zapobiegnie awarii aplikacji.
+                try {
+                    const indicatorsData = await indicatorsResponse.json();
+                    updateValuationData(ticker, lastPrice, indicatorsData);
+                } catch (jsonError) {
+                    console.error(`Błąd parsowania JSON dla ${ticker}, mimo odpowiedzi OK.`, jsonError);
+                    // Traktujemy to jako brak danych i przekazujemy pusty obiekt
+                    updateValuationData(ticker, lastPrice, {});
+                }
             } else {
-                 // Jeśli API wskaźników zwróci błąd, również poinformujmy o tym updateValuationData,
-                 // wysyłając puste dane, co poskutkuje czerwoną rekomendacją.
-                console.warn(`Błąd odpowiedzi serwera wskaźników: ${indicatorsResponse.status}`);
-                const lastPrice = candlestickData[candlestickData.length - 1].close;
-                updateValuationData(ticker, lastPrice, {}); // Przekaż pusty obiekt
+                console.warn(`Serwer wskaźników zwrócił błąd: ${indicatorsResponse.status}`);
+                // Przekazujemy pusty obiekt, aby wyświetlić czerwoną rekomendację "Analiza niemożliwa"
+                updateValuationData(ticker, lastPrice, {});
             }
     
         } catch (error) {
             console.error(`!!! Krytyczny błąd w loadChartData dla ${ticker}:`, error);
+            // Ukrywamy wszystko w razie błędu krytycznego
+            valuationSection.style.display = 'none';
+            recommendationSection.innerHTML = '';
             alert(`Wystąpił krytyczny błąd podczas ładowania danych dla ${ticker}. Sprawdź konsolę (F12).`);
         }
     }
