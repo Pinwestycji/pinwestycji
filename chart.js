@@ -38,6 +38,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const stockTickerInput = document.getElementById('stockTickerInput');
     const searchButton = document.getElementById('searchButton');
     const searchDropdown = document.getElementById('searchDropdown');
+    const chartTitle = document.getElementById('chart-title');
+    const projectionTableBody = document.getElementById('projectionTableBody');
 
     // === LOGIKA APLIKACJI ===
     async function loadCompanyData() {
