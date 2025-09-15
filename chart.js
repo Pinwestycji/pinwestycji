@@ -669,6 +669,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // === Inicjalizacja ===
     loadCompanyData().then(() => {
-        loadChartData('WIG');
+        loadChartData('CDR');
     });
 });
