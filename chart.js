@@ -32,6 +32,11 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     
     const volumeChart = createIndicatorChart('volume-chart-container', 100);
+    const volumeSeries = volumeChart.addSeries(LightweightCharts.HistogramSeries, {
+        priceFormat: { type: 'volume' },
+        color: 'rgba(0, 150, 136, 0.8)'
+    });
+
     const rsiChart = createIndicatorChart('rsi-chart-container', 120);
     const macdChart = createIndicatorChart('macd-chart-container', 120);
     const obvChart = createIndicatorChart('obv-chart-container', 120);
@@ -71,9 +76,14 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        const candlestickData = stooqData.map(d => ({ time: d.time, open: d.open, high: d.high, low: d.low, close: d.close }));
-        const volumeData = stooqData.map(d => ({ time: d.time, value: d.volume, color: d.close > d.open ? 'rgba(0, 150, 136, 0.8)' : 'rgba(255, 82, 82, 0.8)' }));
-        
+        const candlestickData = stooqData
+            .filter(d => d.time && d.open && d.high && d.low && d.close)
+            .map(d => ({ time: d.time, open: d.open, high: d.high, low: d.low, close: d.close }));
+
+        const volumeData = stooqData
+            .filter(d => d.time && d.volume !== null)
+            .map(d => ({ time: d.time, value: d.volume, color: d.close > d.open ? 'rgba(0, 150, 136, 0.8)' : 'rgba(255, 82, 82, 0.8)' }));
+
         // Zawsze ustawiamy dane na głównym wykresie i wykresie wolumenu
         candlestickSeries.setData(candlestickData);
         volumeSeries.setData(volumeData);
