@@ -22,7 +22,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const createIndicatorChart = (containerId, height) => {
         const container = document.getElementById(containerId);
         const chart = LightweightCharts.createChart(container, { width: container.clientWidth, height: height, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } }, timeScale: { timeVisible: true, secondsVisible: false, visible: false } });
-        mainChart.timeScale().subscribeVisibleTimeRangeChange(timeRange => chart.timeScale().setVisibleRange(timeRange));
+        // Kluczowa zmiana: Subskrybuj zmianę zakresu czasu dopiero po załadowaniu danych
+        mainChart.timeScale().subscribeVisibleTimeRangeChange(timeRange => {
+            if (timeRange && timeRange.to && timeRange.from) {
+                chart.timeScale().setVisibleRange(timeRange);
+            }
+        });
         return chart;
     };
     
@@ -58,9 +63,31 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error("Błąd podczas wczytywania pliku wig_companies.csv:", error);
         }
     }
+
+    // === NOWA FUNKCJA: Aktualizacja wszystkich wykresów na podstawie danych ===
+    function updateAllCharts(stooqData) {
+        if (!stooqData || stooqData.length === 0) {
+            console.error('Brak danych do aktualizacji wykresów.');
+            return;
+        }
+
+        const candlestickData = stooqData.map(d => ({ time: d.time, open: d.open, high: d.high, low: d.low, close: d.close }));
+        const volumeData = stooqData.map(d => ({ time: d.time, value: d.volume, color: d.close > d.open ? 'rgba(0, 150, 136, 0.8)' : 'rgba(255, 82, 82, 0.8)' }));
+        
+        // Zawsze ustawiamy dane na głównym wykresie i wykresie wolumenu
+        candlestickSeries.setData(candlestickData);
+        volumeSeries.setData(volumeData);
+        
+        // Funkcja do obliczania i ustawiania wszystkich wskaźników
+        // Przyjmuje dane OHLC, aby można było obliczyć wskaźniki
+        updateAllIndicators(candlestickData);
+        
+        mainChart.timeScale().fitContent();
+    }
     
     // Poniżej wklej swoją ostatnią działającą wersję funkcji loadChartData
     // Poniżej znajduje się PRZYKŁAD, upewnij się, że masz tam swoją działającą wersję
+     // Poniżej znajduje się PRZYKŁAD, upewnij się, że masz tam swoją działającą wersję
     async function loadChartData(ticker) {
         if (!ticker) return;
         ticker = ticker.toUpperCase();
@@ -69,12 +96,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const valuationSection = document.getElementById('valuationCalculatorSection');
         const recommendationSection = document.getElementById('recommendationSection');
         
-        // Zawsze czyścimy i ukrywamy sekcje na starcie
         valuationSection.style.display = 'none';
         recommendationSection.innerHTML = '';
     
         try {
-            // Pobieramy tylko dane cenowe, bo nie wiemy jeszcze, czy będziemy potrzebować wskaźników
             const stooqResponse = await fetch(`${API_URL}/api/data/${ticker}`);
             
             if (!stooqResponse.ok) {
@@ -87,50 +112,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
     
-            const candlestickData = stooqData.map(d => ({ time: d.time, open: d.open, high: d.high, low: d.low, close: d.close }));
-            const volumeData = stooqData.map(d => ({ time: d.time, value: d.volume, color: d.close > d.open ? 'rgba(0, 150, 136, 0.8)' : 'rgba(255, 82, 82, 0.8)' }));
-            
-            candlestickSeries.setData(candlestickData);
-            volumeSeries.setData(volumeData);
-            mainChart.timeScale().fitContent();
+            // !!! Kluczowa zmiana: Zamiast rysować bezpośrednio, wywołujemy nową funkcję
+            updateAllCharts(stooqData);
+
             document.getElementById('chart-title').textContent = `Wykres Świecowy - ${ticker}`;
     
-            // === NOWA LOGIKA: SPRAWDZENIE CZY TICKER JEST INDEKSEM ===
             if (indexTickers.includes(ticker)) {
                 console.log(`Wykryto indeks giełdowy (${ticker}). Kalkulator i rekomendacje nie będą wyświetlane.`);
-                // Upewniamy się, że wszystko jest ukryte i kończymy funkcję
                 valuationSection.style.display = 'none';
                 recommendationSection.innerHTML = '';
                 return; 
             }
     
-            // Jeśli to nie jest indeks, kontynuujemy i pobieramy wskaźniki
             const indicatorsResponse = await fetch(`${API_URL}/api/indicators/${ticker}`);
-            const lastPrice = candlestickData[candlestickData.length - 1].close;
+            const lastPrice = stooqData[stooqData.length - 1].close;
     
             if (indicatorsResponse.ok) {
-                // === NOWA LOGIKA: BEZPIECZNE PARSOWANIE JSON ===
-                // Czasem serwer może odpowiedzieć OK (200), ale zwrócić tekst błędu zamiast JSON.
-                // Ten blok try-catch wyłapie taki błąd i zapobiegnie awarii aplikacji.
                 try {
                     const indicatorsData = await indicatorsResponse.json();
                     updateValuationData(ticker, lastPrice, indicatorsData);
                 } catch (jsonError) {
                     console.error(`Błąd parsowania JSON dla ${ticker}, mimo odpowiedzi OK.`, jsonError);
-                    // Traktujemy to jako brak danych i przekazujemy pusty obiekt
                     updateValuationData(ticker, lastPrice, {});
                 }
             } else {
                 console.warn(`Serwer wskaźników zwrócił błąd: ${indicatorsResponse.status}`);
-                // Przekazujemy pusty obiekt, aby wyświetlić czerwoną rekomendację "Analiza niemożliwa"
                 updateValuationData(ticker, lastPrice, {});
             }
-
-            updateAllIndicators(); // ZAWSZE aktualizuj wskaźniki po załadowaniu nowych danych
     
         } catch (error) {
             console.error(`!!! Krytyczny błąd w loadChartData dla ${ticker}:`, error);
-            // Ukrywamy wszystko w razie błędu krytycznego
             valuationSection.style.display = 'none';
             recommendationSection.innerHTML = '';
             alert(`Wystąpił krytyczny błąd podczas ładowania danych dla ${ticker}. Sprawdź konsolę (F12).`);
