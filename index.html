@@ -83,11 +83,18 @@
                     <div class="row">
                         <div class="col-lg-12">
                             <div class="card shadow mb-4">
-                                <div class="card-header py-3">
+                                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                                     <h6 id="chart-title" class="m-0 font-weight-bold text-primary">Wykres Świecowy (GPW)</h6>
+                                    <button class="btn btn-sm btn-info" data-toggle="modal" data-target="#indicatorsModal">
+                                        <i class="fas fa-chart-line fa-sm"></i> Wskaźniki
+                                    </button>
                                 </div>
                                 <div class="card-body">
-                                    <div id="tvchart" style="width: 100%; height: 500px;"></div>
+                                    <div id="tvchart" style="width: 100%; height: 450px;"></div>
+                                    <div id="volume-chart-container" class="indicator-chart" style="width: 100%; height: 100px; display: none;"></div>
+                                    <div id="rsi-chart-container" class="indicator-chart" style="width: 100%; height: 120px; display: none;"></div>
+                                    <div id="macd-chart-container" class="indicator-chart" style="width: 100%; height: 120px; display: none;"></div>
+                                    <div id="obv-chart-container" class="indicator-chart" style="width: 100%; height: 120px; display: none;"></div>
                                 </div>
                             </div>
                         </div>
@@ -163,51 +170,113 @@
     <script src="js/sb-admin-2.min.js"></script>
 
     <script type="text/template" id="kalkulator-template">
-    <div class="row">
-        <div class="col-lg-5">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        Wycena Spółki
-                        <br>
-                        <small class="text-muted" style="font-size: 0.65rem;">Źródło: stockwatch.pl (dane aktualizowane co miesiąc)</small>
-                    </h6>
+        <div class="row">
+            <div class="col-lg-5">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            Wycena Spółki
+                            <br>
+                            <small class="text-muted" style="font-size: 0.65rem;">Źródło: stockwatch.pl (dane aktualizowane co miesiąc)</small>
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="valuationTable" width="100%" cellspacing="0">
+                                <tbody id="valuationTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered" id="valuationTable" width="100%" cellspacing="0">
-                            <tbody id="valuationTableBody"></tbody>
-                        </table>
+            </div>
+    
+            <div class="col-lg-7">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Wyliczenia</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="projectionTable" width="100%" cellspacing="0">
+                                <tbody id="projectionTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Potencjalna Cena Akcji w kolejnych 5 latach</h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="projectionChart" style="width: 100%; height: 300px;"></div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <div class="col-lg-7">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Wyliczenia</h6>
+    </script>
+    <div class="modal fade" id="indicatorsModal" tabindex="-1" role="dialog" aria-labelledby="indicatorsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="indicatorsModalLabel">Zarządzaj Wskaźnikami Analizy Technicznej</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
                 </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered" id="projectionTable" width="100%" cellspacing="0">
-                            <tbody id="projectionTableBody"></tbody>
-                        </table>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Dodaj nowy wskaźnik</h6>
+                            <hr>
+                            <div class="form-group">
+                                <label>Średnia krocząca (SMA, EMA, WMA)</label>
+                                <div class="input-group">
+                                    <select class="custom-select" id="maType">
+                                        <option value="SMA">SMA</option>
+                                        <option value="EMA">EMA</option>
+                                        <option value="WMA">WMA</option>
+                                    </select>
+                                    <input type="number" class="form-control" id="maPeriod" value="20" placeholder="Okres">
+                                    <div class="input-group-append">
+                                        <button class="btn btn-primary" type="button" id="addMaButton">Dodaj</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <hr>
+                            <h6>Pozostałe wskaźniki</h6>
+                            <div class="custom-control custom-switch mb-2">
+                                <input type="checkbox" class="custom-control-input" id="volumeToggle">
+                                <label class="custom-control-label" for="volumeToggle">Wolumen (Volume)</label>
+                            </div>
+                            <div class="custom-control custom-switch mb-2">
+                                <input type="checkbox" class="custom-control-input" id="rsiToggle">
+                                <label class="custom-control-label" for="rsiToggle">Wskaźnik Siły Względnej (RSI)</label>
+                            </div>
+                            <div class="custom-control custom-switch mb-2">
+                                <input type="checkbox" class="custom-control-input" id="macdToggle">
+                                <label class="custom-control-label" for="macdToggle">MACD</label>
+                            </div>
+                             <div class="custom-control custom-switch mb-2">
+                                <input type="checkbox" class="custom-control-input" id="obvToggle">
+                                <label class="custom-control-label" for="obvToggle">On-Balance Volume (OBV)</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Aktywne wskaźniki</h6>
+                            <hr>
+                            <ul class="list-group" id="activeIndicatorsList">
+                                </ul>
+                        </div>
                     </div>
                 </div>
-            </div>
-            
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Potencjalna Cena Akcji w kolejnych 5 latach</h6>
-                </div>
-                <div class="card-body">
-                    <div id="projectionChart" style="width: 100%; height: 300px;"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Zamknij</button>
                 </div>
             </div>
         </div>
     </div>
-</script>
+    
     
 </body>
 </html>
