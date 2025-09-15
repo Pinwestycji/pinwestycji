@@ -1,62 +1,123 @@
-// Plik: chart.js - Wersja z poprawionym wyświetlaniem sugestii, nową logiką wyceny i działającym wykresem projekcji
+// Plik: chart.js - Wersja z zaawansowanymi wskaźnikami technicznymi
 
 document.addEventListener('DOMContentLoaded', function() {
-    // === POCZĄTEK ZMIAN: Dodajemy zmienną globalną na listę spółek ===
     let companyList = []; 
-    // === KONIEC ZMIAN ===
+    const API_URL = 'https://pinwestycji.onrender.com';
+    const indexTickers = ['WIG20', 'WIG', 'MWIG40', 'SWIG80', 'WIG-UKRAIN'];
 
+    // === GŁÓWNE WYKRESY ===
+    const chartContainer = document.getElementById('tvchart');
+    const mainChart = LightweightCharts.createChart(chartContainer, { width: chartContainer.clientWidth, height: 450, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } }, crosshair: { mode: LightweightCharts.CrosshairMode.Normal }, timeScale: { timeVisible: true, secondsVisible: false } });
+    const candlestickSeries = mainChart.addSeries(LightweightCharts.CandlestickSeries, { upColor: 'rgba(0, 150, 136, 1)', downColor: 'rgba(255, 82, 82, 1)', borderDownColor: 'rgba(255, 82, 82, 1)', borderUpColor: 'rgba(0, 150, 136, 1)', wickDownColor: 'rgba(255, 82, 82, 1)', wickUpColor: 'rgba(0, 150, 136, 1)' });
+
+    // === WYKRESY WSKAŹNIKÓW (PANELE) ===
+    const createIndicatorChart = (containerId, height) => {
+        const container = document.getElementById(containerId);
+        const chart = LightweightCharts.createChart(container, { width: container.clientWidth, height: height, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } }, timeScale: { timeVisible: true, secondsVisible: false, visible: false } });
+        mainChart.timeScale().subscribeVisibleTimeRangeChange(timeRange => chart.timeScale().setVisibleRange(timeRange));
+        return chart;
+    };
+    
+    const volumeChart = createIndicatorChart('volume-chart-container', 100);
+    const rsiChart = createIndicatorChart('rsi-chart-container', 120);
+    const macdChart = createIndicatorChart('macd-chart-container', 120);
+    const obvChart = createIndicatorChart('obv-chart-container', 120);
+
+    let candlestickData = [];
+    let activeIndicators = {}; // Obiekt do przechowywania aktywnych wskaźników
+
+    // === ELEMENTY DOM ===
+    const stockTickerInput = document.getElementById('stockTickerInput');
+    const searchButton = document.getElementById('searchButton');
+    const searchDropdown = document.getElementById('searchDropdown');
+
+    // === LOGIKA APLIKACJI ===
     async function loadCompanyData() {
         try {
             const response = await fetch('wig_companies.csv');
             const csvText = await response.text();
-            
-            // Poprawiona, odporna wersja
             const rows = csvText.trim().split(/\r?\n/).slice(1);
             companyList = rows.map(row => {
                 const [nazwa, ticker] = row.split(',');
                 if (nazwa && ticker) {
-                    // Nowy kod usuwa cudzysłów z początku i końca, a następnie przycina białe znaki
-                    return { 
-                        nazwa: nazwa.replace(/^"|"$/g, '').trim(), 
-                        ticker: ticker.replace(/^"|"$/g, '').trim() 
-                    };
+                    return { nazwa: nazwa.replace(/^"|"$/g, '').trim(), ticker: ticker.replace(/^"|"$/g, '').trim() };
                 }
                 return null;
             }).filter(company => company !== null);
-
-            console.log(`Załadowano ${companyList.length} spółek.`);
         } catch (error) {
             console.error("Błąd podczas wczytywania pliku wig_companies.csv:", error);
         }
     }
-
-    const API_URL = 'https://pinwestycji.onrender.com';
-    // const API_URL = 'http://127.0.0.1:5001'; // Lokalny adres do testów
-    const indexTickers = ['WIG20', 'WIG', 'MWIG40', 'SWIG80', 'WIG-UKRAIN'];
-
-    const chartContainer = document.getElementById('tvchart');
-    const mainChart = LightweightCharts.createChart(chartContainer, { width: chartContainer.clientWidth, height: 500, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } }, crosshair: { mode: LightweightCharts.CrosshairMode.Normal }, rightPriceScale: { borderColor: '#cccccc' }, timeScale: { borderColor: '#cccccc', timeVisible: true, secondsVisible: false } });
-    const candlestickSeries = mainChart.addSeries(LightweightCharts.CandlestickSeries);
-    const volumeSeries = mainChart.addSeries(LightweightCharts.HistogramSeries);
-    candlestickSeries.applyOptions({ upColor: 'rgba(0, 150, 136, 1)', downColor: 'rgba(255, 82, 82, 1)', borderDownColor: 'rgba(255, 82, 82, 1)', borderUpColor: 'rgba(0, 150, 136, 1)', wickDownColor: 'rgba(255, 82, 82, 1)', wickUpColor: 'rgba(0, 150, 136, 1)' });
-    volumeSeries.applyOptions({ priceFormat: { type: 'volume' }, priceScaleId: '', scaleMargins: { top: 0.65, bottom: 0 } });
     
-    const projectionChartContainer = document.getElementById('projectionChart');
-    const projectionChart = LightweightCharts.createChart(projectionChartContainer, { width: projectionChartContainer.clientWidth, height: 300, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } }, crosshair: { mode: LightweightCharts.CrosshairMode.Normal }, rightPriceScale: { borderColor: '#cccccc' }, timeScale: { borderColor: '#cccccc', timeVisible: true, secondsVisible: false } });
+    // Poniżej wklej swoją ostatnią działającą wersję funkcji loadChartData
+    // Poniżej znajduje się PRZYKŁAD, upewnij się, że masz tam swoją działającą wersję
+    async function loadChartData(ticker) {
+        if (!ticker) return;
+        ticker = ticker.toUpperCase();
+        console.log(`--- Rozpoczynam ładowanie danych dla: ${ticker} ---`);
+    
+        const valuationSection = document.getElementById('valuationCalculatorSection');
+        const recommendationSection = document.getElementById('recommendationSection');
+        
+        valuationSection.style.display = 'none';
+        recommendationSection.innerHTML = '';
+    
+        try {
+            const stooqResponse = await fetch(`${API_URL}/api/data/${ticker}`);
+            
+            if (!stooqResponse.ok) {
+                throw new Error(`Błąd pobierania danych Stooq dla ${ticker}: ${stooqResponse.statusText}`);
+            }
+    
+            const stooqData = await stooqResponse.json();
+            if (stooqData.length === 0) {
+                alert(`Brak danych historycznych dla spółki ${ticker}.`);
+                return;
+            }
+            
+            candlestickData = stooqData.map(d => ({ time: d.time, open: d.open, high: d.high, low: d.low, close: d.close, volume: d.volume }));
+            
+            candlestickSeries.setData(candlestickData.map(d => ({ time: d.time, open: d.open, high: d.high, low: d.low, close: d.close })));
+            
+            mainChart.timeScale().fitContent();
+            document.getElementById('chart-title').textContent = `Wykres Świecowy - ${ticker}`;
+    
+            if (indexTickers.includes(ticker)) {
+                console.log(`Wykryto indeks giełdowy (${ticker}).`);
+                valuationSection.style.display = 'none';
+                recommendationSection.innerHTML = '';
+                updateAllIndicators(); // Aktualizujemy wskaźniki (np. wolumen, jeśli był włączony)
+                return; 
+            }
+    
+            const indicatorsResponse = await fetch(`${API_URL}/api/indicators/${ticker}`);
+            const lastPrice = candlestickData[candlestickData.length - 1].close;
+    
+            if (indicatorsResponse.ok) {
+                try {
+                    const indicatorsData = await indicatorsResponse.json();
+                    updateValuationData(ticker, lastPrice, indicatorsData);
+                } catch (jsonError) {
+                    console.error(`Błąd parsowania JSON dla ${ticker}.`, jsonError);
+                    updateValuationData(ticker, lastPrice, {});
+                }
+            } else {
+                console.warn(`Serwer wskaźników zwrócił błąd: ${indicatorsResponse.status}`);
+                updateValuationData(ticker, lastPrice, {});
+            }
 
-    // Tworzenie tylko jednej serii - dla prognozowanych cen
-    const priceSeries = projectionChart.addSeries(LightweightCharts.HistogramSeries);
-    priceSeries.applyOptions({
-        color: '#007bff'
-    });
+            updateAllIndicators(); // ZAWSZE aktualizuj wskaźniki po załadowaniu nowych danych
 
-    const stockTickerInput = document.getElementById('stockTickerInput');
-    const searchButton = document.getElementById('searchButton');
-    const searchDropdown = document.getElementById('searchDropdown');
-    const chartTitle = document.getElementById('chart-title');
-    const projectionTableBody = document.getElementById('projectionTableBody');
+        } catch (error) {
+            console.error(`!!! Krytyczny błąd w loadChartData dla ${ticker}:`, error);
+            valuationSection.style.display = 'none';
+            recommendationSection.innerHTML = '';
+            alert(`Wystąpił krytyczny błąd podczas ładowania danych dla ${ticker}.`);
+        }
+    }
 
 
+    // Wklej tutaj swoją ostatnią działającą funkcję updateValuationData
     async function updateValuationData(ticker, lastPrice, indicators) {
         const valuationCalculatorSection = document.getElementById('valuationCalculatorSection');
         const valuationTableBody = valuationCalculatorSection.querySelector('#valuationTableBody');
@@ -217,80 +278,255 @@ document.addEventListener('DOMContentLoaded', function() {
         
         recommendationContainer.innerHTML = recommendationHtml;
     }
-    
-    async function loadChartData(ticker) {
-        if (!ticker) return;
-        ticker = ticker.toUpperCase();
-        console.log(`--- Rozpoczynam ładowanie danych dla: ${ticker} ---`);
-    
-        const valuationSection = document.getElementById('valuationCalculatorSection');
-        const recommendationSection = document.getElementById('recommendationSection');
-        
-        // Zawsze czyścimy i ukrywamy sekcje na starcie
-        valuationSection.style.display = 'none';
-        recommendationSection.innerHTML = '';
-    
-        try {
-            // Pobieramy tylko dane cenowe, bo nie wiemy jeszcze, czy będziemy potrzebować wskaźników
-            const stooqResponse = await fetch(`${API_URL}/api/data/${ticker}`);
-            
-            if (!stooqResponse.ok) {
-                throw new Error(`Błąd pobierania danych Stooq dla ${ticker}: ${stooqResponse.statusText}`);
+
+    // === FUNKCJE OBLICZAJĄCE WSKAŹNIKI ===
+    const calculateSMA = (data, period) => {
+        let result = [];
+        for (let i = period - 1; i < data.length; i++) {
+            let sum = 0;
+            for (let j = 0; j < period; j++) {
+                sum += data[i - j].close;
             }
-    
-            const stooqData = await stooqResponse.json();
-            if (stooqData.length === 0) {
-                alert(`Brak danych historycznych dla spółki ${ticker}.`);
-                return;
-            }
-    
-            const candlestickData = stooqData.map(d => ({ time: d.time, open: d.open, high: d.high, low: d.low, close: d.close }));
-            const volumeData = stooqData.map(d => ({ time: d.time, value: d.volume, color: d.close > d.open ? 'rgba(0, 150, 136, 0.8)' : 'rgba(255, 82, 82, 0.8)' }));
-            
-            candlestickSeries.setData(candlestickData);
-            volumeSeries.setData(volumeData);
-            mainChart.timeScale().fitContent();
-            document.getElementById('chart-title').textContent = `Wykres Świecowy - ${ticker}`;
-    
-            // === NOWA LOGIKA: SPRAWDZENIE CZY TICKER JEST INDEKSEM ===
-            if (indexTickers.includes(ticker)) {
-                console.log(`Wykryto indeks giełdowy (${ticker}). Kalkulator i rekomendacje nie będą wyświetlane.`);
-                // Upewniamy się, że wszystko jest ukryte i kończymy funkcję
-                valuationSection.style.display = 'none';
-                recommendationSection.innerHTML = '';
-                return; 
-            }
-    
-            // Jeśli to nie jest indeks, kontynuujemy i pobieramy wskaźniki
-            const indicatorsResponse = await fetch(`${API_URL}/api/indicators/${ticker}`);
-            const lastPrice = candlestickData[candlestickData.length - 1].close;
-    
-            if (indicatorsResponse.ok) {
-                // === NOWA LOGIKA: BEZPIECZNE PARSOWANIE JSON ===
-                // Czasem serwer może odpowiedzieć OK (200), ale zwrócić tekst błędu zamiast JSON.
-                // Ten blok try-catch wyłapie taki błąd i zapobiegnie awarii aplikacji.
-                try {
-                    const indicatorsData = await indicatorsResponse.json();
-                    updateValuationData(ticker, lastPrice, indicatorsData);
-                } catch (jsonError) {
-                    console.error(`Błąd parsowania JSON dla ${ticker}, mimo odpowiedzi OK.`, jsonError);
-                    // Traktujemy to jako brak danych i przekazujemy pusty obiekt
-                    updateValuationData(ticker, lastPrice, {});
-                }
-            } else {
-                console.warn(`Serwer wskaźników zwrócił błąd: ${indicatorsResponse.status}`);
-                // Przekazujemy pusty obiekt, aby wyświetlić czerwoną rekomendację "Analiza niemożliwa"
-                updateValuationData(ticker, lastPrice, {});
-            }
-    
-        } catch (error) {
-            console.error(`!!! Krytyczny błąd w loadChartData dla ${ticker}:`, error);
-            // Ukrywamy wszystko w razie błędu krytycznego
-            valuationSection.style.display = 'none';
-            recommendationSection.innerHTML = '';
-            alert(`Wystąpił krytyczny błąd podczas ładowania danych dla ${ticker}. Sprawdź konsolę (F12).`);
+            result.push({ time: data[i].time, value: sum / period });
         }
+        return result;
+    };
+
+    const calculateEMA = (data, period) => {
+        let result = [];
+        const k = 2 / (period + 1);
+        let ema = data[0].close;
+        for (let i = 1; i < data.length; i++) {
+            ema = data[i].close * k + ema * (1 - k);
+            if (i >= period - 1) {
+                result.push({ time: data[i].time, value: ema });
+            }
+        }
+        return result;
+    };
+    
+    const calculateWMA = (data, period) => {
+        let result = [];
+        const weightSum = period * (period + 1) / 2;
+        for (let i = period - 1; i < data.length; i++) {
+            let sum = 0;
+            for (let j = 0; j < period; j++) {
+                sum += data[i - j].close * (period - j);
+            }
+            result.push({ time: data[i].time, value: sum / weightSum });
+        }
+        return result;
+    };
+
+    const calculateRSI = (data, period = 14) => {
+        let gains = 0;
+        let losses = 0;
+        let result = [];
+
+        for (let i = 1; i < data.length; i++) {
+            const diff = data[i].close - data[i-1].close;
+            if (i <= period) {
+                diff > 0 ? gains += diff : losses += Math.abs(diff);
+            } else {
+                gains = (gains * (period - 1) + (diff > 0 ? diff : 0)) / period;
+                losses = (losses * (period - 1) + (diff < 0 ? Math.abs(diff) : 0)) / period;
+            }
+            if (i >= period) {
+                const rs = losses === 0 ? 100 : gains / losses;
+                const rsi = 100 - (100 / (1 + rs));
+                result.push({ time: data[i].time, value: rsi });
+            }
+        }
+        return result;
+    };
+    
+    const calculateMACD = (data, fastPeriod = 12, slowPeriod = 26, signalPeriod = 9) => {
+        const emaFast = calculateEMA(data, fastPeriod).map(d => d.value);
+        const emaSlow = calculateEMA(data, slowPeriod).map(d => d.value);
+        const macdLine = emaFast.slice(slowPeriod-fastPeriod).map((val, idx) => val - emaSlow[idx]);
+        
+        const dataForSignal = macdLine.map((val, idx) => ({ time: data[idx + slowPeriod - 1].time, close: val}));
+        const signalLine = calculateEMA(dataForSignal, signalPeriod);
+        
+        const histogram = signalLine.map((val, idx) => {
+            const macdVal = dataForSignal[idx + signalPeriod - 1].close;
+            return {
+                time: val.time,
+                value: macdVal - val.value,
+                color: (macdVal - val.value) > 0 ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)'
+            }
+        });
+
+        return {
+            macd: dataForSignal.map(d => ({time: d.time, value: d.close})),
+            signal: signalLine,
+            histogram: histogram
+        }
+    };
+
+    const calculateOBV = (data) => {
+        let obv = 0;
+        const result = [];
+        for (let i = 0; i < data.length; i++) {
+            if (i > 0) {
+                if (data[i].close > data[i - 1].close) {
+                    obv += data[i].volume;
+                } else if (data[i].close < data[i - 1].close) {
+                    obv -= data[i].volume;
+                }
+            }
+            result.push({ time: data[i].time, value: obv });
+        }
+        return result;
     }
+
+
+    // === ZARZĄDZANIE WSKAŹNIKAMI ===
+    function addIndicator(id, type, settings, data) {
+        if (activeIndicators[id]) return; // Już istnieje
+
+        let series;
+        switch (type) {
+            case 'SMA':
+            case 'EMA':
+            case 'WMA':
+                series = mainChart.addSeries(LightweightCharts.LineSeries, { color: `#${Math.floor(Math.random()*16777215).toString(16)}`, lineWidth: 2, title: id });
+                series.setData(data);
+                break;
+            case 'Volume':
+                document.getElementById('volume-chart-container').style.display = 'block';
+                series = volumeChart.addSeries(LightweightCharts.HistogramSeries, {priceFormat: { type: 'volume' }});
+                series.setData(data.map(d => ({time: d.time, value: d.volume, color: d.close > d.open ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)'})));
+                break;
+            case 'RSI':
+                document.getElementById('rsi-chart-container').style.display = 'block';
+                series = rsiChart.addSeries(LightweightCharts.LineSeries, { color: 'purple', lineWidth: 2 });
+                series.setData(data);
+                break;
+            case 'MACD':
+                 document.getElementById('macd-chart-container').style.display = 'block';
+                const macdSeries = macdChart.addSeries(LightweightCharts.LineSeries, { color: 'blue', lineWidth: 2, title: 'MACD' });
+                const signalSeries = macdChart.addSeries(LightweightCharts.LineSeries, { color: 'orange', lineWidth: 2, title: 'Signal' });
+                const histSeries = macdChart.addSeries(LightweightCharts.HistogramSeries, { title: 'Histogram' });
+                macdSeries.setData(data.macd);
+                signalSeries.setData(data.signal);
+                histSeries.setData(data.histogram);
+                series = { macd: macdSeries, signal: signalSeries, histogram: histSeries };
+                break;
+            case 'OBV':
+                document.getElementById('obv-chart-container').style.display = 'block';
+                series = obvChart.addSeries(LightweightCharts.LineSeries, { color: 'green', lineWidth: 2 });
+                series.setData(data);
+                break;
+        }
+        activeIndicators[id] = { type, series, settings };
+        updateActiveIndicatorsList();
+    }
+
+    function removeIndicator(id) {
+        const indicator = activeIndicators[id];
+        if (!indicator) return;
+
+        if (indicator.type === 'MACD') {
+            macdChart.removeSeries(indicator.series.macd);
+            macdChart.removeSeries(indicator.series.signal);
+            macdChart.removeSeries(indicator.series.histogram);
+            document.getElementById('macd-chart-container').style.display = 'none';
+        } else {
+            const chart = {
+                'SMA': mainChart, 'EMA': mainChart, 'WMA': mainChart,
+                'Volume': volumeChart, 'RSI': rsiChart, 'OBV': obvChart
+            }[indicator.type];
+            chart.removeSeries(indicator.series);
+            
+            if (['Volume', 'RSI', 'OBV'].includes(indicator.type)) {
+                document.getElementById(`${indicator.type.toLowerCase()}-chart-container`).style.display = 'none';
+            }
+        }
+        
+        delete activeIndicators[id];
+        updateActiveIndicatorsList();
+    }
+    
+    function updateAllIndicators() {
+        if (candlestickData.length === 0) return;
+        
+        Object.keys(activeIndicators).forEach(id => {
+            const indicator = activeIndicators[id];
+            let data;
+            switch(indicator.type) {
+                case 'SMA': data = calculateSMA(candlestickData, indicator.settings.period); indicator.series.setData(data); break;
+                case 'EMA': data = calculateEMA(candlestickData, indicator.settings.period); indicator.series.setData(data); break;
+                case 'WMA': data = calculateWMA(candlestickData, indicator.settings.period); indicator.series.setData(data); break;
+                case 'Volume': indicator.series.setData(candlestickData.map(d => ({time: d.time, value: d.volume, color: d.close > d.open ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)'}))); break;
+                case 'RSI': data = calculateRSI(candlestickData); indicator.series.setData(data); break;
+                case 'MACD': 
+                    data = calculateMACD(candlestickData);
+                    indicator.series.macd.setData(data.macd);
+                    indicator.series.signal.setData(data.signal);
+                    indicator.series.histogram.setData(data.histogram);
+                    break;
+                case 'OBV': data = calculateOBV(candlestickData); indicator.series.setData(data); break;
+            }
+        });
+    }
+
+    function updateActiveIndicatorsList() {
+        const list = document.getElementById('activeIndicatorsList');
+        list.innerHTML = '';
+        Object.keys(activeIndicators).forEach(id => {
+            const item = document.createElement('li');
+            item.className = 'list-group-item d-flex justify-content-between align-items-center';
+            item.textContent = id.toUpperCase();
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'btn btn-danger btn-sm';
+            removeBtn.innerHTML = '&times;';
+            removeBtn.onclick = () => {
+                if (['Volume', 'RSI', 'MACD', 'OBV'].includes(activeIndicators[id].type)) {
+                    document.getElementById(`${id.toLowerCase()}Toggle`).checked = false;
+                }
+                removeIndicator(id);
+            };
+            item.appendChild(removeBtn);
+            list.appendChild(item);
+        });
+    }
+
+
+    // === EVENT LISTENERS MODAL ===
+    document.getElementById('addMaButton').addEventListener('click', () => {
+        const type = document.getElementById('maType').value;
+        const period = parseInt(document.getElementById('maPeriod').value, 10);
+        if (isNaN(period) || period < 1) {
+            alert("Proszę podać prawidłowy okres.");
+            return;
+        }
+        const id = `${type}-${period}`;
+        let data;
+        if(type === 'SMA') data = calculateSMA(candlestickData, period);
+        if(type === 'EMA') data = calculateEMA(candlestickData, period);
+        if(type === 'WMA') data = calculateWMA(candlestickData, period);
+
+        addIndicator(id, type, { period }, data);
+    });
+
+    ['volume', 'rsi', 'macd', 'obv'].forEach(name => {
+        document.getElementById(`${name}Toggle`).addEventListener('change', (e) => {
+            const id = name;
+            const type = name.toUpperCase();
+            if (e.target.checked) {
+                 let data;
+                 if(type === 'Volume') data = candlestickData;
+                 if(type === 'RSI') data = calculateRSI(candlestickData);
+                 if(type === 'MACD') data = calculateMACD(candlestickData);
+                 if(type === 'OBV') data = calculateOBV(candlestickData);
+                 addIndicator(id, type, {}, data);
+            } else {
+                removeIndicator(id);
+            }
+        });
+    });
+
     async function fetchStockData(ticker) {
         // === POCZĄTEK BLOKU DIAGNOSTYCZNEGO ===
         // Wklej ten fragment na samym początku funkcji
@@ -364,13 +600,14 @@ document.addEventListener('DOMContentLoaded', function() {
             searchDropdown.style.display = 'none';
         }
     }
-    
+
+    // Pozostałe event listenery...
     stockTickerInput.addEventListener('input', () => {
         const query = stockTickerInput.value.trim();
         const suggestions = findMatchingCompanies(query);
         renderAutocomplete(suggestions);
     });
-    
+
     document.addEventListener('click', function(event) {
         const isClickInside = stockTickerInput.contains(event.target) || searchDropdown.contains(event.target);
         if (!isClickInside) {
@@ -397,7 +634,8 @@ document.addEventListener('DOMContentLoaded', function() {
         mainChart.applyOptions({ width: chartContainer.clientWidth });
         projectionChart.applyOptions({ width: projectionChartContainer.clientWidth });
     });
-
+    
+    // === Inicjalizacja ===
     loadCompanyData().then(() => {
         loadChartData('WIG');
     });
