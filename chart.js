@@ -22,12 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const createIndicatorChart = (containerId, height) => {
         const container = document.getElementById(containerId);
         const chart = LightweightCharts.createChart(container, { width: container.clientWidth, height: height, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } }, timeScale: { timeVisible: true, secondsVisible: false, visible: false } });
-        // Kluczowa zmiana: Subskrybuj zmianę zakresu czasu dopiero po załadowaniu danych
-        mainChart.timeScale().subscribeVisibleTimeRangeChange(timeRange => {
-            if (timeRange && timeRange.to && timeRange.from) {
-                chart.timeScale().setVisibleRange(timeRange);
-            }
-        });
+        
         return chart;
     };
     
@@ -53,47 +48,59 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // === LOGIKA APLIKACJI ===
     async function loadCompanyData() {
-        try {
-            const response = await fetch('wig_companies.csv');
-            const csvText = await response.text();
-            const rows = csvText.trim().split(/\r?\n/).slice(1);
-            companyList = rows.map(row => {
-                const [nazwa, ticker] = row.split(',');
-                if (nazwa && ticker) {
-                    return { nazwa: nazwa.replace(/^"|"$/g, '').trim(), ticker: ticker.replace(/^"|"$/g, '').trim() };
+            try {
+                const response = await fetch('wig_companies.csv');
+                const csvText = await response.text();
+                const rows = csvText.trim().split(/\r?\n/).slice(1);
+                companyList = rows.map(row => {
+                    const [nazwa, ticker] = row.split(',');
+                    if (nazwa && ticker) {
+                        return { nazwa: nazwa.replace(/^"|"$/g, '').trim(), ticker: ticker.replace(/^"|"$/g, '').trim() };
+                    }
+                    return null;
+                }).filter(company => company !== null);
+            } catch (error) {
+                console.error("Błąd podczas wczytywania pliku wig_companies.csv:", error);
+            }
+        }
+    
+        // === NOWA FUNKCJA: Aktualizacja wszystkich wykresów na podstawie danych ===
+        function updateAllCharts(stooqData) {
+            if (!stooqData || stooqData.length === 0) {
+                console.error('Brak danych do aktualizacji wykresów.');
+                return;
+            }
+        
+            candlestickData = stooqData.map(d => ({
+                time: d.time,
+                open: d.open,
+                high: d.high,
+                low: d.low,
+                close: d.close
+            }));
+        
+            const volumeData = stooqData.map(d => ({
+                time: d.time,
+                value: d.volume,
+                color: d.close > d.open ? 'rgba(0, 150, 136, 0.8)' : 'rgba(255, 82, 82, 0.8)'
+            }));
+        
+            candlestickSeries.setData(candlestickData);
+            volumeSeries.setData(volumeData);
+        
+            // 🔑 Subskrypcja dopiero po załadowaniu danych
+            mainChart.timeScale().subscribeVisibleTimeRangeChange(timeRange => {
+                if (timeRange && timeRange.from !== undefined && timeRange.to !== undefined) {
+                    [volumeChart, rsiChart, macdChart, obvChart].forEach(chart => {
+                        chart.timeScale().setVisibleRange(timeRange);
+                    });
                 }
-                return null;
-            }).filter(company => company !== null);
-        } catch (error) {
-            console.error("Błąd podczas wczytywania pliku wig_companies.csv:", error);
-        }
+            });
+        
+            updateAllIndicators();
+            mainChart.timeScale().fitContent();
     }
 
-    // === NOWA FUNKCJA: Aktualizacja wszystkich wykresów na podstawie danych ===
-    function updateAllCharts(stooqData) {
-        if (!stooqData || stooqData.length === 0) {
-            console.error('Brak danych do aktualizacji wykresów.');
-            return;
-        }
-
-        const candlestickData = stooqData
-            .filter(d => d.time && d.open && d.high && d.low && d.close)
-            .map(d => ({ time: d.time, open: d.open, high: d.high, low: d.low, close: d.close }));
-
-        const volumeData = stooqData
-            .filter(d => d.time && d.volume !== null)
-            .map(d => ({ time: d.time, value: d.volume, color: d.close > d.open ? 'rgba(0, 150, 136, 0.8)' : 'rgba(255, 82, 82, 0.8)' }));
-
-        // Zawsze ustawiamy dane na głównym wykresie i wykresie wolumenu
-        candlestickSeries.setData(candlestickData);
-        volumeSeries.setData(volumeData);
-        
-        // Funkcja do obliczania i ustawiania wszystkich wskaźników
-        // Przyjmuje dane OHLC, aby można było obliczyć wskaźniki
-        updateAllIndicators(candlestickData);
-        
-        mainChart.timeScale().fitContent();
-    }
     
     // Poniżej wklej swoją ostatnią działającą wersję funkcji loadChartData
     // Poniżej znajduje się PRZYKŁAD, upewnij się, że masz tam swoją działającą wersję
