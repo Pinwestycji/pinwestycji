@@ -461,26 +461,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('rsi-chart-container').style.display = 'block';
                 series = rsiChart.addSeries(LightweightCharts.LineSeries, { color: 'purple', lineWidth: 2 });
                 series.setData(data);
+                rsiChart.timeScale().fitContent();  // 👈 DODAJ
                 break;
-    
+            
             case 'MACD':
                 document.getElementById('macd-chart-container').style.display = 'block';
-                const macdSeries = macdChart.addSeries(LightweightCharts.LineSeries, { color: 'blue', lineWidth: 2, title: 'MACD' });
-                const signalSeries = macdChart.addSeries(LightweightCharts.LineSeries, { color: 'orange', lineWidth: 2, title: 'Signal' });
-                const histSeries = macdChart.addSeries(LightweightCharts.HistogramSeries, { title: 'Histogram' });
+                const macdSeries = macdChart.addSeries(LightweightCharts.LineSeries, { color: 'blue', lineWidth: 2 });
+                const signalSeries = macdChart.addSeries(LightweightCharts.LineSeries, { color: 'orange', lineWidth: 2 });
+                const histSeries = macdChart.addSeries(LightweightCharts.HistogramSeries, { });
                 macdSeries.setData(data.macd);
                 signalSeries.setData(data.signal);
                 histSeries.setData(data.histogram);
                 series = { macd: macdSeries, signal: signalSeries, histogram: histSeries };
-                console.log(`📈 MACD aktywowany: macd=${data.macd.length}, signal=${data.signal.length}, hist=${data.histogram.length}`);
+                macdChart.timeScale().fitContent();  // 👈 DODAJ
                 break;
-    
+            
             case 'OBV':
                 document.getElementById('obv-chart-container').style.display = 'block';
                 series = obvChart.addSeries(LightweightCharts.LineSeries, { color: 'green', lineWidth: 2 });
                 series.setData(data);
-                console.log("📉 OBV aktywowany, punkty:", data.length);
+                obvChart.timeScale().fitContent();  // 👈 DODAJ
                 break;
+
         }
     
         activeIndicators[id] = { type, series, settings };
