@@ -366,67 +366,80 @@ document.addEventListener('DOMContentLoaded', function() {
         return result;
     };
 
-    const calculateRSI = (data, period = 14) => {
-        let gains = 0;
-        let losses = 0;
-        let result = [];
-
+    function calculateRSI(data, period = 14) {
+        let gains = 0, losses = 0;
+        const result = [];
+    
         for (let i = 1; i < data.length; i++) {
-            const diff = data[i].close - data[i-1].close;
+            const diff = data[i].close - data[i - 1].close;
             if (i <= period) {
                 diff > 0 ? gains += diff : losses += Math.abs(diff);
             } else {
                 gains = (gains * (period - 1) + (diff > 0 ? diff : 0)) / period;
                 losses = (losses * (period - 1) + (diff < 0 ? Math.abs(diff) : 0)) / period;
             }
+    
             if (i >= period) {
                 const rs = losses === 0 ? 100 : gains / losses;
                 const rsi = 100 - (100 / (1 + rs));
-                result.push({ time: data[i].time, value: rsi });
+                result.push({ time: data[i].time, value: rsi }); // 👈 zawsze {time, value}
             }
         }
-        return result;
-    };
     
-    const calculateMACD = (data, fastPeriod = 12, slowPeriod = 26, signalPeriod = 9) => {
-        const emaFast = calculateEMA(data, fastPeriod).map(d => d.value);
-        const emaSlow = calculateEMA(data, slowPeriod).map(d => d.value);
-        const macdLine = emaFast.slice(slowPeriod-fastPeriod).map((val, idx) => val - emaSlow[idx]);
-        
-        const dataForSignal = macdLine.map((val, idx) => ({ time: data[idx + slowPeriod - 1].time, close: val}));
-        const signalLine = calculateEMA(dataForSignal, signalPeriod);
-        
-        const histogram = signalLine.map((val, idx) => {
-            const macdVal = dataForSignal[idx + signalPeriod - 1].close;
-            return {
-                time: val.time,
-                value: macdVal - val.value,
-                color: (macdVal - val.value) > 0 ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)'
-            }
-        });
-
-        return {
-            macd: dataForSignal.map(d => ({time: d.time, value: d.close})),
-            signal: signalLine,
-            histogram: histogram
-        }
-    };
-
-    const calculateOBV = (data) => {
-        let obv = 0;
-        const result = [];
-        for (let i = 0; i < data.length; i++) {
-            if (i > 0) {
-                if (data[i].close > data[i - 1].close) {
-                    obv += data[i].volume;
-                } else if (data[i].close < data[i - 1].close) {
-                    obv -= data[i].volume;
-                }
-            }
-            result.push({ time: data[i].time, value: obv });
-        }
         return result;
     }
+
+    
+    function calculateMACD(data, fastPeriod = 12, slowPeriod = 26, signalPeriod = 9) {
+        // Obliczamy EMA szybki i wolny
+        const emaFast = calculateEMA(data, fastPeriod);
+        const emaSlow = calculateEMA(data, slowPeriod);
+    
+        const macdLine = [];
+        for (let i = 0; i < emaSlow.length; i++) {
+            if (emaFast[i + (slowPeriod - fastPeriod)]) {
+                macdLine.push({
+                    time: emaSlow[i].time,
+                    value: emaFast[i + (slowPeriod - fastPeriod)].value - emaSlow[i].value
+                });
+            }
+        }
+    
+        // EMA linii MACD jako linia sygnału
+        const signalLine = calculateEMA(macdLine, signalPeriod);
+    
+        // Histogram = różnica MACD - sygnał
+        const histogram = macdLine.map((point, idx) => {
+            if (signalLine[idx]) {
+                return { time: point.time, value: point.value - signalLine[idx].value };
+            }
+            return null;
+        }).filter(p => p !== null);
+    
+        return {
+            macd: macdLine,
+            signal: signalLine,
+            histogram: histogram
+        };
+    }
+
+
+    function calculateOBV(data) {
+        let obv = 0;
+        const result = [];
+    
+        for (let i = 1; i < data.length; i++) {
+            if (data[i].close > data[i - 1].close) {
+                obv += data[i].volume;
+            } else if (data[i].close < data[i - 1].close) {
+                obv -= data[i].volume;
+            }
+            result.push({ time: data[i].time, value: obv }); // 👈 zawsze {time, value}
+        }
+    
+        return result;
+    }
+
 
 
     // === ZARZĄDZANIE WSKAŹNIKAMI ===
@@ -474,6 +487,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 histSeries.setData(data.histogram);
                 series = { macd: macdSeries, signal: signalSeries, histogram: histSeries };
                 macdChart.timeScale().fitContent();  // 👈 DODAJ
+                console.log("MACD sample macd:", data.macd.slice(0,5));
+                console.log("MACD sample signal:", data.signal.slice(0,5));
+                console.log("MACD sample hist:", data.histogram.slice(0,5));
                 break;
             
             case 'OBV':
