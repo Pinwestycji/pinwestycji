@@ -490,18 +490,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
     
             case 'Volume':
-                document.getElementById('volume-chart-container').style.display = 'block';
-                // wolumen zawsze istnieje → tylko log
-                console.log("📊 Wolumen aktywowany, dane:", data.length);
+                const volDiv = document.getElementById('volume-chart-container');
+                volDiv.style.display = 'block';
+                volumeChart.resize(volDiv.clientWidth, volDiv.clientHeight);
+                volumeChart.timeScale().fitContent();
                 break;
     
             case 'RSI':
-                document.getElementById('rsi-chart-container').style.display = 'block';
+                const rsiDiv = document.getElementById('rsi-chart-container');
+                rsiDiv.style.display = 'block';
+                rsiChart.resize(rsiDiv.clientWidth, rsiDiv.clientHeight);
                 series = rsiChart.addSeries(LightweightCharts.LineSeries, { color: 'purple', lineWidth: 2 });
                 series.setData(data);
-                rsiChart.timeScale().fitContent();  // 👈 DODAJ
+                rsiChart.timeScale().fitContent();
                 break;
-            
             case 'MACD':
                 document.getElementById('macd-chart-container').style.display = 'block';
                 const macdSeries = macdChart.addSeries(LightweightCharts.LineSeries, { color: 'blue', lineWidth: 2 });
@@ -518,10 +520,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
             
             case 'OBV':
-                document.getElementById('obv-chart-container').style.display = 'block';
+                const obvDiv = document.getElementById('obv-chart-container');
+                obvDiv.style.display = 'block';
+                obvChart.resize(obvDiv.clientWidth, obvDiv.clientHeight);
                 series = obvChart.addSeries(LightweightCharts.LineSeries, { color: 'green', lineWidth: 2 });
                 series.setData(data);
-                obvChart.timeScale().fitContent();  // 👈 DODAJ
+                obvChart.timeScale().fitContent();
                 break;
 
         }
