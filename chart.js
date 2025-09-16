@@ -19,15 +19,20 @@ document.addEventListener('DOMContentLoaded', function() {
         color: '#007bff'
     });
     // === WYKRESY WSKAŹNIKÓW (PANELE) ===
+    // WERSJA POPRAWIONA
     const createIndicatorChart = (containerId, height) => {
         const container = document.getElementById(containerId);
         const chart = LightweightCharts.createChart(container, { width: container.clientWidth, height: height, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } }, timeScale: { timeVisible: true, secondsVisible: false, visible: false } });
-        // Kluczowa zmiana: Subskrybuj zmianę zakresu czasu dopiero po załadowaniu danych
+        
+        // TO JEST KLUCZOWA POPRAWKA:
         mainChart.timeScale().subscribeVisibleTimeRangeChange(timeRange => {
-            if (timeRange && timeRange.to && timeRange.from) {
+            // Dodajemy warunek, który działa jak strażnik.
+            // Synchronizacja uruchomi się tylko, gdy dane (timeRange) nie są puste.
+            if (timeRange !== null) {
                 chart.timeScale().setVisibleRange(timeRange);
             }
         });
+        
         return chart;
     };
     
