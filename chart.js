@@ -428,27 +428,40 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // === ZARZĄDZANIE WSKAŹNIKAMI ===
     function addIndicator(id, type, settings, data) {
-        if (activeIndicators[id]) return; // Już istnieje
-
+        if (activeIndicators[id]) {
+            console.warn(`⚠️ Wskaźnik ${id} już istnieje, pomijam dodanie.`);
+            return;
+        }
+    
+        console.log(`➕ Dodaję wskaźnik ${type} (${id}), liczba punktów:`, data ? data.length : "brak");
+    
         let series;
         switch (type) {
             case 'SMA':
             case 'EMA':
             case 'WMA':
-                series = mainChart.addSeries(LightweightCharts.LineSeries, { color: `#${Math.floor(Math.random()*16777215).toString(16)}`, lineWidth: 2, title: id });
+                series = mainChart.addSeries(LightweightCharts.LineSeries, {
+                    color: `#${Math.floor(Math.random() * 16777215).toString(16)}`,
+                    lineWidth: 2,
+                    title: id
+                });
                 series.setData(data);
                 break;
+    
             case 'Volume':
                 document.getElementById('volume-chart-container').style.display = 'block';
+                // wolumen zawsze istnieje → tylko log
+                console.log("📊 Wolumen aktywowany, dane:", data.length);
                 break;
-
+    
             case 'RSI':
                 document.getElementById('rsi-chart-container').style.display = 'block';
                 series = rsiChart.addSeries(LightweightCharts.LineSeries, { color: 'purple', lineWidth: 2 });
                 series.setData(data);
                 break;
+    
             case 'MACD':
-                 document.getElementById('macd-chart-container').style.display = 'block';
+                document.getElementById('macd-chart-container').style.display = 'block';
                 const macdSeries = macdChart.addSeries(LightweightCharts.LineSeries, { color: 'blue', lineWidth: 2, title: 'MACD' });
                 const signalSeries = macdChart.addSeries(LightweightCharts.LineSeries, { color: 'orange', lineWidth: 2, title: 'Signal' });
                 const histSeries = macdChart.addSeries(LightweightCharts.HistogramSeries, { title: 'Histogram' });
@@ -456,16 +469,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 signalSeries.setData(data.signal);
                 histSeries.setData(data.histogram);
                 series = { macd: macdSeries, signal: signalSeries, histogram: histSeries };
+                console.log(`📈 MACD aktywowany: macd=${data.macd.length}, signal=${data.signal.length}, hist=${data.histogram.length}`);
                 break;
+    
             case 'OBV':
                 document.getElementById('obv-chart-container').style.display = 'block';
                 series = obvChart.addSeries(LightweightCharts.LineSeries, { color: 'green', lineWidth: 2 });
                 series.setData(data);
+                console.log("📉 OBV aktywowany, punkty:", data.length);
                 break;
         }
+    
         activeIndicators[id] = { type, series, settings };
         updateActiveIndicatorsList();
     }
+
 
     function removeIndicator(id) {
         const indicator = activeIndicators[id];
@@ -497,27 +515,69 @@ document.addEventListener('DOMContentLoaded', function() {
 
     
     function updateAllIndicators() {
-        if (candlestickData.length === 0) return;
-        
+        if (candlestickData.length === 0) {
+            console.warn("⚠️ updateAllIndicators: brak danych w candlestickData");
+            return;
+        }
+    
+        console.log("🔄 Aktualizacja wskaźników, liczba świec:", candlestickData.length);
+    
         Object.keys(activeIndicators).forEach(id => {
             const indicator = activeIndicators[id];
             let data;
-            switch(indicator.type) {
-                case 'SMA': data = calculateSMA(candlestickData, indicator.settings.period); indicator.series.setData(data); break;
-                case 'EMA': data = calculateEMA(candlestickData, indicator.settings.period); indicator.series.setData(data); break;
-                case 'WMA': data = calculateWMA(candlestickData, indicator.settings.period); indicator.series.setData(data); break;
-                case 'Volume': indicator.series.setData(candlestickData.map(d => ({time: d.time, value: d.volume, color: d.close > d.open ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)'}))); break;
-                case 'RSI': data = calculateRSI(candlestickData); indicator.series.setData(data); break;
-                case 'MACD': 
+    
+            switch (indicator.type) {
+                case 'SMA':
+                    data = calculateSMA(candlestickData, indicator.settings.period);
+                    console.log(`SMA (${indicator.settings.period}) punkty:`, data.length);
+                    indicator.series.setData(data);
+                    break;
+    
+                case 'EMA':
+                    data = calculateEMA(candlestickData, indicator.settings.period);
+                    console.log(`EMA (${indicator.settings.period}) punkty:`, data.length);
+                    indicator.series.setData(data);
+                    break;
+    
+                case 'WMA':
+                    data = calculateWMA(candlestickData, indicator.settings.period);
+                    console.log(`WMA (${indicator.settings.period}) punkty:`, data.length);
+                    indicator.series.setData(data);
+                    break;
+    
+                case 'Volume':
+                    const vol = candlestickData.map(d => ({
+                        time: d.time,
+                        value: d.volume,
+                        color: d.close > d.open ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)'
+                    }));
+                    console.log("Volume punkty:", vol.length);
+                    volumeSeries.setData(vol);
+                    break;
+    
+                case 'RSI':
+                    data = calculateRSI(candlestickData);
+                    console.log("RSI punkty:", data.length);
+                    indicator.series.setData(data);
+                    break;
+    
+                case 'MACD':
                     data = calculateMACD(candlestickData);
+                    console.log(`MACD aktualizacja: macd=${data.macd.length}, signal=${data.signal.length}, hist=${data.histogram.length}`);
                     indicator.series.macd.setData(data.macd);
                     indicator.series.signal.setData(data.signal);
                     indicator.series.histogram.setData(data.histogram);
                     break;
-                case 'OBV': data = calculateOBV(candlestickData); indicator.series.setData(data); break;
+    
+                case 'OBV':
+                    data = calculateOBV(candlestickData);
+                    console.log("OBV punkty:", data.length);
+                    indicator.series.setData(data);
+                    break;
             }
         });
     }
+
 
     function updateActiveIndicatorsList() {
         const list = document.getElementById('activeIndicatorsList');
