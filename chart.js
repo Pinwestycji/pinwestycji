@@ -20,22 +20,30 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     // === WYKRESY WSKAŹNIKÓW (PANELE) ===
     // WERSJA POPRAWIONA
+    // WERSJA UPROSZCZONA
     const createIndicatorChart = (containerId, height) => {
         const container = document.getElementById(containerId);
         const chart = LightweightCharts.createChart(container, { width: container.clientWidth, height: height, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } }, timeScale: { timeVisible: true, secondsVisible: false, visible: false } });
-        
-        // TO JEST KLUCZOWA POPRAWKA:
-        mainChart.timeScale().subscribeVisibleTimeRangeChange(timeRange => {
-            // Dodajemy warunek, który działa jak strażnik.
-            // Synchronizacja uruchomi się tylko, gdy dane (timeRange) nie są puste.
-            if (timeRange !== null) {
-                chart.timeScale().setVisibleRange(timeRange);
-            }
-        });
-        
+        // Usunęliśmy stąd linię synchronizującą!
         return chart;
     };
+
+        // NOWA FUNKCJA DO SYNCHRONIZACJI
+    function synchronizeAllCharts() {
+        if (chartsAreSynchronized) return; // Uruchom tylko raz
     
+        const indicatorCharts = [volumeChart, rsiChart, macdChart, obvChart];
+        indicatorCharts.forEach(chart => {
+            mainChart.timeScale().subscribeVisibleTimeRangeChange(timeRange => {
+                if (timeRange !== null) {
+                    chart.timeScale().setVisibleRange(timeRange);
+                }
+            });
+        });
+    
+        chartsAreSynchronized = true;
+        console.log("Wykresy zostały pomyślnie zsynchronizowane.");
+    }
     const volumeChart = createIndicatorChart('volume-chart-container', 100);
     const rsiChart = createIndicatorChart('rsi-chart-container', 120);
     const macdChart = createIndicatorChart('macd-chart-container', 120);
@@ -43,6 +51,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let candlestickData = [];
     let activeIndicators = {}; // Obiekt do przechowywania aktywnych wskaźników
+    let chartsAreSynchronized = false; // <-- DODAJ TĘ LINIĘ
 
     // === ELEMENTY DOM ===
     const stockTickerInput = document.getElementById('stockTickerInput');
@@ -82,6 +91,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Zawsze ustawiamy dane na głównym wykresie i wykresie wolumenu
         candlestickSeries.setData(candlestickData);
         volumeSeries.setData(volumeData);
+
+        // DODAJ TEN BLOK KODU PONIŻEJ:
+        // Uruchamiamy synchronizację dopiero po pierwszym załadowaniu danych
+        if (!chartsAreSynchronized) {
+            synchronizeAllCharts();
+        }
         
         // Funkcja do obliczania i ustawiania wszystkich wskaźników
         // Przyjmuje dane OHLC, aby można było obliczyć wskaźniki
