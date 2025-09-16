@@ -38,17 +38,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const macdChart = createIndicatorChart('macd-chart-container', 120);
     const obvChart = createIndicatorChart('obv-chart-container', 120);
 
-        // === SYNC TIME RANGE Z MAINCHART DO WSZYSTKICH WSKAŹNIKÓW ===
-    mainChart.timeScale().subscribeVisibleTimeRangeChange(timeRange => {
-        if (timeRange && timeRange.from !== undefined && timeRange.to !== undefined) {
-            volumeChart.timeScale().setVisibleRange(timeRange);
-            rsiChart.timeScale().setVisibleRange(timeRange);
-            macdChart.timeScale().setVisibleRange(timeRange);
-            obvChart.timeScale().setVisibleRange(timeRange);
-        }
-    });
-
-
     let candlestickData = [];
     let activeIndicators = {}; // Obiekt do przechowywania aktywnych wskaźników
 
@@ -106,7 +95,7 @@ document.addEventListener('DOMContentLoaded', function() {
             volumeSeries.setData(volumeData);  // ✅ wolumen aktualizowany zawsze
         
             updateAllIndicators();
-         //   mainChart.timeScale().fitContent();
+            mainChart.timeScale().fitContent();
     }
 
 
