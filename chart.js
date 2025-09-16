@@ -21,10 +21,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // === WYKRESY WSKAŹNIKÓW (PANELE) ===
     const createIndicatorChart = (containerId, height) => {
         const container = document.getElementById(containerId);
-        const chart = LightweightCharts.createChart(container, { width: container.clientWidth, height: height, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } }, timeScale: { timeVisible: true, secondsVisible: false }});
-        
+        console.log("Tworzę wykres w:", containerId, "rozmiar:", container.clientWidth, height);
+        const chart = LightweightCharts.createChart(container, {
+            width: container.clientWidth,
+            height: height,
+            layout: { backgroundColor: '#ffffff', textColor: '#333' },
+            grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } },
+            timeScale: { timeVisible: true, secondsVisible: false }
+        });
         return chart;
     };
+
     
     const volumeChart = createIndicatorChart('volume-chart-container', 100);
 
@@ -477,6 +484,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log(`➕ Dodaję wskaźnik ${type} (${id}), liczba punktów:`, data ? data.length : "brak");
     
         let series;
+    
         switch (type) {
             case 'SMA':
             case 'EMA':
@@ -490,49 +498,90 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
     
             case 'Volume':
-                const volDiv = document.getElementById('volume-chart-container');
-                volDiv.style.display = 'block';
-                volumeChart.resize(volDiv.clientWidth, volDiv.clientHeight);
-                volumeChart.timeScale().fitContent();
+                {
+                    const container = document.getElementById('volume-chart-container');
+                    container.style.display = 'block';
+                    // 🔑 tworzymy wykres dopiero teraz
+                    const volumeChart = LightweightCharts.createChart(container, {
+                        width: container.clientWidth,
+                        height: 100,
+                        layout: { backgroundColor: '#fff', textColor: '#333' },
+                        grid: { vertLines: { color: '#eee' }, horzLines: { color: '#eee' } },
+                        timeScale: { timeVisible: true, secondsVisible: false }
+                    });
+                    series = volumeChart.addSeries(LightweightCharts.HistogramSeries, {
+                        priceFormat: { type: 'volume' }
+                    });
+                    series.setData(data.map(d => ({
+                        time: d.time,
+                        value: d.volume,
+                        color: d.close > d.open ? 'rgba(0,150,136,0.8)' : 'rgba(255,82,82,0.8)'
+                    })));
+                    volumeChart.timeScale().fitContent();
+                }
                 break;
     
             case 'RSI':
-                const rsiDiv = document.getElementById('rsi-chart-container');
-                rsiDiv.style.display = 'block';
-                rsiChart.resize(rsiDiv.clientWidth, rsiDiv.clientHeight);
-                series = rsiChart.addSeries(LightweightCharts.LineSeries, { color: 'purple', lineWidth: 2 });
-                series.setData(data);
-                rsiChart.timeScale().fitContent();
+                {
+                    const container = document.getElementById('rsi-chart-container');
+                    container.style.display = 'block';
+                    const rsiChart = LightweightCharts.createChart(container, {
+                        width: container.clientWidth,
+                        height: 120,
+                        layout: { backgroundColor: '#fff', textColor: '#333' },
+                        grid: { vertLines: { color: '#eee' }, horzLines: { color: '#eee' } },
+                        timeScale: { timeVisible: true, secondsVisible: false }
+                    });
+                    series = rsiChart.addSeries(LightweightCharts.LineSeries, { color: 'purple', lineWidth: 2 });
+                    series.setData(data);
+                    rsiChart.timeScale().fitContent();
+                }
                 break;
+    
             case 'MACD':
-                document.getElementById('macd-chart-container').style.display = 'block';
-                const macdSeries = macdChart.addSeries(LightweightCharts.LineSeries, { color: 'blue', lineWidth: 2 });
-                const signalSeries = macdChart.addSeries(LightweightCharts.LineSeries, { color: 'orange', lineWidth: 2 });
-                const histSeries = macdChart.addSeries(LightweightCharts.HistogramSeries, { });
-                macdSeries.setData(data.macd);
-                signalSeries.setData(data.signal);
-                histSeries.setData(data.histogram);
-                series = { macd: macdSeries, signal: signalSeries, histogram: histSeries };
-                macdChart.timeScale().fitContent();  // 👈 DODAJ
-                console.log("MACD sample macd:", data.macd.slice(0,5));
-                console.log("MACD sample signal:", data.signal.slice(0,5));
-                console.log("MACD sample hist:", data.histogram.slice(0,5));
+                {
+                    const container = document.getElementById('macd-chart-container');
+                    container.style.display = 'block';
+                    const macdChart = LightweightCharts.createChart(container, {
+                        width: container.clientWidth,
+                        height: 120,
+                        layout: { backgroundColor: '#fff', textColor: '#333' },
+                        grid: { vertLines: { color: '#eee' }, horzLines: { color: '#eee' } },
+                        timeScale: { timeVisible: true, secondsVisible: false }
+                    });
+                    const macdSeries = macdChart.addSeries(LightweightCharts.LineSeries, { color: 'blue', lineWidth: 2 });
+                    const signalSeries = macdChart.addSeries(LightweightCharts.LineSeries, { color: 'orange', lineWidth: 2 });
+                    const histSeries = macdChart.addSeries(LightweightCharts.HistogramSeries, { color: 'gray' });
+                    macdSeries.setData(data.macd);
+                    signalSeries.setData(data.signal);
+                    histSeries.setData(data.histogram);
+                    series = { macd: macdSeries, signal: signalSeries, histogram: histSeries };
+                    macdChart.timeScale().fitContent();
+                }
                 break;
-            
+    
             case 'OBV':
-                const obvDiv = document.getElementById('obv-chart-container');
-                obvDiv.style.display = 'block';
-                obvChart.resize(obvDiv.clientWidth, obvDiv.clientHeight);
-                series = obvChart.addSeries(LightweightCharts.LineSeries, { color: 'green', lineWidth: 2 });
-                series.setData(data);
-                obvChart.timeScale().fitContent();
+                {
+                    const container = document.getElementById('obv-chart-container');
+                    container.style.display = 'block';
+                    const obvChart = LightweightCharts.createChart(container, {
+                        width: container.clientWidth,
+                        height: 120,
+                        layout: { backgroundColor: '#fff', textColor: '#333' },
+                        grid: { vertLines: { color: '#eee' }, horzLines: { color: '#eee' } },
+                        timeScale: { timeVisible: true, secondsVisible: false }
+                    });
+                    series = obvChart.addSeries(LightweightCharts.LineSeries, { color: 'green', lineWidth: 2 });
+                    series.setData(data);
+                    obvChart.timeScale().fitContent();
+                }
                 break;
-
         }
     
         activeIndicators[id] = { type, series, settings };
         updateActiveIndicatorsList();
     }
+
 
 
     function removeIndicator(id) {
