@@ -38,32 +38,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const macdChart = createIndicatorChart('macd-chart-container', 120);
     const obvChart = createIndicatorChart('obv-chart-container', 120);
 
-    // === POCZĄTEK POPRAWKI: Synchronizacja wszystkich wykresów ===
-
-    // 1. Synchronizacja skali czasu (przewijanie i zoom)
-    // Subskrybujemy zmiany widocznego zakresu czasu na głównym wykresie...
-    mainChart.timeScale().subscribeVisibleTimeRangeChange(timeRange => {
-        // ...i natychmiast ustawiamy ten sam zakres na wszystkich pozostałych wykresach.
-        if (volumeChart) volumeChart.timeScale().setVisibleRange(timeRange);
-        if (rsiChart) rsiChart.timeScale().setVisibleRange(timeRange);
-        if (macdChart) macdChart.timeScale().setVisibleRange(timeRange);
-        if (obvChart) obvChart.timeScale().setVisibleRange(timeRange);
-    });
-    
-    // 2. Synchronizacja kursora (crosshair)
-    // Subskrybujemy ruch kursora na głównym wykresie...
-    mainChart.subscribeCrosshairMove(param => {
-        // Jeśli kursor jest nad jakimś punktem danych (ma znacznik czasu)...
-        if (param.time) {
-            // ...przesuwamy kursory na pozostałych wykresach w to samo miejsce.
-            if (volumeChart) volumeChart.moveCrosshair(param);
-            if (rsiChart) rsiChart.moveCrosshair(param);
-            if (macdChart) macdChart.moveCrosshair(param);
-            if (obvChart) obvChart.moveCrosshair(param);
-        }
-    });
-
-// === KONIEC POPRAWKI ===
 
     let candlestickData = [];
     let activeIndicators = {}; // Obiekt do przechowywania aktywnych wskaźników
