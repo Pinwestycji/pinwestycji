@@ -27,10 +27,12 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     
     const volumeChart = createIndicatorChart('volume-chart-container', 100);
+
+    // dodajemy serię wolumenu od razu
     const volumeSeries = volumeChart.addSeries(LightweightCharts.HistogramSeries, {
-        priceFormat: { type: 'volume' },
-        color: 'rgba(0, 150, 136, 0.8)'
+        priceFormat: { type: 'volume' }
     });
+
 
     const rsiChart = createIndicatorChart('rsi-chart-container', 120);
     const macdChart = createIndicatorChart('macd-chart-container', 120);
@@ -86,20 +88,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }));
         
             candlestickSeries.setData(candlestickData);
-            volumeSeries.setData(volumeData);
-        
-            // 🔑 Subskrypcja dopiero po załadowaniu danych
-            mainChart.timeScale().subscribeVisibleTimeRangeChange(timeRange => {
-                if (timeRange && timeRange.from !== undefined && timeRange.to !== undefined) {
-                    [volumeChart, rsiChart, macdChart, obvChart].forEach(chart => {
-                        chart.timeScale().setVisibleRange(timeRange);
-                    });
-                }
-            });
+            volumeSeries.setData(volumeData);  // ✅ wolumen aktualizowany zawsze
         
             updateAllIndicators();
             mainChart.timeScale().fitContent();
     }
+
 
     
     // Poniżej wklej swoją ostatnią działającą wersję funkcji loadChartData
@@ -444,9 +438,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
             case 'Volume':
                 document.getElementById('volume-chart-container').style.display = 'block';
-                series = volumeChart.addSeries(LightweightCharts.HistogramSeries, {priceFormat: { type: 'volume' }});
-                series.setData(data.map(d => ({time: d.time, value: d.volume, color: d.close > d.open ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)'})));
                 break;
+
             case 'RSI':
                 document.getElementById('rsi-chart-container').style.display = 'block';
                 series = rsiChart.addSeries(LightweightCharts.LineSeries, { color: 'purple', lineWidth: 2 });
@@ -475,27 +468,31 @@ document.addEventListener('DOMContentLoaded', function() {
     function removeIndicator(id) {
         const indicator = activeIndicators[id];
         if (!indicator) return;
-
+    
         if (indicator.type === 'MACD') {
             macdChart.removeSeries(indicator.series.macd);
             macdChart.removeSeries(indicator.series.signal);
             macdChart.removeSeries(indicator.series.histogram);
             document.getElementById('macd-chart-container').style.display = 'none';
+        } else if (indicator.type === 'Volume') {
+            //  dla Volume tylko chowamy kontener, nie usuwamy serii
+            document.getElementById('volume-chart-container').style.display = 'none';
         } else {
             const chart = {
                 'SMA': mainChart, 'EMA': mainChart, 'WMA': mainChart,
-                'Volume': volumeChart, 'RSI': rsiChart, 'OBV': obvChart
+                'RSI': rsiChart, 'OBV': obvChart
             }[indicator.type];
             chart.removeSeries(indicator.series);
-            
-            if (['Volume', 'RSI', 'OBV'].includes(indicator.type)) {
+    
+            if (['RSI', 'OBV'].includes(indicator.type)) {
                 document.getElementById(`${indicator.type.toLowerCase()}-chart-container`).style.display = 'none';
             }
         }
-        
+    
         delete activeIndicators[id];
         updateActiveIndicatorsList();
     }
+
     
     function updateAllIndicators() {
         if (candlestickData.length === 0) return;
