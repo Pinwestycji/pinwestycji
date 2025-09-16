@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // === WYKRESY WSKAŹNIKÓW (PANELE) ===
     const createIndicatorChart = (containerId, height) => {
         const container = document.getElementById(containerId);
-        const chart = LightweightCharts.createChart(container, { width: container.clientWidth, height: height, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } }, timeScale: { timeVisible: true, secondsVisible: false, visible: false } });
+        const chart = LightweightCharts.createChart(container, { width: container.clientWidth, height: height, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } }, timeScale: { timeVisible: true, secondsVisible: false }});
         
         return chart;
     };
