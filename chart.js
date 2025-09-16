@@ -340,18 +340,32 @@ document.addEventListener('DOMContentLoaded', function() {
         return result;
     };
 
-    const calculateEMA = (data, period) => {
-        let result = [];
-        const k = 2 / (period + 1);
-        let ema = data[0].close;
-        for (let i = 1; i < data.length; i++) {
-            ema = data[i].close * k + ema * (1 - k);
-            if (i >= period - 1) {
-                result.push({ time: data[i].time, value: ema });
-            }
+    function calculateEMA(data, period) {
+        if (!data || data.length < period) {
+            console.warn(`⚠️ calculateEMA: za mało danych (potrzeba ${period}, mamy ${data ? data.length : 0})`);
+            return [];
         }
-        return result;
-    };
+    
+        const k = 2 / (period + 1);
+        const emaArray = [];
+        let prevEma;
+    
+        data.forEach((d, i) => {
+            const price = d.close !== undefined ? d.close : d.value; // obsługuje świeczki i wskaźniki
+            if (price === undefined || price === null) return;
+    
+            if (i === 0) {
+                prevEma = price; // pierwsza wartość = cena
+            } else {
+                prevEma = price * k + prevEma * (1 - k);
+            }
+    
+            emaArray.push({ time: d.time, value: prevEma });
+        });
+    
+        return emaArray;
+    }
+
     
     const calculateWMA = (data, period) => {
         let result = [];
@@ -391,30 +405,41 @@ document.addEventListener('DOMContentLoaded', function() {
 
     
     function calculateMACD(data, fastPeriod = 12, slowPeriod = 26, signalPeriod = 9) {
-        // Obliczamy EMA szybki i wolny
+        if (!data || data.length < slowPeriod) {
+            console.warn("⚠️ calculateMACD: za mało danych");
+            return { macd: [], signal: [], histogram: [] };
+        }
+    
         const emaFast = calculateEMA(data, fastPeriod);
         const emaSlow = calculateEMA(data, slowPeriod);
     
         const macdLine = [];
         for (let i = 0; i < emaSlow.length; i++) {
-            if (emaFast[i + (slowPeriod - fastPeriod)]) {
+            const fast = emaFast[i + (slowPeriod - fastPeriod)];
+            const slow = emaSlow[i];
+            if (fast && slow) {
                 macdLine.push({
-                    time: emaSlow[i].time,
-                    value: emaFast[i + (slowPeriod - fastPeriod)].value - emaSlow[i].value
+                    time: slow.time,
+                    value: fast.value - slow.value
                 });
             }
         }
     
-        // EMA linii MACD jako linia sygnału
+        if (macdLine.length === 0) {
+            return { macd: [], signal: [], histogram: [] };
+        }
+    
+        // 🔑 Signal line jako EMA z macdLine
         const signalLine = calculateEMA(macdLine, signalPeriod);
     
-        // Histogram = różnica MACD - sygnał
+        // Histogram = różnica MACD - Signal
         const histogram = macdLine.map((point, idx) => {
-            if (signalLine[idx]) {
-                return { time: point.time, value: point.value - signalLine[idx].value };
+            const sig = signalLine[idx];
+            if (sig) {
+                return { time: point.time, value: point.value - sig.value };
             }
             return null;
-        }).filter(p => p !== null);
+        }).filter(Boolean);
     
         return {
             macd: macdLine,
