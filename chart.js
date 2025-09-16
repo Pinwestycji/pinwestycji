@@ -108,6 +108,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Poniżej wklej swoją ostatnią działającą wersję funkcji loadChartData
     // Poniżej znajduje się PRZYKŁAD, upewnij się, że masz tam swoją działającą wersję
      // Poniżej znajduje się PRZYKŁAD, upewnij się, że masz tam swoją działającą wersję
+    // WERSJA POPRAWIONA
     async function loadChartData(ticker) {
         if (!ticker) return;
         ticker = ticker.toUpperCase();
@@ -131,28 +132,39 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert(`Brak danych historycznych dla spółki ${ticker}.`);
                 return;
             }
+            
+            candlestickData = stooqData.map(d => ({ time: d.time, open: d.open, high: d.high, low: d.low, close: d.close, volume: d.volume }));
+            
+            candlestickSeries.setData(candlestickData.map(d => ({ time: d.time, open: d.open, high: d.high, low: d.low, close: d.close })));
+            
+            // TA LINIJKA POWODOWAŁA BŁĄD I ZOSTAŁA USUNIĘTA.
+            // Wolumen jest teraz obsługiwany przez nową funkcję `updateAllIndicators`.
+            // volumeSeries.setData(volumeData); 
     
-            // !!! Kluczowa zmiana: Zamiast rysować bezpośrednio, wywołujemy nową funkcję
-            updateAllCharts(stooqData);
-
+            if (!chartsAreSynchronized) {
+                synchronizeAllCharts();
+            }
+            
+            mainChart.timeScale().fitContent();
             document.getElementById('chart-title').textContent = `Wykres Świecowy - ${ticker}`;
     
             if (indexTickers.includes(ticker)) {
-                console.log(`Wykryto indeks giełdowy (${ticker}). Kalkulator i rekomendacje nie będą wyświetlane.`);
+                console.log(`Wykryto indeks giełdowy (${ticker}).`);
                 valuationSection.style.display = 'none';
                 recommendationSection.innerHTML = '';
+                updateAllIndicators();
                 return; 
             }
     
             const indicatorsResponse = await fetch(`${API_URL}/api/indicators/${ticker}`);
-            const lastPrice = stooqData[stooqData.length - 1].close;
+            const lastPrice = candlestickData[candlestickData.length - 1].close;
     
             if (indicatorsResponse.ok) {
                 try {
                     const indicatorsData = await indicatorsResponse.json();
                     updateValuationData(ticker, lastPrice, indicatorsData);
                 } catch (jsonError) {
-                    console.error(`Błąd parsowania JSON dla ${ticker}, mimo odpowiedzi OK.`, jsonError);
+                    console.error(`Błąd parsowania JSON dla ${ticker}.`, jsonError);
                     updateValuationData(ticker, lastPrice, {});
                 }
             } else {
@@ -160,11 +172,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 updateValuationData(ticker, lastPrice, {});
             }
     
+            updateAllIndicators();
+    
         } catch (error) {
             console.error(`!!! Krytyczny błąd w loadChartData dla ${ticker}:`, error);
             valuationSection.style.display = 'none';
             recommendationSection.innerHTML = '';
-            alert(`Wystąpił krytyczny błąd podczas ładowania danych dla ${ticker}. Sprawdź konsolę (F12).`);
+            alert(`Wystąpił krytyczny błąd podczas ładowania danych dla ${ticker}.`);
         }
     }
 
