@@ -78,8 +78,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 open: d.open,
                 high: d.high,
                 low: d.low,
-                close: d.close
+                close: d.close,
+                volume: d.volume
             }));
+
         
             const volumeData = stooqData.map(d => ({
                 time: d.time,
