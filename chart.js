@@ -40,10 +40,10 @@ document.addEventListener('DOMContentLoaded', function() {
         priceFormat: { type: 'volume' }
     });
 
+    let rsiChart = null;
+    let macdChart = null;
+    let obvChart = null;
 
-    const rsiChart = createIndicatorChart('rsi-chart-container', 120);
-    const macdChart = createIndicatorChart('macd-chart-container', 120);
-    const obvChart = createIndicatorChart('obv-chart-container', 120);
 
 
     let candlestickData = [];
@@ -497,85 +497,98 @@ document.addEventListener('DOMContentLoaded', function() {
                 series.setData(data);
                 break;
     
-            case 'Volume':
-                {
-                    const container = document.getElementById('volume-chart-container');
-                    container.style.display = 'block';
-                    // 🔑 tworzymy wykres dopiero teraz
-                    const volumeChart = LightweightCharts.createChart(container, {
+            case 'Volume': {
+                const container = document.getElementById('volume-chart-container');
+                container.style.display = 'block';
+    
+                if (!volumeChart) {
+                    volumeChart = LightweightCharts.createChart(container, {
                         width: container.clientWidth,
                         height: 100,
                         layout: { backgroundColor: '#fff', textColor: '#333' },
                         grid: { vertLines: { color: '#eee' }, horzLines: { color: '#eee' } },
                         timeScale: { timeVisible: true, secondsVisible: false }
                     });
-                    series = volumeChart.addSeries(LightweightCharts.HistogramSeries, {
-                        priceFormat: { type: 'volume' }
-                    });
-                    series.setData(data.map(d => ({
-                        time: d.time,
-                        value: d.volume,
-                        color: d.close > d.open ? 'rgba(0,150,136,0.8)' : 'rgba(255,82,82,0.8)'
-                    })));
-                    volumeChart.timeScale().fitContent();
                 }
-                break;
     
-            case 'RSI':
-                {
-                    const container = document.getElementById('rsi-chart-container');
-                    container.style.display = 'block';
-                    const rsiChart = LightweightCharts.createChart(container, {
+                series = volumeChart.addSeries(LightweightCharts.HistogramSeries, {
+                    priceFormat: { type: 'volume' }
+                });
+                series.setData(data.map(d => ({
+                    time: d.time,
+                    value: d.volume,
+                    color: d.close > d.open ? 'rgba(0,150,136,0.8)' : 'rgba(255,82,82,0.8)'
+                })));
+                volumeChart.timeScale().fitContent();
+                break;
+            }
+    
+            case 'RSI': {
+                const container = document.getElementById('rsi-chart-container');
+                container.style.display = 'block';
+    
+                if (!rsiChart) {
+                    rsiChart = LightweightCharts.createChart(container, {
                         width: container.clientWidth,
                         height: 120,
                         layout: { backgroundColor: '#fff', textColor: '#333' },
                         grid: { vertLines: { color: '#eee' }, horzLines: { color: '#eee' } },
                         timeScale: { timeVisible: true, secondsVisible: false }
                     });
-                    series = rsiChart.addSeries(LightweightCharts.LineSeries, { color: 'purple', lineWidth: 2 });
-                    series.setData(data);
-                    rsiChart.timeScale().fitContent();
                 }
-                break;
     
-            case 'MACD':
-                {
-                    const container = document.getElementById('macd-chart-container');
-                    container.style.display = 'block';
-                    const macdChart = LightweightCharts.createChart(container, {
+                series = rsiChart.addSeries(LightweightCharts.LineSeries, { color: 'purple', lineWidth: 2 });
+                series.setData(data);
+                rsiChart.timeScale().fitContent();
+                break;
+            }
+    
+            case 'MACD': {
+                const container = document.getElementById('macd-chart-container');
+                container.style.display = 'block';
+    
+                if (!macdChart) {
+                    macdChart = LightweightCharts.createChart(container, {
                         width: container.clientWidth,
                         height: 120,
                         layout: { backgroundColor: '#fff', textColor: '#333' },
                         grid: { vertLines: { color: '#eee' }, horzLines: { color: '#eee' } },
                         timeScale: { timeVisible: true, secondsVisible: false }
                     });
-                    const macdSeries = macdChart.addSeries(LightweightCharts.LineSeries, { color: 'blue', lineWidth: 2 });
-                    const signalSeries = macdChart.addSeries(LightweightCharts.LineSeries, { color: 'orange', lineWidth: 2 });
-                    const histSeries = macdChart.addSeries(LightweightCharts.HistogramSeries, { color: 'gray' });
-                    macdSeries.setData(data.macd);
-                    signalSeries.setData(data.signal);
-                    histSeries.setData(data.histogram);
-                    series = { macd: macdSeries, signal: signalSeries, histogram: histSeries };
-                    macdChart.timeScale().fitContent();
                 }
-                break;
     
-            case 'OBV':
-                {
-                    const container = document.getElementById('obv-chart-container');
-                    container.style.display = 'block';
-                    const obvChart = LightweightCharts.createChart(container, {
+                const macdSeries = macdChart.addSeries(LightweightCharts.LineSeries, { color: 'blue', lineWidth: 2 });
+                const signalSeries = macdChart.addSeries(LightweightCharts.LineSeries, { color: 'orange', lineWidth: 2 });
+                const histSeries = macdChart.addSeries(LightweightCharts.HistogramSeries, { color: 'gray' });
+    
+                macdSeries.setData(data.macd);
+                signalSeries.setData(data.signal);
+                histSeries.setData(data.histogram);
+    
+                series = { macd: macdSeries, signal: signalSeries, histogram: histSeries };
+                macdChart.timeScale().fitContent();
+                break;
+            }
+    
+            case 'OBV': {
+                const container = document.getElementById('obv-chart-container');
+                container.style.display = 'block';
+    
+                if (!obvChart) {
+                    obvChart = LightweightCharts.createChart(container, {
                         width: container.clientWidth,
                         height: 120,
                         layout: { backgroundColor: '#fff', textColor: '#333' },
                         grid: { vertLines: { color: '#eee' }, horzLines: { color: '#eee' } },
                         timeScale: { timeVisible: true, secondsVisible: false }
                     });
-                    series = obvChart.addSeries(LightweightCharts.LineSeries, { color: 'green', lineWidth: 2 });
-                    series.setData(data);
-                    obvChart.timeScale().fitContent();
                 }
+    
+                series = obvChart.addSeries(LightweightCharts.LineSeries, { color: 'green', lineWidth: 2 });
+                series.setData(data);
+                obvChart.timeScale().fitContent();
                 break;
+            }
         }
     
         activeIndicators[id] = { type, series, settings };
@@ -589,21 +602,28 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!indicator) return;
     
         if (indicator.type === 'MACD') {
-            macdChart.removeSeries(indicator.series.macd);
-            macdChart.removeSeries(indicator.series.signal);
-            macdChart.removeSeries(indicator.series.histogram);
+            if (macdChart) {
+                macdChart.removeSeries(indicator.series.macd);
+                macdChart.removeSeries(indicator.series.signal);
+                macdChart.removeSeries(indicator.series.histogram);
+            }
             document.getElementById('macd-chart-container').style.display = 'none';
-        } else if (indicator.type === 'Volume') {
-            //  dla Volume tylko chowamy kontener, nie usuwamy serii
-            document.getElementById('volume-chart-container').style.display = 'none';
         } else {
-            const chart = {
-                'SMA': mainChart, 'EMA': mainChart, 'WMA': mainChart,
-                'RSI': rsiChart, 'OBV': obvChart
-            }[indicator.type];
-            chart.removeSeries(indicator.series);
+            const chartMap = {
+                'SMA': mainChart,
+                'EMA': mainChart,
+                'WMA': mainChart,
+                'Volume': volumeChart,
+                'RSI': rsiChart,
+                'OBV': obvChart
+            };
     
-            if (['RSI', 'OBV'].includes(indicator.type)) {
+            const chart = chartMap[indicator.type];
+            if (chart && indicator.series) {
+                chart.removeSeries(indicator.series);
+            }
+    
+            if (['Volume', 'RSI', 'OBV'].includes(indicator.type)) {
                 document.getElementById(`${indicator.type.toLowerCase()}-chart-container`).style.display = 'none';
             }
         }
@@ -611,6 +631,7 @@ document.addEventListener('DOMContentLoaded', function() {
         delete activeIndicators[id];
         updateActiveIndicatorsList();
     }
+
 
     
     function updateAllIndicators() {
