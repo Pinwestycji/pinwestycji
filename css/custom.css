@@ -1,0 +1,11 @@
+#charts-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;          /* odstęp między wykresami */
+  margin-bottom: 20px;
+}
+
+#charts-wrapper > div {
+  border: 1px solid #ddd; /* opcjonalnie ramka */
+  box-sizing: border-box;
+}
