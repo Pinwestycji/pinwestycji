@@ -500,28 +500,11 @@ document.addEventListener('DOMContentLoaded', function() {
             case 'Volume': {
                 const container = document.getElementById('volume-chart-container');
                 container.style.display = 'block';
-    
-                if (!volumeChart) {
-                    volumeChart = LightweightCharts.createChart(container, {
-                        width: container.clientWidth,
-                        height: 100,
-                        layout: { backgroundColor: '#fff', textColor: '#333' },
-                        grid: { vertLines: { color: '#eee' }, horzLines: { color: '#eee' } },
-                        timeScale: { timeVisible: true, secondsVisible: false }
-                    });
-                }
-    
-                series = volumeChart.addSeries(LightweightCharts.HistogramSeries, {
-                    priceFormat: { type: 'volume' }
-                });
-                series.setData(data.map(d => ({
-                    time: d.time,
-                    value: d.volume,
-                    color: d.close > d.open ? 'rgba(0,150,136,0.8)' : 'rgba(255,82,82,0.8)'
-                })));
-                volumeChart.timeScale().fitContent();
+                // nie tworzymy niczego nowego, używamy globalnego volumeSeries
+                series = volumeSeries;
                 break;
             }
+
     
             case 'RSI': {
                 const container = document.getElementById('rsi-chart-container');
