@@ -18,6 +18,8 @@ document.addEventListener('DOMContentLoaded', function() {
     priceSeries.applyOptions({
         color: '#007bff'
     });
+
+    
     // === WYKRESY WSKAŹNIKÓW (PANELE) ===
     const createIndicatorChart = (containerId, height) => {
         const container = document.getElementById(containerId);
@@ -32,13 +34,17 @@ document.addEventListener('DOMContentLoaded', function() {
         return chart;
     };
 
+    const volumeChart = createIndicatorChart('volume-chart-container', 100);
+
+    // dodajemy serię wolumenu od razu
+    const volumeSeries = volumeChart.addSeries(LightweightCharts.HistogramSeries, {
+        priceFormat: { type: 'volume' }
+    });
 
     let rsiChart = null;
     let macdChart = null;
     let obvChart = null;
-    let volumeChart = null;
-    let volumeSeries = null;
-
+   
 
 
     let candlestickData = [];
@@ -506,39 +512,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 const container = document.getElementById('volume-chart-container');
                 container.style.display = 'block';
             
-                if (!volumeChart) {
-                    volumeChart = LightweightCharts.createChart(container, {
-                        width: container.clientWidth,
-                        height: 100,
-                        layout: { backgroundColor: '#fff', textColor: '#333' },
-                        grid: { vertLines: { color: '#eee' }, horzLines: { color: '#eee' } },
-                        timeScale: { timeVisible: true, secondsVisible: false }
-                    });
-                    volumeSeries = volumeChart.addSeries(LightweightCharts.HistogramSeries, {
-                        priceFormat: { type: 'volume' }
-                    });
-                }
-            
-                // ustaw dane jeśli już istnieją
-                if (candlestickData && candlestickData.length > 0) {
-                    const volumeData = candlestickData.map(d => ({
-                        time: d.time,
-                        value: d.volume,
-                        color: d.close > d.open ? 'rgba(0,150,136,0.8)' : 'rgba(255,82,82,0.8)'
-                    }));
-                    volumeSeries.setData(volumeData);
-                    console.log("✅ Volume aktywowany, punkty:", volumeData.length);
-                } else {
-                    console.warn("⚠️ Brak danych do Volume w momencie aktywacji");
+                if (volumeChart) {
+                    setTimeout(() => {
+                        volumeChart.resize(container.clientWidth, 100);
+                        volumeChart.timeScale().fitContent();
+                        console.log("🔄 Wymusiłem resize VolumeChart:", container.clientWidth);
+                    }, 0);
                 }
             
                 series = volumeSeries;
                 break;
             }
-
-
-
-    
+                
             case 'RSI': {
                 const container = document.getElementById('rsi-chart-container');
                 container.style.display = 'block';
