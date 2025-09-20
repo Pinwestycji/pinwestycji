@@ -36,6 +36,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let rsiChart = null;
     let macdChart = null;
     let obvChart = null;
+    let volumeChart = null;
+    let volumeSeries = null;
 
 
 
@@ -98,9 +100,9 @@ document.addEventListener('DOMContentLoaded', function() {
             candlestickSeries.setData(candlestickData);
         
             if (volumeSeries) {
-                console.log("📈 Ustawiam dane Volume → punkty:", volumeData.length);
                 volumeSeries.setData(volumeData);
-            } else {
+                console.log("📈 Volume zaktualizowany w updateAllCharts:", volumeData.length);
+            }else {
                 console.warn("⚠️ volumeSeries jest undefined w momencie updateAllCharts");
             }
         
