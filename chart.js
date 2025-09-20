@@ -32,13 +32,6 @@ document.addEventListener('DOMContentLoaded', function() {
         return chart;
     };
 
-    
-    const volumeChart = createIndicatorChart('volume-chart-container', 100);
-
-    // dodajemy serię wolumenu od razu
-    const volumeSeries = volumeChart.addSeries(LightweightCharts.HistogramSeries, {
-        priceFormat: { type: 'volume' }
-    });
 
     let rsiChart = null;
     let macdChart = null;
@@ -510,14 +503,37 @@ document.addEventListener('DOMContentLoaded', function() {
             case 'Volume': {
                 const container = document.getElementById('volume-chart-container');
                 container.style.display = 'block';
-                if (!volumeSeries) {
-                    console.error("❌ Próba włączenia Volume, ale volumeSeries = null!");
-                } else {
-                    console.log("✅ Włączam Volume, seria istnieje, ostatnie punkty:", volumeSeries);
+            
+                if (!volumeChart) {
+                    volumeChart = LightweightCharts.createChart(container, {
+                        width: container.clientWidth,
+                        height: 100,
+                        layout: { backgroundColor: '#fff', textColor: '#333' },
+                        grid: { vertLines: { color: '#eee' }, horzLines: { color: '#eee' } },
+                        timeScale: { timeVisible: true, secondsVisible: false }
+                    });
+                    volumeSeries = volumeChart.addSeries(LightweightCharts.HistogramSeries, {
+                        priceFormat: { type: 'volume' }
+                    });
                 }
+            
+                // ustaw dane jeśli już istnieją
+                if (candlestickData && candlestickData.length > 0) {
+                    const volumeData = candlestickData.map(d => ({
+                        time: d.time,
+                        value: d.volume,
+                        color: d.close > d.open ? 'rgba(0,150,136,0.8)' : 'rgba(255,82,82,0.8)'
+                    }));
+                    volumeSeries.setData(volumeData);
+                    console.log("✅ Volume aktywowany, punkty:", volumeData.length);
+                } else {
+                    console.warn("⚠️ Brak danych do Volume w momencie aktywacji");
+                }
+            
                 series = volumeSeries;
                 break;
             }
+
 
 
     
