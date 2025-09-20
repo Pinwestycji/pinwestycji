@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // === NOWA FUNKCJA: Aktualizacja wszystkich wykresów na podstawie danych ===
         function updateAllCharts(stooqData) {
             if (!stooqData || stooqData.length === 0) {
-                console.error('Brak danych do aktualizacji wykresów.');
+                console.error('❌ Brak danych do aktualizacji wykresów.');
                 return;
             }
         
@@ -91,7 +91,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 close: d.close,
                 volume: d.volume
             }));
-
         
             const volumeData = stooqData.map(d => ({
                 time: d.time,
@@ -99,12 +98,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 color: d.close > d.open ? 'rgba(0, 150, 136, 0.8)' : 'rgba(255, 82, 82, 0.8)'
             }));
         
+            console.log("📊 updateAllCharts: świec =", candlestickData.length);
+            console.log("📊 updateAllCharts: wolumen =", volumeData.length, 
+                        "pierwsze punkty =", volumeData.slice(0, 5));
+        
             candlestickSeries.setData(candlestickData);
-            volumeSeries.setData(volumeData);  // ✅ wolumen aktualizowany zawsze
+        
+            if (volumeSeries) {
+                console.log("📈 Ustawiam dane Volume → punkty:", volumeData.length);
+                volumeSeries.setData(volumeData);
+            } else {
+                console.warn("⚠️ volumeSeries jest undefined w momencie updateAllCharts");
+            }
         
             updateAllIndicators();
             mainChart.timeScale().fitContent();
-    }
+        }
+
 
 
     
@@ -500,10 +510,15 @@ document.addEventListener('DOMContentLoaded', function() {
             case 'Volume': {
                 const container = document.getElementById('volume-chart-container');
                 container.style.display = 'block';
-                // nie tworzymy niczego nowego, używamy globalnego volumeSeries
+                if (!volumeSeries) {
+                    console.error("❌ Próba włączenia Volume, ale volumeSeries = null!");
+                } else {
+                    console.log("✅ Włączam Volume, seria istnieje, ostatnie punkty:", volumeSeries);
+                }
                 series = volumeSeries;
                 break;
             }
+
 
     
             case 'RSI': {
