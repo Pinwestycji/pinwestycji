@@ -591,12 +591,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 macdChart.removeSeries(indicator.series.histogram);
             }
             document.getElementById('macd-chart-container').style.display = 'none';
+        } else if (indicator.type === 'Volume') {
+            // 🔑 NIE usuwamy serii volumeSeries, tylko chowamy kontener
+            document.getElementById('volume-chart-container').style.display = 'none';
         } else {
             const chartMap = {
                 'SMA': mainChart,
                 'EMA': mainChart,
                 'WMA': mainChart,
-                'Volume': volumeChart,
                 'RSI': rsiChart,
                 'OBV': obvChart
             };
@@ -606,7 +608,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 chart.removeSeries(indicator.series);
             }
     
-            if (['Volume', 'RSI', 'OBV'].includes(indicator.type)) {
+            if (['RSI', 'OBV'].includes(indicator.type)) {
                 document.getElementById(`${indicator.type.toLowerCase()}-chart-container`).style.display = 'none';
             }
         }
@@ -614,6 +616,7 @@ document.addEventListener('DOMContentLoaded', function() {
         delete activeIndicators[id];
         updateActiveIndicatorsList();
     }
+
 
 
     
