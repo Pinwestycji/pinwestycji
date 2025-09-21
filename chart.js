@@ -34,12 +34,9 @@ document.addEventListener('DOMContentLoaded', function() {
         return chart;
     };
 
-    const volumeChart = createIndicatorChart('volume-chart-container', 100);
+    let volumeChart = null;
+    let volumeSeries = null;
 
-    // dodajemy serię wolumenu od razu
-    const volumeSeries = volumeChart.addSeries(LightweightCharts.HistogramSeries, {
-        priceFormat: { type: 'volume' }
-    });
 
     let rsiChart = null;
     let macdChart = null;
@@ -512,17 +509,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 const container = document.getElementById('volume-chart-container');
                 container.style.display = 'block';
             
-                if (volumeChart) {
-                    setTimeout(() => {
-                        volumeChart.resize(container.clientWidth, 100);
-                        volumeChart.timeScale().fitContent();
-                        console.log("🔄 Wymusiłem resize VolumeChart:", container.clientWidth);
-                    }, 0);
+                if (!volumeChart) {
+                    volumeChart = LightweightCharts.createChart(container, {
+                        width: container.clientWidth,
+                        height: 100,
+                        layout: { backgroundColor: '#ffffff', textColor: '#333' },
+                        grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } },
+                        timeScale: { timeVisible: true, secondsVisible: false }
+                    });
+            
+                    volumeSeries = volumeChart.addSeries(LightweightCharts.HistogramSeries, {
+                        priceFormat: { type: 'volume' }
+                    });
                 }
             
-                series = volumeSeries;
-            
-                // 🔑 Dodaj tę część:
                 if (candlestickData.length > 0) {
                     const vol = candlestickData.map(d => ({
                         time: d.time,
@@ -532,10 +532,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     volumeSeries.setData(vol);
                 }
             
+                setTimeout(() => {
+                    volumeChart.resize(container.clientWidth, 100);
+                    volumeChart.timeScale().fitContent();
+                }, 0);
+            
+                series = volumeSeries;
                 break;
             }
-
-                
+   
             case 'RSI': {
                 const container = document.getElementById('rsi-chart-container');
                 container.style.display = 'block';
@@ -755,21 +760,27 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     ['volume', 'rsi', 'macd', 'obv'].forEach(name => {
-        document.getElementById(`${name}Toggle`).addEventListener('change', (e) => {
+        const toggleEl = document.getElementById(`${name}Toggle`);
+        if (!toggleEl) return;
+    
+        toggleEl.addEventListener('change', (e) => {
             const id = name;
-            const type = name.toUpperCase();
+            const type = (name === 'volume') ? 'Volume' : name.toUpperCase();
+    
             if (e.target.checked) {
-                 let data;
-                 if(type === 'Volume') data = candlestickData;
-                 if(type === 'RSI') data = calculateRSI(candlestickData);
-                 if(type === 'MACD') data = calculateMACD(candlestickData);
-                 if(type === 'OBV') data = calculateOBV(candlestickData);
-                 addIndicator(id, type, {}, data);
+                let data;
+                if (type === 'Volume') data = candlestickData;
+                if (type === 'RSI') data = calculateRSI(candlestickData);
+                if (type === 'MACD') data = calculateMACD(candlestickData);
+                if (type === 'OBV') data = calculateOBV(candlestickData);
+    
+                addIndicator(id, type, {}, data);
             } else {
                 removeIndicator(id);
             }
         });
     });
+
 
     async function fetchStockData(ticker) {
         // === POCZĄTEK BLOKU DIAGNOSTYCZNEGO ===
