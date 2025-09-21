@@ -521,8 +521,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             
                 series = volumeSeries;
+            
+                // 🔑 Dodaj tę część:
+                if (candlestickData.length > 0) {
+                    const vol = candlestickData.map(d => ({
+                        time: d.time,
+                        value: d.volume,
+                        color: d.close > d.open ? 'rgba(0, 150, 136, 0.5)' : 'rgba(255, 82, 82, 0.5)'
+                    }));
+                    volumeSeries.setData(vol);
+                }
+            
                 break;
             }
+
                 
             case 'RSI': {
                 const container = document.getElementById('rsi-chart-container');
