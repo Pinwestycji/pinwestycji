@@ -449,13 +449,18 @@ document.addEventListener('DOMContentLoaded', function() {
     
         const signalLine = calculateEMA(macdLine, signalPeriod);
     
-        const histogram = macdLine.map((point, idx) => {
-            const sig = signalLine[idx];
-            if (sig) {
-                return { time: point.time, value: point.value - sig.value };
+                // Tworzymy mapę Signal po dacie
+        const signalMap = new Map(signalLine.map(s => [s.time, s.value]));
+        
+        // Histogram = różnica MACD - Signal dla wspólnej daty
+        const histogram = macdLine.map(point => {
+            const sigValue = signalMap.get(point.time);
+            if (sigValue !== undefined) {
+                return { time: point.time, value: point.value - sigValue };
             }
             return null;
         }).filter(Boolean);
+
     
         return {
             macd: macdLine,
