@@ -56,6 +56,88 @@ document.addEventListener('DOMContentLoaded', function() {
     const chartTitle = document.getElementById('chart-title');
     const projectionTableBody = document.getElementById('projectionTableBody');
 
+        // --- Rysowanie linii ---
+    let drawingMode = null;
+    let drawingPoints = [];
+    let drawnShapes = [];
+    
+    let lineColor = "#0000ff";  // domyślny kolor
+    let lineWidth = 2;          // domyślna grubość
+    
+    // Canvas do rysowania
+    const drawingCanvas = document.getElementById("drawingCanvas");
+    const ctx = drawingCanvas.getContext("2d");
+    
+    function resizeDrawingCanvas() {
+        drawingCanvas.width = document.getElementById("candlestick-chart").clientWidth;
+        drawingCanvas.height = document.getElementById("candlestick-chart").clientHeight;
+    }
+    resizeDrawingCanvas();
+    window.addEventListener("resize", resizeDrawingCanvas);
+    
+    // Ustawianie trybu rysowania
+    function setDrawingMode(mode) {
+        drawingMode = mode;
+        drawingPoints = [];
+        console.log("Tryb rysowania:", mode);
+    }
+
+    function addTrendLine(p1, p2) {
+        ctx.strokeStyle = lineColor;
+        ctx.lineWidth = lineWidth;
+        ctx.beginPath();
+        ctx.moveTo(p1.point.x, p1.point.y);
+        ctx.lineTo(p2.point.x, p2.point.y);
+        ctx.stroke();
+    
+        drawnShapes.push({ type: "trendline", p1, p2, color: lineColor, width: lineWidth });
+    }
+    
+    function addHorizontalLine(y) {
+        ctx.strokeStyle = lineColor;
+        ctx.lineWidth = lineWidth;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(drawingCanvas.width, y);
+        ctx.stroke();
+    
+        drawnShapes.push({ type: "hline", y, color: lineColor, width: lineWidth });
+    }
+    
+    function addVerticalLine(x) {
+        ctx.strokeStyle = lineColor;
+        ctx.lineWidth = lineWidth;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, drawingCanvas.height);
+        ctx.stroke();
+    
+        drawnShapes.push({ type: "vline", x, color: lineColor, width: lineWidth });
+    }
+    
+    function addChannel(p1, p2) {
+        const offset = 40; // na początek sztywno, potem możemy dać regulację
+    
+        ctx.strokeStyle = lineColor;
+        ctx.lineWidth = lineWidth;
+    
+        // główna linia
+        ctx.beginPath();
+        ctx.moveTo(p1.point.x, p1.point.y);
+        ctx.lineTo(p2.point.x, p2.point.y);
+        ctx.stroke();
+    
+        // równoległa linia
+        ctx.beginPath();
+        ctx.moveTo(p1.point.x, p1.point.y + offset);
+        ctx.lineTo(p2.point.x, p2.point.y + offset);
+        ctx.stroke();
+    
+        drawnShapes.push({ type: "channel", p1, p2, offset, color: lineColor, width: lineWidth });
+    }
+
+
+
     // === LOGIKA APLIKACJI ===
     async function loadCompanyData() {
             try {
@@ -897,6 +979,31 @@ document.addEventListener('DOMContentLoaded', function() {
         mainChart.applyOptions({ width: chartContainer.clientWidth });
         projectionChart.applyOptions({ width: projectionChartContainer.clientWidth });
     });
+
+    chart.subscribeClick((param) => {
+        if (!drawingMode || !param.point) return;
+    
+        if (drawingMode === 'hline') {
+            addHorizontalLine(param.point.y);
+            drawingMode = null;
+        } else if (drawingMode === 'vline') {
+            addVerticalLine(param.point.x);
+            drawingMode = null;
+        } else {
+            // Trendline i Channel potrzebują 2 punktów
+            drawingPoints.push(param);
+            if (drawingPoints.length === 2) {
+                if (drawingMode === 'trendline') {
+                    addTrendLine(drawingPoints[0], drawingPoints[1]);
+                } else if (drawingMode === 'channel') {
+                    addChannel(drawingPoints[0], drawingPoints[1]);
+                }
+                drawingPoints = [];
+                drawingMode = null;
+            }
+        }
+    });
+
     
     // === Inicjalizacja ===
     loadCompanyData().then(() => {
