@@ -419,32 +419,37 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     
-    function calculateMACD(data, fastPeriod = 12, slowPeriod = 26, signalPeriod = 9) {
+   function calculateMACD(data, fastPeriod = 12, slowPeriod = 26, signalPeriod = 9) {
         if (!data || data.length < slowPeriod) {
             console.warn("⚠️ calculateMACD: za mało danych");
             return { macd: [], signal: [], histogram: [] };
         }
     
+        // Obliczamy EMA szybkie i wolne
         const emaFast = calculateEMA(data, fastPeriod);
         const emaSlow = calculateEMA(data, slowPeriod);
     
         const macdLine = [];
-        for (let i = 0; i < emaSlow.length; i++) {
-            const fast = emaFast[i + (slowPeriod - fastPeriod)];
-            const slow = emaSlow[i];
-            if (fast && slow) {
+    
+        // Mapujemy emaSlow po czasie -> szybkie wyszukiwanie
+        const slowMap = new Map(emaSlow.map(s => [s.time, s.value]));
+    
+        // Iterujemy po EMA szybkiej, żeby dojść do samego końca
+        emaFast.forEach(fastPoint => {
+            const slowValue = slowMap.get(fastPoint.time);
+            if (slowValue !== undefined) {
                 macdLine.push({
-                    time: slow.time,
-                    value: fast.value - slow.value
+                    time: fastPoint.time,
+                    value: fastPoint.value - slowValue
                 });
             }
-        }
+        });
     
         if (macdLine.length === 0) {
             return { macd: [], signal: [], histogram: [] };
         }
     
-        // 🔑 Signal line jako EMA z macdLine
+        // Linia sygnału = EMA z macdLine
         const signalLine = calculateEMA(macdLine, signalPeriod);
     
         // Histogram = różnica MACD - Signal
@@ -462,6 +467,7 @@ document.addEventListener('DOMContentLoaded', function() {
             histogram: histogram
         };
     }
+
 
 
     function calculateOBV(data) {
