@@ -363,20 +363,21 @@ document.addEventListener('DOMContentLoaded', function() {
     
         const k = 2 / (period + 1);
         const emaArray = [];
-        let prevEma;
     
-        data.forEach((d, i) => {
-            const price = d.close !== undefined ? d.close : d.value; // obsługuje świeczki i wskaźniki
-            if (price === undefined || price === null) return;
+        // 🔑 Pierwsza wartość EMA to średnia z pierwszych 'period' cen
+        let sum = 0;
+        for (let i = 0; i < period; i++) {
+            sum += data[i].close !== undefined ? data[i].close : data[i].value;
+        }
+        let prevEma = sum / period;
+        emaArray.push({ time: data[period - 1].time, value: prevEma });
     
-            if (i === 0) {
-                prevEma = price; // pierwsza wartość = cena
-            } else {
-                prevEma = price * k + prevEma * (1 - k);
-            }
-    
-            emaArray.push({ time: d.time, value: prevEma });
-        });
+        // 🔑 Potem dopiero iterujemy
+        for (let i = period; i < data.length; i++) {
+            const price = data[i].close !== undefined ? data[i].close : data[i].value;
+            prevEma = price * k + prevEma * (1 - k);
+            emaArray.push({ time: data[i].time, value: prevEma });
+        }
     
         return emaArray;
     }
@@ -425,16 +426,13 @@ document.addEventListener('DOMContentLoaded', function() {
             return { macd: [], signal: [], histogram: [] };
         }
     
-        // Obliczamy EMA szybkie i wolne
         const emaFast = calculateEMA(data, fastPeriod);
         const emaSlow = calculateEMA(data, slowPeriod);
     
         const macdLine = [];
     
-        // Mapujemy emaSlow po czasie -> szybkie wyszukiwanie
         const slowMap = new Map(emaSlow.map(s => [s.time, s.value]));
     
-        // Iterujemy po EMA szybkiej, żeby dojść do samego końca
         emaFast.forEach(fastPoint => {
             const slowValue = slowMap.get(fastPoint.time);
             if (slowValue !== undefined) {
@@ -449,10 +447,8 @@ document.addEventListener('DOMContentLoaded', function() {
             return { macd: [], signal: [], histogram: [] };
         }
     
-        // Linia sygnału = EMA z macdLine
         const signalLine = calculateEMA(macdLine, signalPeriod);
     
-        // Histogram = różnica MACD - Signal
         const histogram = macdLine.map((point, idx) => {
             const sig = signalLine[idx];
             if (sig) {
@@ -467,6 +463,7 @@ document.addEventListener('DOMContentLoaded', function() {
             histogram: histogram
         };
     }
+
 
 
 
