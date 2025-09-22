@@ -892,6 +892,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // === Inicjalizacja ===
     loadCompanyData().then(() => {
-        loadChartData('CDR');
+        loadChartData('WIG');
     });
 });
