@@ -87,6 +87,27 @@
                             <div class="card shadow mb-4">
                                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                                     <h6 id="chart-title" class="m-0 font-weight-bold text-primary">Wykres Świecowy (GPW)</h6>
+                                    <!-- Przycisk Linie -->
+                                    <div class="btn-group">
+                                      <button class="btn btn-sm btn-warning dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        <i class="fas fa-draw-polygon fa-sm"></i> Linie
+                                      </button>
+                                      <div class="dropdown-menu">
+                                        <a class="dropdown-item" href="#" onclick="setDrawingMode('trendline')">
+                                          <i class="fas fa-long-arrow-alt-up"></i> Linia Trendu
+                                        </a>
+                                        <a class="dropdown-item" href="#" onclick="setDrawingMode('hline')">
+                                          <i class="fas fa-arrows-alt-h"></i> Linia Pozioma
+                                        </a>
+                                        <a class="dropdown-item" href="#" onclick="setDrawingMode('vline')">
+                                          <i class="fas fa-arrows-alt-v"></i> Linia Pionowa
+                                        </a>
+                                        <a class="dropdown-item" href="#" onclick="setDrawingMode('channel')">
+                                          <i class="fas fa-stream"></i> Kanał Trendu
+                                        </a>
+                                      </div>
+                                    </div>
+
                                     <button class="btn btn-sm btn-info" data-toggle="modal" data-target="#indicatorsModal">
                                         <i class="fas fa-chart-line fa-sm"></i> Wskaźniki
                                     </button>
