@@ -980,7 +980,7 @@ document.addEventListener('DOMContentLoaded', function() {
         projectionChart.applyOptions({ width: projectionChartContainer.clientWidth });
     });
 
-    chart.subscribeClick((param) => {
+    drawingCanvas.subscribeClick((param) => {
         if (!drawingMode || !param.point) return;
     
         if (drawingMode === 'hline') {
