@@ -75,6 +75,41 @@ document.addEventListener('DOMContentLoaded', function() {
     // Canvas do rysowania
     const drawingCanvas = document.getElementById("drawingCanvas");
     const ctx = drawingCanvas.getContext("2d");
+
+    function redrawShapes() {
+        // Czyścimy (używamy wymiarów w devicePixelRatio)
+        ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+        const ratio = window.devicePixelRatio || 1;
+        const cssWidth = drawingCanvas.width / ratio;
+        const cssHeight = drawingCanvas.height / ratio;
+    
+        drawnShapes.forEach(shape => {
+            ctx.strokeStyle = shape.color || lineColor;
+            ctx.lineWidth = shape.width || lineWidth;
+            ctx.beginPath();
+            if (shape.type === 'trendline') {
+                ctx.moveTo(shape.p1.point.x, shape.p1.point.y);
+                ctx.lineTo(shape.p2.point.x, shape.p2.point.y);
+                ctx.stroke();
+            } else if (shape.type === 'hline') {
+                ctx.moveTo(0, shape.y);
+                ctx.lineTo(cssWidth, shape.y);
+                ctx.stroke();
+            } else if (shape.type === 'vline') {
+                ctx.moveTo(shape.x, 0);
+                ctx.lineTo(shape.x, cssHeight);
+                ctx.stroke();
+            } else if (shape.type === 'channel') {
+                ctx.moveTo(shape.p1.point.x, shape.p1.point.y);
+                ctx.lineTo(shape.p2.point.x, shape.p2.point.y);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(shape.p1.point.x, shape.p1.point.y + shape.offset);
+                ctx.lineTo(shape.p2.point.x, shape.p2.point.y + shape.offset);
+                ctx.stroke();
+            }
+        });
+    }
     
     function resizeDrawingCanvas() {
         const rect = chartContainer.getBoundingClientRect();
