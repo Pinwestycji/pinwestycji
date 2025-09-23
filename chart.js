@@ -87,29 +87,37 @@ document.addEventListener('DOMContentLoaded', function() {
             ctx.strokeStyle = shape.color || lineColor;
             ctx.lineWidth = shape.width || lineWidth;
             ctx.beginPath();
+    
             if (shape.type === 'trendline') {
-                ctx.moveTo(shape.p1.point.x, shape.p1.point.y);
-                ctx.lineTo(shape.p2.point.x, shape.p2.point.y);
+                ctx.moveTo(shape.p1.x, shape.p1.y);
+                ctx.lineTo(shape.p2.x, shape.p2.y);
                 ctx.stroke();
+    
             } else if (shape.type === 'hline') {
                 ctx.moveTo(0, shape.y);
                 ctx.lineTo(cssWidth, shape.y);
                 ctx.stroke();
+    
             } else if (shape.type === 'vline') {
                 ctx.moveTo(shape.x, 0);
                 ctx.lineTo(shape.x, cssHeight);
                 ctx.stroke();
+    
             } else if (shape.type === 'channel') {
-                ctx.moveTo(shape.p1.point.x, shape.p1.point.y);
-                ctx.lineTo(shape.p2.point.x, shape.p2.point.y);
+                // główna linia
+                ctx.moveTo(shape.p1.x, shape.p1.y);
+                ctx.lineTo(shape.p2.x, shape.p2.y);
                 ctx.stroke();
+    
+                // równoległa linia
                 ctx.beginPath();
-                ctx.moveTo(shape.p1.point.x, shape.p1.point.y + shape.offset);
-                ctx.lineTo(shape.p2.point.x, shape.p2.point.y + shape.offset);
+                ctx.moveTo(shape.p1.x, shape.p1.y + shape.offset);
+                ctx.lineTo(shape.p2.x, shape.p2.y + shape.offset);
                 ctx.stroke();
             }
         });
     }
+
     
     function resizeDrawingCanvas() {
         const rect = chartContainer.getBoundingClientRect();
@@ -142,37 +150,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
     function addTrendLine(p1, p2) {
-        ctx.strokeStyle = lineColor;
-        ctx.lineWidth = lineWidth;
-        ctx.beginPath();
-        ctx.moveTo(p1.point.x, p1.point.y);
-        ctx.lineTo(p2.point.x, p2.point.y);
-        ctx.stroke();
-    
-        drawnShapes.push({ type: "trendline", p1, p2, color: lineColor, width: lineWidth });
+        drawnShapes.push({
+            type: 'trendline',
+            p1, // bez .point, bo obiekt ma już {x, y, time, price}
+            p2,
+            color: lineColor,
+            width: lineWidth
+        });
+        redrawShapes();
     }
+
+
     
     function addHorizontalLine(y) {
-        ctx.strokeStyle = lineColor;
-        ctx.lineWidth = lineWidth;
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(drawingCanvas.width, y);
-        ctx.stroke();
-    
         drawnShapes.push({ type: "hline", y, color: lineColor, width: lineWidth });
+        redrawShapes();
     }
+
     
     function addVerticalLine(x) {
-        ctx.strokeStyle = lineColor;
-        ctx.lineWidth = lineWidth;
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, drawingCanvas.height);
-        ctx.stroke();
-    
         drawnShapes.push({ type: "vline", x, color: lineColor, width: lineWidth });
+        redrawShapes();
     }
+
     
     function addChannel(p1, p2) {
         const offset = 40; // na początek sztywno, potem możemy dać regulację
@@ -182,18 +182,26 @@ document.addEventListener('DOMContentLoaded', function() {
     
         // główna linia
         ctx.beginPath();
-        ctx.moveTo(p1.point.x, p1.point.y);
-        ctx.lineTo(p2.point.x, p2.point.y);
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
         ctx.stroke();
     
         // równoległa linia
         ctx.beginPath();
-        ctx.moveTo(p1.point.x, p1.point.y + offset);
-        ctx.lineTo(p2.point.x, p2.point.y + offset);
+        ctx.moveTo(p1.x, p1.y + offset);
+        ctx.lineTo(p2.x, p2.y + offset);
         ctx.stroke();
     
-        drawnShapes.push({ type: "channel", p1, p2, offset, color: lineColor, width: lineWidth });
+        drawnShapes.push({
+            type: "channel",
+            p1,
+            p2,
+            offset,
+            color: lineColor,
+            width: lineWidth
+        });
     }
+
 
 
 
