@@ -133,11 +133,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     
     // Ustawianie trybu rysowania
-    function setDrawingMode(mode) {
+    // wersja: przypisz funkcję do window (globalnie)
+    window.setDrawingMode = function(mode) {
         drawingMode = mode;
         drawingPoints = [];
         console.log("Tryb rysowania:", mode);
-    }
+    };
+
 
     function addTrendLine(p1, p2) {
         ctx.strokeStyle = lineColor;
