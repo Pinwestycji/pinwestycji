@@ -1040,16 +1040,27 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     mainChart.subscribeClick((param) => {
-        if (!drawingMode || !param || !param.point) return;
+        if (!drawingMode || !param || !param.time) return;
+    
+        // Konwersja czasu i ceny na współrzędne pikselowe
+        const x = mainChart.timeScale().timeToCoordinate(param.time);
+        const seriesData = param.seriesData.get(candlestickSeries);
+        if (!seriesData) return;
+        const price = seriesData.close; 
+        const y = candlestickSeries.priceToCoordinate(price);
+    
+        if (x === null || y === null) return;
+    
+        const point = { x, y, time: param.time, price };
     
         if (drawingMode === 'hline') {
-            addHorizontalLine(param.point.y);
+            addHorizontalLine(y);
             drawingMode = null;
         } else if (drawingMode === 'vline') {
-            addVerticalLine(param.point.x);
+            addVerticalLine(x);
             drawingMode = null;
         } else {
-            drawingPoints.push(param);
+            drawingPoints.push(point);
             if (drawingPoints.length === 2) {
                 if (drawingMode === 'trendline') {
                     addTrendLine(drawingPoints[0], drawingPoints[1]);
@@ -1062,6 +1073,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         redrawShapes();
     });
+
 
 
     
