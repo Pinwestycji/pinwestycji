@@ -7,7 +7,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // === GŁÓWNE WYKRESY ===
     const chartContainer = document.getElementById('tvchart');
-    const mainChart = LightweightCharts.createChart(chartContainer, { width: chartContainer.clientWidth, height: 450, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } }, crosshair: { mode: LightweightCharts.CrosshairMode.Normal }, timeScale: { timeVisible: true, secondsVisible: false } });
+    const mainChart = LightweightCharts.createChart(chartContainer, {
+        width: chartContainer.clientWidth,
+        height: chartContainer.clientHeight || 450,
+        layout: { backgroundColor: '#ffffff', textColor: '#333' },
+        grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } },
+        crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+        timeScale: { timeVisible: true, secondsVisible: false }
+    });
+
     const candlestickSeries = mainChart.addSeries(LightweightCharts.CandlestickSeries, { upColor: 'rgba(0, 150, 136, 1)', downColor: 'rgba(255, 82, 82, 1)', borderDownColor: 'rgba(255, 82, 82, 1)', borderUpColor: 'rgba(0, 150, 136, 1)', wickDownColor: 'rgba(255, 82, 82, 1)', wickUpColor: 'rgba(0, 150, 136, 1)' });
 
     const projectionChartContainer = document.getElementById('projectionChart');
@@ -69,11 +77,25 @@ document.addEventListener('DOMContentLoaded', function() {
     const ctx = drawingCanvas.getContext("2d");
     
     function resizeDrawingCanvas() {
-        drawingCanvas.width = document.getElementById("candlestick-chart").clientWidth;
-        drawingCanvas.height = document.getElementById("candlestick-chart").clientHeight;
+        const rect = chartContainer.getBoundingClientRect();
+        const ratio = window.devicePixelRatio || 1;
+    
+        drawingCanvas.style.width = rect.width + "px";
+        drawingCanvas.style.height = rect.height + "px";
+    
+        drawingCanvas.width = Math.floor(rect.width * ratio);
+        drawingCanvas.height = Math.floor(rect.height * ratio);
+    
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        redrawShapes();
     }
+    
     resizeDrawingCanvas();
-    window.addEventListener("resize", resizeDrawingCanvas);
+    window.addEventListener("resize", () => {
+        resizeDrawingCanvas();
+        mainChart.applyOptions({ width: chartContainer.clientWidth });
+    });
+
     
     // Ustawianie trybu rysowania
     function setDrawingMode(mode) {
@@ -980,8 +1002,8 @@ document.addEventListener('DOMContentLoaded', function() {
         projectionChart.applyOptions({ width: projectionChartContainer.clientWidth });
     });
 
-    candlestickSeries.subscribeClick((param) => {
-        if (!drawingMode || !param.point) return;
+    mainChart.subscribeClick((param) => {
+        if (!drawingMode || !param || !param.point) return;
     
         if (drawingMode === 'hline') {
             addHorizontalLine(param.point.y);
@@ -990,7 +1012,6 @@ document.addEventListener('DOMContentLoaded', function() {
             addVerticalLine(param.point.x);
             drawingMode = null;
         } else {
-            // Trendline i Channel potrzebują 2 punktów
             drawingPoints.push(param);
             if (drawingPoints.length === 2) {
                 if (drawingMode === 'trendline') {
@@ -1002,7 +1023,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 drawingMode = null;
             }
         }
+        redrawShapes();
     });
+
 
     
     // === Inicjalizacja ===
