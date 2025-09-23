@@ -111,6 +111,17 @@
                                     <button class="btn btn-sm btn-info" data-toggle="modal" data-target="#indicatorsModal">
                                         <i class="fas fa-chart-line fa-sm"></i> Wskaźniki
                                     </button>
+                                    <div id="drawing-toolbar" class="d-flex align-items-center" style="gap: 10px;">
+                                        <label for="lineColor" class="mb-0 small">Kolor:</label>
+                                        <input type="color" id="lineColor" class="form-control form-control-sm" value="#0000FF" style="width: 50px;">
+                                        
+                                        <label for="lineWidth" class="mb-0 small">Grubość:</label>
+                                        <input type="number" id="lineWidth" class="form-control form-control-sm" value="2" min="1" max="10" style="width: 60px;">
+                                        
+                                        <button id="clearDrawingButton" class="btn btn-sm btn-danger">
+                                            <i class="fas fa-trash fa-sm"></i> Wyczyść
+                                        </button>
+                                    </div>
                                 </div>
                                 
 
