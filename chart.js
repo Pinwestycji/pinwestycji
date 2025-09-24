@@ -336,7 +336,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
             updateAllIndicators();
             mainChart.timeScale().fitContent();
-            redrawShapes(); // Ważne: przerysuj linie po załadowaniu nowych danych
+            masterRedraw(); // Zmieniono z redrawShapes() na masterRedraw()
         }
 
 
