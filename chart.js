@@ -41,12 +41,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const chartTitle = document.getElementById('chart-title');
     const projectionTableBody = document.getElementById('projectionTableBody');
 
-    // === SEKCJA RYSOWANIA - ZMODYFIKOWANA ===
+    // === SEKCJA RYSOWANIA - ZMODYFIKOWANA I POPRAWIONA ===
     
-    let drawingMode = null; // 'trendline', 'hline', 'vline', 'channel'
+    let drawingMode = null; 
     let drawingPoints = [];
     let drawnShapes = [];
-    let currentMousePoint = null; // Do dynamicznego rysowania
+    let currentMousePoint = null; 
 
     let lineColor = document.getElementById('lineColor').value;
     let lineWidth = parseInt(document.getElementById('lineWidth').value, 10);
@@ -65,19 +65,15 @@ document.addEventListener('DOMContentLoaded', function() {
         masterRedraw(); 
     }
 
-    /**
-     * Główna funkcja rysująca. Czyści płótno, rysuje zapisane kształty,
-     * a następnie rysuje aktualnie tworzony, dynamiczny kształt.
-     */
     function masterRedraw() {
         const ratio = window.devicePixelRatio || 1;
         ctx.clearRect(0, 0, drawingCanvas.width / ratio, drawingCanvas.height / ratio);
-        
-        redrawShapes();      // Rysuj zapisane, statyczne kształty
-        drawCurrentShape();  // Rysuj dynamiczny kształt podążający za myszką
+        redrawShapes();
+        drawCurrentShape();
     }
 
     function redrawShapes() {
+        // ... (Ta funkcja pozostaje bez zmian w stosunku do poprzedniej wersji)
         drawnShapes.forEach(shape => {
             ctx.strokeStyle = shape.color;
             ctx.lineWidth = shape.width;
@@ -105,19 +101,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     ctx.lineTo(x_coord, drawingCanvas.height / ratio);
                 }
             } else if (shape.type === 'channel') {
-                // Rysowanie głównej linii kanału
                 const p1_coord = { x: mainChart.timeScale().timeToCoordinate(shape.p1.time), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
                 const p2_coord = { x: mainChart.timeScale().timeToCoordinate(shape.p2.time), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
-                
                 if (p1_coord.x !== null && p2_coord.x !== null) {
                     ctx.moveTo(p1_coord.x, p1_coord.y);
                     ctx.lineTo(p2_coord.x, p2_coord.y);
-                    
-                    // Obliczanie przesunięcia dla linii równoległej
                     const p3_y_coord = candlestickSeries.priceToCoordinate(shape.p3.price);
                     const p1_y_coord_at_p3_time = candlestickSeries.priceToCoordinate(shape.p1_price_at_p3_time);
                     const dy = p3_y_coord - p1_y_coord_at_p3_time;
-
                     ctx.moveTo(p1_coord.x, p1_coord.y + dy);
                     ctx.lineTo(p2_coord.x, p2_coord.y + dy);
                 }
@@ -126,38 +117,28 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    /**
-     * Funkcja rysująca kształt "podążający" za kursorem, zanim zostanie on ostatecznie narysowany.
-     */
     function drawCurrentShape() {
+        // ... (Ta funkcja pozostaje bez zmian w stosunku do poprzedniej wersji)
         if (drawingPoints.length === 0 || !currentMousePoint) return;
-
         ctx.strokeStyle = lineColor;
         ctx.lineWidth = lineWidth;
         ctx.beginPath();
-
         const p1 = drawingPoints[0];
         const p1_coord = { x: mainChart.timeScale().timeToCoordinate(p1.time), y: candlestickSeries.priceToCoordinate(p1.price) };
-
         if (drawingMode === 'trendline' && drawingPoints.length === 1) {
             ctx.moveTo(p1_coord.x, p1_coord.y);
             ctx.lineTo(currentMousePoint.x, currentMousePoint.y);
         } else if (drawingMode === 'channel') {
             if (drawingPoints.length === 1) {
-                // Rysuj pierwszą linię dynamicznie
                 ctx.moveTo(p1_coord.x, p1_coord.y);
                 ctx.lineTo(currentMousePoint.x, currentMousePoint.y);
             } else if (drawingPoints.length === 2) {
-                // Rysuj drugą linię (równoległą) dynamicznie
                 const p2 = drawingPoints[1];
                 const p2_coord = { x: mainChart.timeScale().timeToCoordinate(p2.time), y: candlestickSeries.priceToCoordinate(p2.price) };
-
-                // Linia główna (już statyczna)
                 ctx.moveTo(p1_coord.x, p1_coord.y);
                 ctx.lineTo(p2_coord.x, p2_coord.y);
-
-                // Linia równoległa (dynamiczna)
-                const dy = currentMousePoint.y - p1_coord.y;
+                const p1_coord_at_mouse_time = { x: mainChart.timeScale().timeToCoordinate(p1.time), y: candlestickSeries.priceToCoordinate(interpolatePrice([p1,p2], currentMousePoint.time))};
+                const dy = currentMousePoint.y - p1_coord_at_mouse_time.y;
                 ctx.moveTo(p1_coord.x, p1_coord.y + dy);
                 ctx.lineTo(p2_coord.x, p2_coord.y + dy);
             }
@@ -166,19 +147,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function resizeDrawingCanvas() {
+        // ... (Ta funkcja pozostaje bez zmian)
         const rect = chartContainer.getBoundingClientRect();
         const ratio = window.devicePixelRatio || 1;
-        
         drawingCanvas.style.width = rect.width + "px";
         drawingCanvas.style.height = rect.height + "px";
         drawingCanvas.width = Math.floor(rect.width * ratio);
         drawingCanvas.height = Math.floor(rect.height * ratio);
         ctx.scale(ratio, ratio);
-        
         masterRedraw();
     }
     
     window.setDrawingMode = function(mode) {
+        // ... (Ta funkcja pozostaje bez zmian)
         drawingMode = mode;
         drawingPoints = [];
         chartContainer.style.cursor = 'crosshair';
@@ -187,39 +168,46 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- GŁÓWNE LISTENERY DO OBSŁUGI RYSOWANIA ---
 
-    // 1. Listener do ruchu myszy (dla dynamicznego rysowania)
+    // 1. Listener do ruchu myszy
     mainChart.subscribeCrosshairMove((param) => {
-        if (!drawingMode || drawingPoints.length === 0 || !param.point || !param.time) {
+        // === POPRAWKA 2: Zawsze przerysowuj, gdy mysz porusza się po wykresie ===
+        // To zapewnia responsywność przy przesuwaniu osi Y.
+        masterRedraw();
+
+        if (!drawingMode || drawingPoints.length === 0 || !param.point) {
             currentMousePoint = null;
             return;
         }
-        
-        // Konwertuj współrzędne myszy na cenę
+
+        // === POPRAWKA 1: Pobieraj czas i cenę bezpośrednio z koordynatów ===
         const price = candlestickSeries.coordinateToPrice(param.point.y);
-        if (price === null) return;
+        const time = mainChart.timeScale().coordinateToTime(param.point.x);
+
+        if (price === null || time === null) return;
 
         currentMousePoint = {
             x: param.point.x,
             y: param.point.y,
-            time: param.time,
+            time: time,
             price: price
         };
-        masterRedraw();
+        // masterRedraw() jest już na początku, więc nie trzeba go tu powtarzać
     });
 
-    // 2. Listener do kliknięć (do ustawiania punktów)
+    // 2. Listener do kliknięć
     mainChart.subscribeClick((param) => {
-        if (!drawingMode || !param.point || !param.time) return;
+        if (!drawingMode || !param.point) return;
 
-        // BARDZO WAŻNA POPRAWKA: Konwertujemy współrzędną Y kliknięcia na precyzyjną cenę.
+        // === POPRAWKA 1: Pobieraj czas i cenę bezpośrednio z koordynatów ===
         const price = candlestickSeries.coordinateToPrice(param.point.y);
-        if (price === null) {
-            // Czasem kliknięcie jest poza widoczną skalą cenową
-            console.warn("Nie można ustalić ceny w punkcie kliknięcia.");
+        const time = mainChart.timeScale().coordinateToTime(param.point.x);
+
+        if (price === null || time === null) {
+            console.warn("Kliknięcie poza obszarem rysowania.");
             return;
         }
 
-        const currentPoint = { time: param.time, price: price };
+        const currentPoint = { time: time, price: price };
         drawingPoints.push(currentPoint);
         
         if (drawingMode === 'hline') {
@@ -237,17 +225,13 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (drawingMode === 'channel' && drawingPoints.length === 3) {
             const [p1, p2, p3] = drawingPoints;
             
-            // Do poprawnego obliczenia przesunięcia potrzebujemy znać cenę na głównej linii w momencie czasu p3
-            const line = mainChart.getSeriesApi(candlestickSeries).createPriceLine({ price: 0, color: 'transparent' });
-            line.applyOptions({ price: p1.price }); // Ustawienie początku
-            const priceLineData = [ { time: p1.time, value: p1.price }, { time: p2.time, value: p2.price } ];
-            // To jest mały trik - symulujemy linię, żeby znaleźć cenę w dowolnym punkcie czasu
-            const interpolatedPrice = interpolatePrice(priceLineData, p3.time);
-            mainChart.removePriceLine(line);
+            // === POPRAWKA 3: Usunięcie błędnego kodu i użycie funkcji pomocniczej ===
+            // Nie tworzymy już tymczasowej linii, tylko obliczamy wartość matematycznie.
+            const interpolatedPrice = interpolatePrice([p1, p2], p3.time);
 
             drawnShapes.push({ 
                 type: "channel", p1, p2, p3, 
-                p1_price_at_p3_time: interpolatedPrice, // Zapisujemy tę wartość
+                p1_price_at_p3_time: interpolatedPrice,
                 color: lineColor, width: lineWidth 
             });
             drawingMode = null;
@@ -261,17 +245,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Funkcja pomocnicza do interpolacji ceny na linii
     function interpolatePrice(lineData, targetTime) {
+        // ... (Ta funkcja pozostaje bez zmian)
         const p1 = lineData[0];
         const p2 = lineData[1];
         if (p1.time === p2.time) return p1.value;
-        const slope = (p2.value - p1.value) / (p2.time - p1.time);
-        return p1.value + slope * (targetTime - p1.time);
+        const slope = (p2.value - p1.price) / (p2.time - p1.time);
+        return p1.price + slope * (targetTime - p1.time);
     }
     
     mainChart.timeScale().subscribeVisibleLogicalRangeChange(() => { masterRedraw(); });
-
     resizeDrawingCanvas();
     window.addEventListener("resize", () => {
         resizeDrawingCanvas();
