@@ -1,6 +1,7 @@
 // Plik: chart.js - Wersja z zaawansowanymi wskaźnikami technicznymi
 
 document.addEventListener('DOMContentLoaded', function() {
+    // ... (bez zmian na początku pliku, aż do sekcji rysowania)
     let companyList = []; 
     const API_URL = 'https://pinwestycji.onrender.com';
     const indexTickers = ['WIG20', 'WIG', 'MWIG40', 'SWIG80', 'WIG-UKRAIN'];
@@ -21,41 +22,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const projectionChartContainer = document.getElementById('projectionChart');
     const projectionChart = LightweightCharts.createChart(projectionChartContainer, { width: projectionChartContainer.clientWidth, height: 300, layout: { backgroundColor: '#ffffff', textColor: '#333' }, grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } }, crosshair: { mode: LightweightCharts.CrosshairMode.Normal }, rightPriceScale: { borderColor: '#cccccc' }, timeScale: { borderColor: '#cccccc', timeVisible: true, secondsVisible: false } });
 
-    // Tworzenie tylko jednej serii - dla prognozowanych cen
     const priceSeries = projectionChart.addSeries(LightweightCharts.HistogramSeries);
-    priceSeries.applyOptions({
-        color: '#007bff'
-    });
-
-    
-    // === WYKRESY WSKAŹNIKÓW (PANELE) ===
-    const createIndicatorChart = (containerId, height) => {
-        const container = document.getElementById(containerId);
-        console.log("Tworzę wykres w:", containerId, "rozmiar:", container.clientWidth, height);
-        const chart = LightweightCharts.createChart(container, {
-            width: container.clientWidth,
-            height: height,
-            layout: { backgroundColor: '#ffffff', textColor: '#333' },
-            grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } },
-            timeScale: { timeVisible: true, secondsVisible: false }
-        });
-        return chart;
-    };
+    priceSeries.applyOptions({ color: '#007bff' });
 
     let volumeChart = null;
     let volumeSeries = null;
-
-
     let rsiChart = null;
     let macdChart = null;
     let obvChart = null;
-   
-
 
     let candlestickData = [];
-    let activeIndicators = {}; // Obiekt do przechowywania aktywnych wskaźników
-
-    
+    let activeIndicators = {};
 
     // === ELEMENTY DOM ===
     const stockTickerInput = document.getElementById('stockTickerInput');
@@ -64,146 +41,173 @@ document.addEventListener('DOMContentLoaded', function() {
     const chartTitle = document.getElementById('chart-title');
     const projectionTableBody = document.getElementById('projectionTableBody');
 
-        // --- Rysowanie linii ---
-    let drawingMode = null;
+    // === SEKCJA RYSOWANIA - ZMODYFIKOWANA ===
+    
+    let drawingMode = null; // 'trendline', 'hline', 'vline', 'channel'
     let drawingPoints = [];
     let drawnShapes = [];
     
-    let lineColor = "#0000ff";  // domyślny kolor
-    let lineWidth = 2;          // domyślna grubość
+    // Zmienne do przechowywania aktualnych ustawień z panelu
+    let lineColor = document.getElementById('lineColor').value;
+    let lineWidth = parseInt(document.getElementById('lineWidth').value, 10);
     
-    // Canvas do rysowania
     const drawingCanvas = document.getElementById("drawingCanvas");
     const ctx = drawingCanvas.getContext("2d");
 
+    // Nasłuchiwanie na zmiany w panelu narzędzi
+    document.getElementById('lineColor').addEventListener('input', (e) => {
+        lineColor = e.target.value;
+    });
+    document.getElementById('lineWidth').addEventListener('input', (e) => {
+        lineWidth = parseInt(e.target.value, 10);
+    });
+    document.getElementById('clearDrawingButton').addEventListener('click', clearDrawings);
+
+    function clearDrawings() {
+        drawnShapes = [];
+        drawingPoints = [];
+        drawingMode = null;
+        redrawShapes(); // To wyczyści canvas
+    }
+
     function redrawShapes() {
-        // Czyścimy (używamy wymiarów w devicePixelRatio)
-        ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
         const ratio = window.devicePixelRatio || 1;
-        const cssWidth = drawingCanvas.width / ratio;
-        const cssHeight = drawingCanvas.height / ratio;
+        ctx.clearRect(0, 0, drawingCanvas.width / ratio, drawingCanvas.height / ratio);
     
         drawnShapes.forEach(shape => {
-            ctx.strokeStyle = shape.color || lineColor;
-            ctx.lineWidth = shape.width || lineWidth;
+            ctx.strokeStyle = shape.color;
+            ctx.lineWidth = shape.width;
             ctx.beginPath();
     
             if (shape.type === 'trendline') {
-                ctx.moveTo(shape.p1.x, shape.p1.y);
-                ctx.lineTo(shape.p2.x, shape.p2.y);
-                ctx.stroke();
-    
+                const p1_coord = { x: mainChart.timeScale().timeToCoordinate(shape.p1.time), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
+                const p2_coord = { x: mainChart.timeScale().timeToCoordinate(shape.p2.time), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
+                if (p1_coord.x !== null && p2_coord.x !== null) {
+                    ctx.moveTo(p1_coord.x, p1_coord.y);
+                    ctx.lineTo(p2_coord.x, p2_coord.y);
+                }
             } else if (shape.type === 'hline') {
-                ctx.moveTo(0, shape.y);
-                ctx.lineTo(cssWidth, shape.y);
-                ctx.stroke();
-    
+                const y_coord = candlestickSeries.priceToCoordinate(shape.price);
+                if (y_coord !== null) {
+                    ctx.moveTo(0, y_coord);
+                    ctx.lineTo(drawingCanvas.width / ratio, y_coord);
+                }
             } else if (shape.type === 'vline') {
-                ctx.moveTo(shape.x, 0);
-                ctx.lineTo(shape.x, cssHeight);
-                ctx.stroke();
-    
+                const x_coord = mainChart.timeScale().timeToCoordinate(shape.time);
+                if (x_coord !== null) {
+                    ctx.moveTo(x_coord, 0);
+                    ctx.lineTo(x_coord, drawingCanvas.height / ratio);
+                }
             } else if (shape.type === 'channel') {
-                // główna linia
-                ctx.moveTo(shape.p1.x, shape.p1.y);
-                ctx.lineTo(shape.p2.x, shape.p2.y);
-                ctx.stroke();
-    
-                // równoległa linia
-                ctx.beginPath();
-                ctx.moveTo(shape.p1.x, shape.p1.y + shape.offset);
-                ctx.lineTo(shape.p2.x, shape.p2.y + shape.offset);
-                ctx.stroke();
+                const p1_coord = { x: mainChart.timeScale().timeToCoordinate(shape.p1.time), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
+                const p2_coord = { x: mainChart.timeScale().timeToCoordinate(shape.p2.time), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
+                if (p1_coord.x !== null && p2_coord.x !== null) {
+                    // Linia główna
+                    ctx.moveTo(p1_coord.x, p1_coord.y);
+                    ctx.lineTo(p2_coord.x, p2_coord.y);
+                    
+                    // Linia równoległa
+                    const dy = shape.p3.y - shape.p1.y;
+                    ctx.moveTo(p1_coord.x, p1_coord.y + dy);
+                    ctx.lineTo(p2_coord.x, p2_coord.y + dy);
+                }
             }
+            ctx.stroke();
         });
     }
-
     
     function resizeDrawingCanvas() {
         const rect = chartContainer.getBoundingClientRect();
         const ratio = window.devicePixelRatio || 1;
-    
+        
         drawingCanvas.style.width = rect.width + "px";
         drawingCanvas.style.height = rect.height + "px";
-    
         drawingCanvas.width = Math.floor(rect.width * ratio);
         drawingCanvas.height = Math.floor(rect.height * ratio);
-    
-        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        ctx.scale(ratio, ratio);
+        
         redrawShapes();
     }
     
+    // Globalna funkcja do ustawiania trybu rysowania
+    window.setDrawingMode = function(mode) {
+        drawingMode = mode;
+        drawingPoints = [];
+        console.log("Tryb rysowania:", mode);
+        // Zmień kursor, aby użytkownik wiedział, że jest w trybie rysowania
+        chartContainer.style.cursor = 'crosshair';
+    };
+
+    function addTrendLine(p1, p2) {
+        drawnShapes.push({ type: 'trendline', p1, p2, color: lineColor, width: lineWidth });
+        redrawShapes();
+    }
+    
+    function addHorizontalLine(point) {
+        drawnShapes.push({ type: "hline", price: point.price, color: lineColor, width: lineWidth });
+        redrawShapes();
+    }
+    
+    function addVerticalLine(point) {
+        drawnShapes.push({ type: "vline", time: point.time, color: lineColor, width: lineWidth });
+        redrawShapes();
+    }
+
+    function addChannel(p1, p2, p3) {
+        drawnShapes.push({ type: "channel", p1, p2, p3, color: lineColor, width: lineWidth });
+        redrawShapes();
+    }
+
+    // Główny listener do obsługi rysowania
+    mainChart.subscribeClick((param) => {
+        if (!drawingMode || !param.point || !param.time) return;
+
+        // Pobieramy cenę z najbliższego punktu danych
+        const seriesData = param.seriesData.get(candlestickSeries);
+        if (!seriesData) return;
+        const price = seriesData.close; 
+
+        const currentPoint = { x: param.point.x, y: param.point.y, time: param.time, price };
+        drawingPoints.push(currentPoint);
+
+        if (drawingMode === 'hline') {
+            addHorizontalLine(currentPoint);
+            drawingPoints = [];
+            drawingMode = null;
+        } else if (drawingMode === 'vline') {
+            addVerticalLine(currentPoint);
+            drawingPoints = [];
+            drawingMode = null;
+        } else if (drawingMode === 'trendline' && drawingPoints.length === 2) {
+            addTrendLine(drawingPoints[0], drawingPoints[1]);
+            drawingPoints = [];
+            drawingMode = null;
+        } else if (drawingMode === 'channel' && drawingPoints.length === 3) {
+            addChannel(drawingPoints[0], drawingPoints[1], drawingPoints[2]);
+            drawingPoints = [];
+            drawingMode = null;
+        }
+
+        // Jeśli tryb rysowania został zakończony, przywróć kursor
+        if (!drawingMode) {
+            chartContainer.style.cursor = 'default';
+        }
+    });
+    
+    // Synchronizacja przesuwania wykresu z przerysowaniem linii
+    mainChart.timeScale().subscribeVisibleLogicalRangeChange(() => {
+        redrawShapes();
+    });
+
+    // Inicjalizacja i resize
     resizeDrawingCanvas();
     window.addEventListener("resize", () => {
         resizeDrawingCanvas();
         mainChart.applyOptions({ width: chartContainer.clientWidth });
     });
 
+    // === KONIEC SEKCJI RYSOWANIA ===
     
-    // Ustawianie trybu rysowania
-    // wersja: przypisz funkcję do window (globalnie)
-    window.setDrawingMode = function(mode) {
-        drawingMode = mode;
-        drawingPoints = [];
-        console.log("Tryb rysowania:", mode);
-    };
-
-
-    function addTrendLine(p1, p2) {
-        drawnShapes.push({
-            type: 'trendline',
-            p1, // bez .point, bo obiekt ma już {x, y, time, price}
-            p2,
-            color: lineColor,
-            width: lineWidth
-        });
-        redrawShapes();
-    }
-
-
-    
-    function addHorizontalLine(y) {
-        drawnShapes.push({ type: "hline", y, color: lineColor, width: lineWidth });
-        redrawShapes();
-    }
-
-    
-    function addVerticalLine(x) {
-        drawnShapes.push({ type: "vline", x, color: lineColor, width: lineWidth });
-        redrawShapes();
-    }
-
-    
-    function addChannel(p1, p2) {
-        const offset = 40; // na początek sztywno, potem możemy dać regulację
-    
-        ctx.strokeStyle = lineColor;
-        ctx.lineWidth = lineWidth;
-    
-        // główna linia
-        ctx.beginPath();
-        ctx.moveTo(p1.x, p1.y);
-        ctx.lineTo(p2.x, p2.y);
-        ctx.stroke();
-    
-        // równoległa linia
-        ctx.beginPath();
-        ctx.moveTo(p1.x, p1.y + offset);
-        ctx.lineTo(p2.x, p2.y + offset);
-        ctx.stroke();
-    
-        drawnShapes.push({
-            type: "channel",
-            p1,
-            p2,
-            offset,
-            color: lineColor,
-            width: lineWidth
-        });
-    }
-
-
-
 
     // === LOGIKA APLIKACJI ===
     async function loadCompanyData() {
@@ -260,6 +264,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
             updateAllIndicators();
             mainChart.timeScale().fitContent();
+            redrawShapes(); // Ważne: przerysuj linie po załadowaniu nowych danych
         }
 
 
@@ -278,6 +283,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         valuationSection.style.display = 'none';
         recommendationSection.innerHTML = '';
+        
+        clearDrawings(); // Czyścimy rysunki przy zmianie spółki
     
         try {
             const stooqResponse = await fetch(`${API_URL}/api/data/${ticker}`);
@@ -1047,44 +1054,6 @@ document.addEventListener('DOMContentLoaded', function() {
         projectionChart.applyOptions({ width: projectionChartContainer.clientWidth });
     });
 
-    mainChart.subscribeClick((param) => {
-        if (!drawingMode || !param || !param.time) return;
-    
-        // Konwersja czasu i ceny na współrzędne pikselowe
-        const x = mainChart.timeScale().timeToCoordinate(param.time);
-        const seriesData = param.seriesData.get(candlestickSeries);
-        if (!seriesData) return;
-        const price = seriesData.close; 
-        const y = candlestickSeries.priceToCoordinate(price);
-    
-        if (x === null || y === null) return;
-    
-        const point = { x, y, time: param.time, price };
-    
-        if (drawingMode === 'hline') {
-            addHorizontalLine(y);
-            drawingMode = null;
-        } else if (drawingMode === 'vline') {
-            addVerticalLine(x);
-            drawingMode = null;
-        } else {
-            drawingPoints.push(point);
-            if (drawingPoints.length === 2) {
-                if (drawingMode === 'trendline') {
-                    addTrendLine(drawingPoints[0], drawingPoints[1]);
-                } else if (drawingMode === 'channel') {
-                    addChannel(drawingPoints[0], drawingPoints[1]);
-                }
-                drawingPoints = [];
-                drawingMode = null;
-            }
-        }
-        redrawShapes();
-    });
-
-
-
-    
     // === Inicjalizacja ===
     loadCompanyData().then(() => {
         loadChartData('WIG');
