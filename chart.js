@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const chartTitle = document.getElementById('chart-title');
     const projectionTableBody = document.getElementById('projectionTableBody');
 
-    // === SEKCJA RYSOWANIA - ZMODYFIKOWANA I POPRAWIONA ===
+    // === SEKCJA RYSOWANIA - NOWA, NIEZAWODNA WERSJA ===
     
     let drawingMode = null; 
     let drawingPoints = [];
@@ -62,7 +62,6 @@ document.addEventListener('DOMContentLoaded', function() {
         drawnShapes = [];
         drawingPoints = [];
         drawingMode = null;
-        masterRedraw(); 
     }
 
     function masterRedraw() {
@@ -73,13 +72,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function redrawShapes() {
-        // ... (Ta funkcja pozostaje bez zmian w stosunku do poprzedniej wersji)
         drawnShapes.forEach(shape => {
             ctx.strokeStyle = shape.color;
             ctx.lineWidth = shape.width;
             ctx.beginPath();
     
-            if (shape.type === 'trendline' || shape.type === 'channel_base') {
+            if (shape.type === 'trendline') {
                 const p1_coord = { x: mainChart.timeScale().timeToCoordinate(shape.p1.time), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
                 const p2_coord = { x: mainChart.timeScale().timeToCoordinate(shape.p2.time), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
                 if (p1_coord.x !== null && p2_coord.x !== null) {
@@ -103,14 +101,21 @@ document.addEventListener('DOMContentLoaded', function() {
             } else if (shape.type === 'channel') {
                 const p1_coord = { x: mainChart.timeScale().timeToCoordinate(shape.p1.time), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
                 const p2_coord = { x: mainChart.timeScale().timeToCoordinate(shape.p2.time), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
+                
                 if (p1_coord.x !== null && p2_coord.x !== null) {
+                    // Linia główna
                     ctx.moveTo(p1_coord.x, p1_coord.y);
                     ctx.lineTo(p2_coord.x, p2_coord.y);
+                    
+                    // Linia równoległa
                     const p3_y_coord = candlestickSeries.priceToCoordinate(shape.p3.price);
                     const p1_y_coord_at_p3_time = candlestickSeries.priceToCoordinate(shape.p1_price_at_p3_time);
-                    const dy = p3_y_coord - p1_y_coord_at_p3_time;
-                    ctx.moveTo(p1_coord.x, p1_coord.y + dy);
-                    ctx.lineTo(p2_coord.x, p2_coord.y + dy);
+
+                    if (p3_y_coord !== null && p1_y_coord_at_p3_time !== null) {
+                        const dy = p3_y_coord - p1_y_coord_at_p3_time;
+                        ctx.moveTo(p1_coord.x, p1_coord.y + dy);
+                        ctx.lineTo(p2_coord.x, p2_coord.y + dy);
+                    }
                 }
             }
             ctx.stroke();
@@ -118,13 +123,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function drawCurrentShape() {
-        // ... (Ta funkcja pozostaje bez zmian w stosunku do poprzedniej wersji)
         if (drawingPoints.length === 0 || !currentMousePoint) return;
+
         ctx.strokeStyle = lineColor;
         ctx.lineWidth = lineWidth;
         ctx.beginPath();
+
         const p1 = drawingPoints[0];
         const p1_coord = { x: mainChart.timeScale().timeToCoordinate(p1.time), y: candlestickSeries.priceToCoordinate(p1.price) };
+
+        if (p1_coord.x === null || p1_coord.y === null) return;
+
         if (drawingMode === 'trendline' && drawingPoints.length === 1) {
             ctx.moveTo(p1_coord.x, p1_coord.y);
             ctx.lineTo(currentMousePoint.x, currentMousePoint.y);
@@ -135,19 +144,28 @@ document.addEventListener('DOMContentLoaded', function() {
             } else if (drawingPoints.length === 2) {
                 const p2 = drawingPoints[1];
                 const p2_coord = { x: mainChart.timeScale().timeToCoordinate(p2.time), y: candlestickSeries.priceToCoordinate(p2.price) };
+                
+                if (p2_coord.x === null || p2_coord.y === null) return;
+
+                // Linia główna (już statyczna)
                 ctx.moveTo(p1_coord.x, p1_coord.y);
                 ctx.lineTo(p2_coord.x, p2_coord.y);
-                const p1_coord_at_mouse_time = { x: mainChart.timeScale().timeToCoordinate(p1.time), y: candlestickSeries.priceToCoordinate(interpolatePrice([p1,p2], currentMousePoint.time))};
-                const dy = currentMousePoint.y - p1_coord_at_mouse_time.y;
-                ctx.moveTo(p1_coord.x, p1_coord.y + dy);
-                ctx.lineTo(p2_coord.x, p2_coord.y + dy);
+
+                // Linia równoległa (dynamiczna)
+                const interpolatedPriceAtMouse = interpolatePrice([p1, p2], currentMousePoint.time);
+                const y_coord_on_line = candlestickSeries.priceToCoordinate(interpolatedPriceAtMouse);
+
+                if (y_coord_on_line !== null) {
+                    const dy = currentMousePoint.y - y_coord_on_line;
+                    ctx.moveTo(p1_coord.x, p1_coord.y + dy);
+                    ctx.lineTo(p2_coord.x, p2_coord.y + dy);
+                }
             }
         }
         ctx.stroke();
     }
     
     function resizeDrawingCanvas() {
-        // ... (Ta funkcja pozostaje bez zmian)
         const rect = chartContainer.getBoundingClientRect();
         const ratio = window.devicePixelRatio || 1;
         drawingCanvas.style.width = rect.width + "px";
@@ -155,57 +173,36 @@ document.addEventListener('DOMContentLoaded', function() {
         drawingCanvas.width = Math.floor(rect.width * ratio);
         drawingCanvas.height = Math.floor(rect.height * ratio);
         ctx.scale(ratio, ratio);
-        masterRedraw();
     }
     
     window.setDrawingMode = function(mode) {
-        // ... (Ta funkcja pozostaje bez zmian)
         drawingMode = mode;
         drawingPoints = [];
         chartContainer.style.cursor = 'crosshair';
-        console.log("Tryb rysowania:", mode);
     };
 
-    // --- GŁÓWNE LISTENERY DO OBSŁUGI RYSOWANIA ---
-
-    // 1. Listener do ruchu myszy
     mainChart.subscribeCrosshairMove((param) => {
-        // === POPRAWKA 2: Zawsze przerysowuj, gdy mysz porusza się po wykresie ===
-        // To zapewnia responsywność przy przesuwaniu osi Y.
-        masterRedraw();
-
         if (!drawingMode || drawingPoints.length === 0 || !param.point) {
             currentMousePoint = null;
             return;
         }
-
-        // === POPRAWKA 1: Pobieraj czas i cenę bezpośrednio z koordynatów ===
-        const price = candlestickSeries.coordinateToPrice(param.point.y);
-        const time = mainChart.timeScale().coordinateToTime(param.point.x);
-
-        if (price === null || time === null) return;
-
-        currentMousePoint = {
-            x: param.point.x,
-            y: param.point.y,
-            time: time,
-            price: price
-        };
-        // masterRedraw() jest już na początku, więc nie trzeba go tu powtarzać
-    });
-
-    // 2. Listener do kliknięć
-    mainChart.subscribeClick((param) => {
-        if (!drawingMode || !param.point) return;
-
-        // === POPRAWKA 1: Pobieraj czas i cenę bezpośrednio z koordynatów ===
         const price = candlestickSeries.coordinateToPrice(param.point.y);
         const time = mainChart.timeScale().coordinateToTime(param.point.x);
 
         if (price === null || time === null) {
-            console.warn("Kliknięcie poza obszarem rysowania.");
+            currentMousePoint = null;
             return;
         }
+        currentMousePoint = { x: param.point.x, y: param.point.y, time: time, price: price };
+    });
+
+    mainChart.subscribeClick((param) => {
+        if (!drawingMode || !param.point) return;
+
+        const price = candlestickSeries.coordinateToPrice(param.point.y);
+        const time = mainChart.timeScale().coordinateToTime(param.point.x);
+
+        if (price === null || time === null) return;
 
         const currentPoint = { time: time, price: price };
         drawingPoints.push(currentPoint);
@@ -224,42 +221,43 @@ document.addEventListener('DOMContentLoaded', function() {
             drawingPoints = [];
         } else if (drawingMode === 'channel' && drawingPoints.length === 3) {
             const [p1, p2, p3] = drawingPoints;
-            
-            // === POPRAWKA 3: Usunięcie błędnego kodu i użycie funkcji pomocniczej ===
-            // Nie tworzymy już tymczasowej linii, tylko obliczamy wartość matematycznie.
             const interpolatedPrice = interpolatePrice([p1, p2], p3.time);
-
-            drawnShapes.push({ 
-                type: "channel", p1, p2, p3, 
-                p1_price_at_p3_time: interpolatedPrice,
-                color: lineColor, width: lineWidth 
-            });
+            drawnShapes.push({ type: "channel", p1, p2, p3, p1_price_at_p3_time: interpolatedPrice, color: lineColor, width: lineWidth });
             drawingMode = null;
             drawingPoints = [];
         }
         
-        masterRedraw();
-
         if (!drawingMode) {
             chartContainer.style.cursor = 'default';
         }
     });
 
+    // === POPRAWKA KRYTYCZNA: Błąd w funkcji pomocniczej ===
     function interpolatePrice(lineData, targetTime) {
-        // ... (Ta funkcja pozostaje bez zmian)
         const p1 = lineData[0];
         const p2 = lineData[1];
-        if (p1.time === p2.time) return p1.value;
-        const slope = (p2.value - p1.price) / (p2.time - p1.time);
+        // Używamy .price zamiast .value
+        if (p1.time === p2.time) return p1.price; 
+        const slope = (p2.price - p1.price) / (p2.time - p1.time);
         return p1.price + slope * (targetTime - p1.time);
     }
     
-    mainChart.timeScale().subscribeVisibleLogicalRangeChange(() => { masterRedraw(); });
+    // Inicjalizacja zmiany rozmiaru i synchronizacji osi czasu
     resizeDrawingCanvas();
+    mainChart.timeScale().subscribeVisibleLogicalRangeChange(() => { /* Pętla animacji to obsługuje */ });
     window.addEventListener("resize", () => {
-        resizeDrawingCanvas();
         mainChart.applyOptions({ width: chartContainer.clientWidth });
+        resizeDrawingCanvas();
     });
+
+    // === NOWY ELEMENT: Pętla animacji do ciągłego przerysowywania ===
+    function animationLoop() {
+        masterRedraw();
+        requestAnimationFrame(animationLoop);
+    }
+
+    // Uruchomienie pętli
+    animationLoop();
 
     // === KONIEC SEKCJI RYSOWANIA ===
     
@@ -319,7 +317,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
             updateAllIndicators();
             mainChart.timeScale().fitContent();
-            masterRedraw(); // Zmieniono z redrawShapes() na masterRedraw()
+        //    masterRedraw(); // Zmieniono z redrawShapes() na masterRedraw()
         }
 
 
