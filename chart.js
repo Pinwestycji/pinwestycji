@@ -41,9 +41,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const chartTitle = document.getElementById('chart-title');
     const projectionTableBody = document.getElementById('projectionTableBody');
 
+
     // Plik: chart.js
 
-// === SEKCJA RYSOWANIA - WERSJA OSTATECZNA ===
+// === SEKCJA RYSOWANIA - WERSJA OPARTA NA INDEKSACH LOGICZNYCH ===
     
     let drawingMode = null; 
     let drawingPoints = [];
@@ -73,6 +74,7 @@ document.addEventListener('DOMContentLoaded', function() {
         drawCurrentShape();
     }
 
+    // ZMIANA: Funkcje rysujące używają teraz 'logical' zamiast 'time'
     function redrawShapes() {
         drawnShapes.forEach(shape => {
             ctx.strokeStyle = shape.color;
@@ -80,8 +82,8 @@ document.addEventListener('DOMContentLoaded', function() {
             ctx.beginPath();
     
             if (shape.type === 'trendline') {
-                const p1_coord = { x: mainChart.timeScale().timeToCoordinate(shape.p1.time), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
-                const p2_coord = { x: mainChart.timeScale().timeToCoordinate(shape.p2.time), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
+                const p1_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p1.logical), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
+                const p2_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p2.logical), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
                 if (p1_coord.x !== null && p2_coord.x !== null) {
                     ctx.moveTo(p1_coord.x, p1_coord.y);
                     ctx.lineTo(p2_coord.x, p2_coord.y);
@@ -94,25 +96,26 @@ document.addEventListener('DOMContentLoaded', function() {
                     ctx.lineTo(drawingCanvas.width / ratio, y_coord);
                 }
             } else if (shape.type === 'vline') {
-                const x_coord = mainChart.timeScale().timeToCoordinate(shape.time);
+                const x_coord = mainChart.timeScale().logicalToCoordinate(shape.logical);
                 if (x_coord !== null) {
                     const ratio = window.devicePixelRatio || 1;
                     ctx.moveTo(x_coord, 0);
                     ctx.lineTo(x_coord, drawingCanvas.height / ratio);
                 }
             } else if (shape.type === 'channel') {
-                const p1_coord = { x: mainChart.timeScale().timeToCoordinate(shape.p1.time), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
-                const p2_coord = { x: mainChart.timeScale().timeToCoordinate(shape.p2.time), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
+                const p1_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p1.logical), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
+                const p2_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p2.logical), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
                 
                 if (p1_coord.x !== null && p2_coord.x !== null) {
                     ctx.moveTo(p1_coord.x, p1_coord.y);
                     ctx.lineTo(p2_coord.x, p2_coord.y);
                     
                     const p3_y_coord = candlestickSeries.priceToCoordinate(shape.p3.price);
-                    const p1_y_coord_at_p3_time = candlestickSeries.priceToCoordinate(shape.p1_price_at_p3_time);
+                    const interpolatedPrice = interpolatePriceByLogical(shape.p1, shape.p2, shape.p3.logical);
+                    const p1_y_coord_at_p3_logical = candlestickSeries.priceToCoordinate(interpolatedPrice);
 
-                    if (p3_y_coord !== null && p1_y_coord_at_p3_time !== null) {
-                        const dy = p3_y_coord - p1_y_coord_at_p3_time;
+                    if (p3_y_coord !== null && p1_y_coord_at_p3_logical !== null) {
+                        const dy = p3_y_coord - p1_y_coord_at_p3_logical;
                         ctx.moveTo(p1_coord.x, p1_coord.y + dy);
                         ctx.lineTo(p2_coord.x, p2_coord.y + dy);
                     }
@@ -122,6 +125,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // ZMIANA: Funkcje rysujące używają teraz 'logical' zamiast 'time'
     function drawCurrentShape() {
         if (drawingPoints.length === 0 || !currentMousePoint) return;
 
@@ -130,7 +134,7 @@ document.addEventListener('DOMContentLoaded', function() {
         ctx.beginPath();
 
         const p1 = drawingPoints[0];
-        const p1_coord = { x: mainChart.timeScale().timeToCoordinate(p1.time), y: candlestickSeries.priceToCoordinate(p1.price) };
+        const p1_coord = { x: mainChart.timeScale().logicalToCoordinate(p1.logical), y: candlestickSeries.priceToCoordinate(p1.price) };
 
         if (p1_coord.x === null || p1_coord.y === null) return;
 
@@ -143,20 +147,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 ctx.lineTo(currentMousePoint.x, currentMousePoint.y);
             } else if (drawingPoints.length === 2) {
                 const p2 = drawingPoints[1];
-                const p2_coord = { x: mainChart.timeScale().timeToCoordinate(p2.time), y: candlestickSeries.priceToCoordinate(p2.price) };
+                const p2_coord = { x: mainChart.timeScale().logicalToCoordinate(p2.logical), y: candlestickSeries.priceToCoordinate(p2.price) };
                 
                 if (p2_coord.x === null || p2_coord.y === null) return;
-
                 ctx.moveTo(p1_coord.x, p1_coord.y);
                 ctx.lineTo(p2_coord.x, p2_coord.y);
                 
                 if (p2_coord.x === p1_coord.x) return;
-
                 const m = (p2_coord.y - p1_coord.y) / (p2_coord.x - p1_coord.x);
                 const c = p1_coord.y - m * p1_coord.x;
                 const y_on_line = m * currentMousePoint.x + c;
                 const dy = currentMousePoint.y - y_on_line;
-
                 ctx.moveTo(p1_coord.x, p1_coord.y + dy);
                 ctx.lineTo(p2_coord.x, p2_coord.y + dy);
             }
@@ -180,6 +181,7 @@ document.addEventListener('DOMContentLoaded', function() {
         chartContainer.style.cursor = 'crosshair';
     };
 
+    // ZMIANA: Pobieramy 'logical' zamiast 'time'
     mainChart.subscribeCrosshairMove((param) => {
         if (!drawingMode || drawingPoints.length === 0 || !param.point) {
             currentMousePoint = null;
@@ -188,36 +190,31 @@ document.addEventListener('DOMContentLoaded', function() {
         const x = param.point.x;
         const y = param.point.y;
         const price = candlestickSeries.coordinateToPrice(y);
-        const time = mainChart.timeScale().coordinateToTime(x);
-        currentMousePoint = { x, y, time, price };
+        const logical = mainChart.timeScale().coordinateToLogical(x);
+        currentMousePoint = { x, y, logical, price };
     });
 
-    // === NAPRAWIONA FUNKCJA KLIKNIĘCIA ===
+    // ZMIANA: Zapisujemy punkt z 'logical' zamiast 'time'
     mainChart.subscribeClick((param) => {
         if (!drawingMode || !param.point) return;
 
-        // Logika jest teraz samowystarczalna - bazuje tylko na informacji z kliknięcia ('param')
         const price = candlestickSeries.coordinateToPrice(param.point.y);
-        const time = mainChart.timeScale().coordinateToTime(param.point.x);
+        const logical = mainChart.timeScale().coordinateToLogical(param.point.x);
 
-        // Usuwamy rygorystyczne sprawdzanie - to jest klucz do umożliwienia
-        // klikania w "przyszłości". Jeśli biblioteka jest w stanie podać koordynaty,
-        // ufamy im.
-        if (price === null || time === null) {
-            console.warn("Kliknięcie w obszarze, gdzie nie można ustalić koordynatów logicznych.");
-            return;
+        if (price === null || logical === null) {
+            return; // Ten warunek jest teraz bezpieczny i prawidłowy
         }
 
-        const currentPoint = { time: time, price: price };
+        const currentPoint = { logical: logical, price: price };
         drawingPoints.push(currentPoint);
         
-        // Reszta logiki bez zmian
         if (drawingMode === 'hline') {
             drawnShapes.push({ type: "hline", price: currentPoint.price, color: lineColor, width: lineWidth });
             drawingMode = null;
             drawingPoints = [];
         } else if (drawingMode === 'vline') {
-            drawnShapes.push({ type: "vline", time: currentPoint.time, color: lineColor, width: lineWidth });
+            // Dla vline 'logical' jest odpowiednikiem 'time'
+            drawnShapes.push({ type: "vline", logical: currentPoint.logical, color: lineColor, width: lineWidth });
             drawingMode = null;
             drawingPoints = [];
         } else if (drawingMode === 'trendline' && drawingPoints.length === 2) {
@@ -226,8 +223,8 @@ document.addEventListener('DOMContentLoaded', function() {
             drawingPoints = [];
         } else if (drawingMode === 'channel' && drawingPoints.length === 3) {
             const [p1, p2, p3] = drawingPoints;
-            const interpolatedPrice = interpolatePrice([p1, p2], p3.time);
-            drawnShapes.push({ type: "channel", p1, p2, p3, p1_price_at_p3_time: interpolatedPrice, color: lineColor, width: lineWidth });
+            const interpolatedPrice = interpolatePriceByLogical(p1, p2, p3.logical);
+            drawnShapes.push({ type: "channel", p1, p2, p3, interpolatedPrice: interpolatedPrice, color: lineColor, width: lineWidth });
             drawingMode = null;
             drawingPoints = [];
         }
@@ -237,12 +234,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    function interpolatePrice(lineData, targetTime) {
-        const p1 = lineData[0];
-        const p2 = lineData[1];
-        if (p1.time === p2.time) return p1.price; 
-        const slope = (p2.price - p1.price) / (p2.time - p1.time);
-        return p1.price + slope * (targetTime - p1.time);
+    // ZMIANA: Nowa funkcja pomocnicza operująca na 'logical'
+    function interpolatePriceByLogical(p1, p2, targetLogical) {
+        if (p1.logical === p2.logical) return p1.price; 
+        const slope = (p2.price - p1.price) / (p2.logical - p1.logical);
+        return p1.price + slope * (targetLogical - p1.logical);
     }
     
     resizeDrawingCanvas();
@@ -255,7 +251,6 @@ document.addEventListener('DOMContentLoaded', function() {
         masterRedraw();
         requestAnimationFrame(animationLoop);
     }
-
     animationLoop();
 
 // === KONIEC SEKCJI RYSOWANIA ===
