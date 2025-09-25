@@ -41,7 +41,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const chartTitle = document.getElementById('chart-title');
     const projectionTableBody = document.getElementById('projectionTableBody');
 
-    // === SEKCJA RYSOWANIA - NOWA, NIEZAWODNA WERSJA ===
+    // Plik: chart.js
+
+// === SEKCJA RYSOWANIA - WERSJA OSTATECZNA ===
     
     let drawingMode = null; 
     let drawingPoints = [];
@@ -103,11 +105,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const p2_coord = { x: mainChart.timeScale().timeToCoordinate(shape.p2.time), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
                 
                 if (p1_coord.x !== null && p2_coord.x !== null) {
-                    // Linia główna
                     ctx.moveTo(p1_coord.x, p1_coord.y);
                     ctx.lineTo(p2_coord.x, p2_coord.y);
                     
-                    // Linia równoległa
                     const p3_y_coord = candlestickSeries.priceToCoordinate(shape.p3.price);
                     const p1_y_coord_at_p3_time = candlestickSeries.priceToCoordinate(shape.p1_price_at_p3_time);
 
@@ -122,56 +122,41 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Plik: chart.js
-
     function drawCurrentShape() {
         if (drawingPoints.length === 0 || !currentMousePoint) return;
-    
+
         ctx.strokeStyle = lineColor;
         ctx.lineWidth = lineWidth;
         ctx.beginPath();
-    
+
         const p1 = drawingPoints[0];
         const p1_coord = { x: mainChart.timeScale().timeToCoordinate(p1.time), y: candlestickSeries.priceToCoordinate(p1.price) };
-    
+
         if (p1_coord.x === null || p1_coord.y === null) return;
-    
+
         if (drawingMode === 'trendline' && drawingPoints.length === 1) {
             ctx.moveTo(p1_coord.x, p1_coord.y);
             ctx.lineTo(currentMousePoint.x, currentMousePoint.y);
-    
         } else if (drawingMode === 'channel') {
             if (drawingPoints.length === 1) {
                 ctx.moveTo(p1_coord.x, p1_coord.y);
                 ctx.lineTo(currentMousePoint.x, currentMousePoint.y);
-    
             } else if (drawingPoints.length === 2) {
                 const p2 = drawingPoints[1];
                 const p2_coord = { x: mainChart.timeScale().timeToCoordinate(p2.time), y: candlestickSeries.priceToCoordinate(p2.price) };
                 
                 if (p2_coord.x === null || p2_coord.y === null) return;
-    
-                // Linia główna (już statyczna)
+
                 ctx.moveTo(p1_coord.x, p1_coord.y);
                 ctx.lineTo(p2_coord.x, p2_coord.y);
-    
-                // === POPRAWKA: Logika rysowania równoległej linii oparta w 100% na geometrii pikseli ===
-                // To rozwiązuje problem znikania linii w "przyszłości".
-    
-                // Unikamy dzielenia przez zero, jeśli linia jest idealnie pionowa
+                
                 if (p2_coord.x === p1_coord.x) return;
-    
-                // Obliczamy nachylenie (m) i przesunięcie (c) linii głównej y = mx + c
+
                 const m = (p2_coord.y - p1_coord.y) / (p2_coord.x - p1_coord.x);
                 const c = p1_coord.y - m * p1_coord.x;
-    
-                // Obliczamy, jaka byłaby współrzędna Y na linii głównej dla X kursora
                 const y_on_line = m * currentMousePoint.x + c;
-    
-                // Różnica w pikselach to nasze przesunięcie pionowe (dy)
                 const dy = currentMousePoint.y - y_on_line;
-    
-                // Rysujemy linię równoległą, przesuniętą o dy
+
                 ctx.moveTo(p1_coord.x, p1_coord.y + dy);
                 ctx.lineTo(p2_coord.x, p2_coord.y + dy);
             }
@@ -194,96 +179,39 @@ document.addEventListener('DOMContentLoaded', function() {
         drawingPoints = [];
         chartContainer.style.cursor = 'crosshair';
     };
-    
-    function drawCurrentShape() {
-        if (drawingPoints.length === 0 || !currentMousePoint) return;
-    
-        ctx.strokeStyle = lineColor;
-        ctx.lineWidth = lineWidth;
-        ctx.beginPath();
-    
-        const p1 = drawingPoints[0];
-        const p1_coord = { x: mainChart.timeScale().timeToCoordinate(p1.time), y: candlestickSeries.priceToCoordinate(p1.price) };
-    
-        if (p1_coord.x === null || p1_coord.y === null) return;
-    
-        if (drawingMode === 'trendline' && drawingPoints.length === 1) {
-            // Rysuj ZAWSZE do surowych współrzędnych X i Y kursora.
-            ctx.moveTo(p1_coord.x, p1_coord.y);
-            ctx.lineTo(currentMousePoint.x, currentMousePoint.y);
-    
-        } else if (drawingMode === 'channel') {
-            if (drawingPoints.length === 1) {
-                // Rysuj ZAWSZE do surowych współrzędnych X i Y kursora.
-                ctx.moveTo(p1_coord.x, p1_coord.y);
-                ctx.lineTo(currentMousePoint.x, currentMousePoint.y);
-    
-            } else if (drawingPoints.length === 2) {
-                const p2 = drawingPoints[1];
-                const p2_coord = { x: mainChart.timeScale().timeToCoordinate(p2.time), y: candlestickSeries.priceToCoordinate(p2.price) };
-                
-                if (p2_coord.x === null || p2_coord.y === null) return;
-    
-                // Linia główna (już statyczna)
-                ctx.moveTo(p1_coord.x, p1_coord.y);
-                ctx.lineTo(p2_coord.x, p2_coord.y);
-    
-                // === POPRAWKA ===
-                // Rysuj linię równoległą tylko jeśli mamy prawidłowy logiczny 'czas' kursora
-                // do wykonania obliczeń.
-                if (currentMousePoint.time !== null) {
-                    const interpolatedPriceAtMouse = interpolatePrice([p1, p2], currentMousePoint.time);
-                    const y_coord_on_line = candlestickSeries.priceToCoordinate(interpolatedPriceAtMouse);
-    
-                    if (y_coord_on_line !== null) {
-                        // Używamy surowej współrzędnej Y kursora dla precyzji.
-                        const dy = currentMousePoint.y - y_coord_on_line;
-                        ctx.moveTo(p1_coord.x, p1_coord.y + dy);
-                        ctx.lineTo(p2_coord.x, p2_coord.y + dy);
-                    }
-                }
-            }
-        }
-        ctx.stroke();
-    }
-    
+
     mainChart.subscribeCrosshairMove((param) => {
         if (!drawingMode || drawingPoints.length === 0 || !param.point) {
             currentMousePoint = null;
             return;
         }
-    
-        // === GŁÓWNA POPRAWKA ===
-        // Zawsze przechowujemy surowe współrzędne X i Y kursora.
         const x = param.point.x;
         const y = param.point.y;
-    
-        // Dodatkowo próbujemy uzyskać wartości logiczne (czas i cenę).
-        // Jeśli się nie uda (bo jesteśmy poza głównym obszarem),
-        // to nie problem - linia i tak będzie rysowana do surowych współrzędnych X i Y.
         const price = candlestickSeries.coordinateToPrice(y);
         const time = mainChart.timeScale().coordinateToTime(x);
-    
-        // Zaktualizuj globalny obiekt punktu myszy.
         currentMousePoint = { x, y, time, price };
     });
 
-    // Plik: chart.js
-
+    // === NAPRAWIONA FUNKCJA KLIKNIĘCIA ===
     mainChart.subscribeClick((param) => {
-        // === POPRAWKA: Używamy ostatniej znanej pozycji kursora, aby umożliwić kliknięcie w pustym obszarze ===
-        if (!drawingMode || !currentMousePoint) return;
-    
-        // Pobieramy logiczne koordynaty z ostatniej znanej pozycji myszy, a nie z samego eventu 'param'
-        const price = currentMousePoint.price;
-        const time = currentMousePoint.time;
-    
-        // Sprawdzamy, czy te koordynaty są prawidłowe
-        if (price === null || time === null) return;
-    
+        if (!drawingMode || !param.point) return;
+
+        // Logika jest teraz samowystarczalna - bazuje tylko na informacji z kliknięcia ('param')
+        const price = candlestickSeries.coordinateToPrice(param.point.y);
+        const time = mainChart.timeScale().coordinateToTime(param.point.x);
+
+        // Usuwamy rygorystyczne sprawdzanie - to jest klucz do umożliwienia
+        // klikania w "przyszłości". Jeśli biblioteka jest w stanie podać koordynaty,
+        // ufamy im.
+        if (price === null || time === null) {
+            console.warn("Kliknięcie w obszarze, gdzie nie można ustalić koordynatów logicznych.");
+            return;
+        }
+
         const currentPoint = { time: time, price: price };
         drawingPoints.push(currentPoint);
         
+        // Reszta logiki bez zmian
         if (drawingMode === 'hline') {
             drawnShapes.push({ type: "hline", price: currentPoint.price, color: lineColor, width: lineWidth });
             drawingMode = null;
@@ -309,34 +237,28 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // === POPRAWKA KRYTYCZNA: Błąd w funkcji pomocniczej ===
     function interpolatePrice(lineData, targetTime) {
         const p1 = lineData[0];
         const p2 = lineData[1];
-        // Używamy .price zamiast .value
         if (p1.time === p2.time) return p1.price; 
         const slope = (p2.price - p1.price) / (p2.time - p1.time);
         return p1.price + slope * (targetTime - p1.time);
     }
     
-    // Inicjalizacja zmiany rozmiaru i synchronizacji osi czasu
     resizeDrawingCanvas();
-    mainChart.timeScale().subscribeVisibleLogicalRangeChange(() => { /* Pętla animacji to obsługuje */ });
     window.addEventListener("resize", () => {
         mainChart.applyOptions({ width: chartContainer.clientWidth });
         resizeDrawingCanvas();
     });
 
-    // === NOWY ELEMENT: Pętla animacji do ciągłego przerysowywania ===
     function animationLoop() {
         masterRedraw();
         requestAnimationFrame(animationLoop);
     }
 
-    // Uruchomienie pętli
     animationLoop();
 
-    // === KONIEC SEKCJI RYSOWANIA ===
+// === KONIEC SEKCJI RYSOWANIA ===
     
 
     // === LOGIKA APLIKACJI ===
