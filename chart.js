@@ -122,44 +122,58 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Plik: chart.js
+
     function drawCurrentShape() {
         if (drawingPoints.length === 0 || !currentMousePoint) return;
-
+    
         ctx.strokeStyle = lineColor;
         ctx.lineWidth = lineWidth;
         ctx.beginPath();
-
+    
         const p1 = drawingPoints[0];
         const p1_coord = { x: mainChart.timeScale().timeToCoordinate(p1.time), y: candlestickSeries.priceToCoordinate(p1.price) };
-
+    
         if (p1_coord.x === null || p1_coord.y === null) return;
-
+    
         if (drawingMode === 'trendline' && drawingPoints.length === 1) {
             ctx.moveTo(p1_coord.x, p1_coord.y);
             ctx.lineTo(currentMousePoint.x, currentMousePoint.y);
+    
         } else if (drawingMode === 'channel') {
             if (drawingPoints.length === 1) {
                 ctx.moveTo(p1_coord.x, p1_coord.y);
                 ctx.lineTo(currentMousePoint.x, currentMousePoint.y);
+    
             } else if (drawingPoints.length === 2) {
                 const p2 = drawingPoints[1];
                 const p2_coord = { x: mainChart.timeScale().timeToCoordinate(p2.time), y: candlestickSeries.priceToCoordinate(p2.price) };
                 
                 if (p2_coord.x === null || p2_coord.y === null) return;
-
+    
                 // Linia główna (już statyczna)
                 ctx.moveTo(p1_coord.x, p1_coord.y);
                 ctx.lineTo(p2_coord.x, p2_coord.y);
-
-                // Linia równoległa (dynamiczna)
-                const interpolatedPriceAtMouse = interpolatePrice([p1, p2], currentMousePoint.time);
-                const y_coord_on_line = candlestickSeries.priceToCoordinate(interpolatedPriceAtMouse);
-
-                if (y_coord_on_line !== null) {
-                    const dy = currentMousePoint.y - y_coord_on_line;
-                    ctx.moveTo(p1_coord.x, p1_coord.y + dy);
-                    ctx.lineTo(p2_coord.x, p2_coord.y + dy);
-                }
+    
+                // === POPRAWKA: Logika rysowania równoległej linii oparta w 100% na geometrii pikseli ===
+                // To rozwiązuje problem znikania linii w "przyszłości".
+    
+                // Unikamy dzielenia przez zero, jeśli linia jest idealnie pionowa
+                if (p2_coord.x === p1_coord.x) return;
+    
+                // Obliczamy nachylenie (m) i przesunięcie (c) linii głównej y = mx + c
+                const m = (p2_coord.y - p1_coord.y) / (p2_coord.x - p1_coord.x);
+                const c = p1_coord.y - m * p1_coord.x;
+    
+                // Obliczamy, jaka byłaby współrzędna Y na linii głównej dla X kursora
+                const y_on_line = m * currentMousePoint.x + c;
+    
+                // Różnica w pikselach to nasze przesunięcie pionowe (dy)
+                const dy = currentMousePoint.y - y_on_line;
+    
+                // Rysujemy linię równoległą, przesuniętą o dy
+                ctx.moveTo(p1_coord.x, p1_coord.y + dy);
+                ctx.lineTo(p2_coord.x, p2_coord.y + dy);
             }
         }
         ctx.stroke();
@@ -254,14 +268,19 @@ document.addEventListener('DOMContentLoaded', function() {
         currentMousePoint = { x, y, time, price };
     });
 
+    // Plik: chart.js
+
     mainChart.subscribeClick((param) => {
-        if (!drawingMode || !param.point) return;
-
-        const price = candlestickSeries.coordinateToPrice(param.point.y);
-        const time = mainChart.timeScale().coordinateToTime(param.point.x);
-
+        // === POPRAWKA: Używamy ostatniej znanej pozycji kursora, aby umożliwić kliknięcie w pustym obszarze ===
+        if (!drawingMode || !currentMousePoint) return;
+    
+        // Pobieramy logiczne koordynaty z ostatniej znanej pozycji myszy, a nie z samego eventu 'param'
+        const price = currentMousePoint.price;
+        const time = currentMousePoint.time;
+    
+        // Sprawdzamy, czy te koordynaty są prawidłowe
         if (price === null || time === null) return;
-
+    
         const currentPoint = { time: time, price: price };
         drawingPoints.push(currentPoint);
         
