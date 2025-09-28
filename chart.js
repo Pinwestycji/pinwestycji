@@ -214,18 +214,36 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    function interpolatePriceByLogical(p1, p2, targetLogical) { /* ... bez zmian ... */ }
+    // === POPRAWKA KRYTYCZNA: Błąd w funkcji pomocniczej ===
+    function interpolatePrice(lineData, targetTime) {
+        const p1 = lineData[0];
+        const p2 = lineData[1];
+        // Używamy .price zamiast .value
+        if (p1.time === p2.time) return p1.price; 
+        const slope = (p2.price - p1.price) / (p2.time - p1.time);
+        return p1.price + slope * (targetTime - p1.time);
+    }
     
+    // Inicjalizacja zmiany rozmiaru i synchronizacji osi czasu
     resizeDrawingCanvas();
-    window.addEventListener("resize", () => { /* ... bez zmian ... */ });
+    mainChart.timeScale().subscribeVisibleLogicalRangeChange(() => { /* Pętla animacji to obsługuje */ });
+    window.addEventListener("resize", () => {
+        mainChart.applyOptions({ width: chartContainer.clientWidth });
+        resizeDrawingCanvas();
+    });
 
-    function animationLoop() { /* ... bez zmian ... */ }
-    
+    // === NOWY ELEMENT: Pętla animacji do ciągłego przerysowywania ===
+    function animationLoop() {
+        masterRedraw();
+        requestAnimationFrame(animationLoop);
+    }
+
+    // Uruchomienie pętli
     // Inicjalizacja przycisku na starcie
     updateClearButtonUI();
     animationLoop();
 
-// === KONIEC SEKCJI RYSOWANIA ===
+    // === KONIEC SEKCJI RYSOWANIA ===
     
 
     // === LOGIKA APLIKACJI ===
@@ -303,7 +321,7 @@ document.addEventListener('DOMContentLoaded', function() {
         valuationSection.style.display = 'none';
         recommendationSection.innerHTML = '';
         
-        clearDrawings(); // Czyścimy rysunki przy zmianie spółki
+        clearAllDrawings(); // Czyścimy rysunki przy zmianie spółki
     
         try {
             const stooqResponse = await fetch(`${API_URL}/api/data/${ticker}`);
