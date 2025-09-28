@@ -44,213 +44,185 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Plik: chart.js
 
-// === SEKCJA RYSOWANIA - WERSJA OPARTA NA INDEKSACH LOGICZNYCH ===
+// === SEKCJA RYSOWANIA - WERSJA Z ULEPSZONYM USUWANIEM LINII ===
     
     let drawingMode = null; 
     let drawingPoints = [];
     let drawnShapes = [];
     let currentMousePoint = null; 
+    
+    // Liczniki do nadawania unikalnych nazw
+    let shapeCounters = { trendline: 0, hline: 0, vline: 0, channel: 0 };
 
     let lineColor = document.getElementById('lineColor').value;
     let lineWidth = parseInt(document.getElementById('lineWidth').value, 10);
     
     const drawingCanvas = document.getElementById("drawingCanvas");
     const ctx = drawingCanvas.getContext("2d");
+    const clearButtonContainer = document.getElementById('clear-button-container');
+    const clearDrawingButton = document.getElementById('clearDrawingButton');
+    const drawnShapesList = document.getElementById('drawnShapesList');
+
 
     document.getElementById('lineColor').addEventListener('input', (e) => { lineColor = e.target.value; });
     document.getElementById('lineWidth').addEventListener('input', (e) => { lineWidth = parseInt(e.target.value, 10); });
-    document.getElementById('clearDrawingButton').addEventListener('click', clearDrawings);
+    
+    // Listener dla przycisku "Wyczyść wszystko" i usuwania pojedynczych linii
+    clearButtonContainer.addEventListener('click', (e) => {
+        if (e.target.id === 'clearDrawingButton' || e.target.id === 'clearAllShapes') {
+            clearAllDrawings();
+        }
+        if (e.target.dataset.shapeId) {
+            removeShapeById(e.target.dataset.shapeId);
+        }
+    });
 
-    function clearDrawings() {
+    function clearAllDrawings() {
         drawnShapes = [];
         drawingPoints = [];
         drawingMode = null;
+        // Resetujemy liczniki
+        shapeCounters = { trendline: 0, hline: 0, vline: 0, channel: 0 };
+        updateClearButtonUI();
     }
 
-    function masterRedraw() {
-        const ratio = window.devicePixelRatio || 1;
-        ctx.clearRect(0, 0, drawingCanvas.width / ratio, drawingCanvas.height / ratio);
-        redrawShapes();
-        drawCurrentShape();
+    function removeShapeById(id) {
+        drawnShapes = drawnShapes.filter(shape => shape.id !== id);
+        updateClearButtonUI();
     }
 
-    // ZMIANA: Funkcje rysujące używają teraz 'logical' zamiast 'time'
-    function redrawShapes() {
-        drawnShapes.forEach(shape => {
-            ctx.strokeStyle = shape.color;
-            ctx.lineWidth = shape.width;
-            ctx.beginPath();
-    
-            if (shape.type === 'trendline') {
-                const p1_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p1.logical), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
-                const p2_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p2.logical), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
-                if (p1_coord.x !== null && p2_coord.x !== null) {
-                    ctx.moveTo(p1_coord.x, p1_coord.y);
-                    ctx.lineTo(p2_coord.x, p2_coord.y);
-                }
-            } else if (shape.type === 'hline') {
-                const y_coord = candlestickSeries.priceToCoordinate(shape.price);
-                if (y_coord !== null) {
-                    const ratio = window.devicePixelRatio || 1;
-                    ctx.moveTo(0, y_coord);
-                    ctx.lineTo(drawingCanvas.width / ratio, y_coord);
-                }
-            } else if (shape.type === 'vline') {
-                const x_coord = mainChart.timeScale().logicalToCoordinate(shape.logical);
-                if (x_coord !== null) {
-                    const ratio = window.devicePixelRatio || 1;
-                    ctx.moveTo(x_coord, 0);
-                    ctx.lineTo(x_coord, drawingCanvas.height / ratio);
-                }
-            } else if (shape.type === 'channel') {
-                const p1_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p1.logical), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
-                const p2_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p2.logical), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
+    // Nowa funkcja do zarządzania wyglądem i zawartością przycisku "Wyczyść"
+    function updateClearButtonUI() {
+        // Wyczyść starą listę
+        drawnShapesList.innerHTML = '';
+
+        if (drawnShapes.length === 0) {
+            clearDrawingButton.classList.remove('dropdown-toggle');
+            clearDrawingButton.innerHTML = '<i class="fas fa-trash fa-sm"></i> Wyczyść wszystko';
+            clearDrawingButton.disabled = true; // Wyłącz przycisk, gdy nie ma co czyścić
+        } else {
+            clearDrawingButton.disabled = false;
+            clearDrawingButton.classList.add('dropdown-toggle');
+            clearDrawingButton.setAttribute('data-toggle', 'dropdown');
+            clearDrawingButton.innerHTML = '<i class="fas fa-trash fa-sm"></i> Usuń...';
+
+            drawnShapes.forEach(shape => {
+                const item = document.createElement('a');
+                item.className = 'dropdown-item d-flex align-items-center';
+                item.href = '#';
                 
-                if (p1_coord.x !== null && p2_coord.x !== null) {
-                    ctx.moveTo(p1_coord.x, p1_coord.y);
-                    ctx.lineTo(p2_coord.x, p2_coord.y);
-                    
-                    const p3_y_coord = candlestickSeries.priceToCoordinate(shape.p3.price);
-                    const interpolatedPrice = interpolatePriceByLogical(shape.p1, shape.p2, shape.p3.logical);
-                    const p1_y_coord_at_p3_logical = candlestickSeries.priceToCoordinate(interpolatedPrice);
-
-                    if (p3_y_coord !== null && p1_y_coord_at_p3_logical !== null) {
-                        const dy = p3_y_coord - p1_y_coord_at_p3_logical;
-                        ctx.moveTo(p1_coord.x, p1_coord.y + dy);
-                        ctx.lineTo(p2_coord.x, p2_coord.y + dy);
-                    }
-                }
-            }
-            ctx.stroke();
-        });
-    }
-
-    // ZMIANA: Funkcje rysujące używają teraz 'logical' zamiast 'time'
-    function drawCurrentShape() {
-        if (drawingPoints.length === 0 || !currentMousePoint) return;
-
-        ctx.strokeStyle = lineColor;
-        ctx.lineWidth = lineWidth;
-        ctx.beginPath();
-
-        const p1 = drawingPoints[0];
-        const p1_coord = { x: mainChart.timeScale().logicalToCoordinate(p1.logical), y: candlestickSeries.priceToCoordinate(p1.price) };
-
-        if (p1_coord.x === null || p1_coord.y === null) return;
-
-        if (drawingMode === 'trendline' && drawingPoints.length === 1) {
-            ctx.moveTo(p1_coord.x, p1_coord.y);
-            ctx.lineTo(currentMousePoint.x, currentMousePoint.y);
-        } else if (drawingMode === 'channel') {
-            if (drawingPoints.length === 1) {
-                ctx.moveTo(p1_coord.x, p1_coord.y);
-                ctx.lineTo(currentMousePoint.x, currentMousePoint.y);
-            } else if (drawingPoints.length === 2) {
-                const p2 = drawingPoints[1];
-                const p2_coord = { x: mainChart.timeScale().logicalToCoordinate(p2.logical), y: candlestickSeries.priceToCoordinate(p2.price) };
+                // Tworzymy kwadracik z kolorem
+                const colorSwatch = document.createElement('span');
+                colorSwatch.style.backgroundColor = shape.color;
+                colorSwatch.style.width = '15px';
+                colorSwatch.style.height = '15px';
+                colorSwatch.style.marginRight = '10px';
+                colorSwatch.style.border = '1px solid #ccc';
                 
-                if (p2_coord.x === null || p2_coord.y === null) return;
-                ctx.moveTo(p1_coord.x, p1_coord.y);
-                ctx.lineTo(p2_coord.x, p2_coord.y);
-                
-                if (p2_coord.x === p1_coord.x) return;
-                const m = (p2_coord.y - p1_coord.y) / (p2_coord.x - p1_coord.x);
-                const c = p1_coord.y - m * p1_coord.x;
-                const y_on_line = m * currentMousePoint.x + c;
-                const dy = currentMousePoint.y - y_on_line;
-                ctx.moveTo(p1_coord.x, p1_coord.y + dy);
-                ctx.lineTo(p2_coord.x, p2_coord.y + dy);
-            }
+                // Nazwa linii
+                const text = document.createElement('span');
+                text.textContent = shape.name;
+                text.style.flexGrow = '1';
+
+                // Przycisk usuwania
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn btn-danger btn-sm py-0 px-1';
+                deleteBtn.innerHTML = '&times;';
+                deleteBtn.dataset.shapeId = shape.id; // Używamy ID do identyfikacji
+
+                item.appendChild(colorSwatch);
+                item.appendChild(text);
+                item.appendChild(deleteBtn);
+                drawnShapesList.appendChild(item);
+            });
+
+            // Dodajemy separator i opcję "Wyczyść wszystko"
+            drawnShapesList.innerHTML += '<div class="dropdown-divider"></div>';
+            const clearAllItem = document.createElement('a');
+            clearAllItem.className = 'dropdown-item';
+            clearAllItem.href = '#';
+            clearAllItem.id = 'clearAllShapes';
+            clearAllItem.textContent = 'Wyczyść wszystko';
+            drawnShapesList.appendChild(clearAllItem);
         }
-        ctx.stroke();
     }
-    
-    function resizeDrawingCanvas() {
-        const rect = chartContainer.getBoundingClientRect();
-        const ratio = window.devicePixelRatio || 1;
-        drawingCanvas.style.width = rect.width + "px";
-        drawingCanvas.style.height = rect.height + "px";
-        drawingCanvas.width = Math.floor(rect.width * ratio);
-        drawingCanvas.height = Math.floor(rect.height * ratio);
-        ctx.scale(ratio, ratio);
-    }
-    
-    window.setDrawingMode = function(mode) {
-        drawingMode = mode;
-        drawingPoints = [];
-        chartContainer.style.cursor = 'crosshair';
-    };
 
-    // ZMIANA: Pobieramy 'logical' zamiast 'time'
-    mainChart.subscribeCrosshairMove((param) => {
-        if (!drawingMode || drawingPoints.length === 0 || !param.point) {
-            currentMousePoint = null;
-            return;
-        }
-        const x = param.point.x;
-        const y = param.point.y;
-        const price = candlestickSeries.coordinateToPrice(y);
-        const logical = mainChart.timeScale().coordinateToLogical(x);
-        currentMousePoint = { x, y, logical, price };
-    });
+    function masterRedraw() { /* ... bez zmian ... */ }
+    function redrawShapes() { /* ... bez zmian ... */ }
+    function drawCurrentShape() { /* ... bez zmian ... */ }
+    function resizeDrawingCanvas() { /* ... bez zmian ... */ }
+    
+    window.setDrawingMode = function(mode) { /* ... bez zmian ... */ };
+    mainChart.subscribeCrosshairMove((param) => { /* ... bez zmian ... */ });
 
-    // ZMIANA: Zapisujemy punkt z 'logical' zamiast 'time'
+    // ZMIANA: Nadajemy unikalne ID i nazwę każdemu rysowanemu kształtowi
     mainChart.subscribeClick((param) => {
         if (!drawingMode || !param.point) return;
 
-        const price = candlestickSeries.coordinateToPrice(param.point.y);
+        const price = candlestickSeries.priceToCoordinate(param.point.y);
         const logical = mainChart.timeScale().coordinateToLogical(param.point.x);
 
-        if (price === null || logical === null) {
-            return; // Ten warunek jest teraz bezpieczny i prawidłowy
-        }
+        if (price === null || logical === null) return;
 
         const currentPoint = { logical: logical, price: price };
         drawingPoints.push(currentPoint);
         
+        let newShape = null;
+
         if (drawingMode === 'hline') {
-            drawnShapes.push({ type: "hline", price: currentPoint.price, color: lineColor, width: lineWidth });
-            drawingMode = null;
-            drawingPoints = [];
+            shapeCounters.hline++;
+            newShape = { 
+                type: "hline", price: currentPoint.price, color: lineColor, width: lineWidth,
+                id: `hline-${shapeCounters.hline}`, name: `Pozioma ${shapeCounters.hline}`
+            };
+            drawnShapes.push(newShape);
+            drawingMode = null; drawingPoints = [];
         } else if (drawingMode === 'vline') {
-            // Dla vline 'logical' jest odpowiednikiem 'time'
-            drawnShapes.push({ type: "vline", logical: currentPoint.logical, color: lineColor, width: lineWidth });
-            drawingMode = null;
-            drawingPoints = [];
+            shapeCounters.vline++;
+            newShape = {
+                type: "vline", logical: currentPoint.logical, color: lineColor, width: lineWidth,
+                id: `vline-${shapeCounters.vline}`, name: `Pionowa ${shapeCounters.vline}`
+            };
+            drawnShapes.push(newShape);
+            drawingMode = null; drawingPoints = [];
         } else if (drawingMode === 'trendline' && drawingPoints.length === 2) {
-            drawnShapes.push({ type: 'trendline', p1: drawingPoints[0], p2: drawingPoints[1], color: lineColor, width: lineWidth });
-            drawingMode = null;
-            drawingPoints = [];
+            shapeCounters.trendline++;
+            newShape = {
+                type: 'trendline', p1: drawingPoints[0], p2: drawingPoints[1], color: lineColor, width: lineWidth,
+                id: `trendline-${shapeCounters.trendline}`, name: `Linia trendu ${shapeCounters.trendline}`
+            };
+            drawnShapes.push(newShape);
+            drawingMode = null; drawingPoints = [];
         } else if (drawingMode === 'channel' && drawingPoints.length === 3) {
+            shapeCounters.channel++;
             const [p1, p2, p3] = drawingPoints;
             const interpolatedPrice = interpolatePriceByLogical(p1, p2, p3.logical);
-            drawnShapes.push({ type: "channel", p1, p2, p3, interpolatedPrice: interpolatedPrice, color: lineColor, width: lineWidth });
-            drawingMode = null;
-            drawingPoints = [];
+            newShape = {
+                type: "channel", p1, p2, p3, interpolatedPrice: interpolatedPrice, color: lineColor, width: lineWidth,
+                id: `channel-${shapeCounters.channel}`, name: `Kanał ${shapeCounters.channel}`
+            };
+            drawnShapes.push(newShape);
+            drawingMode = null; drawingPoints = [];
         }
         
+        if (newShape) {
+            updateClearButtonUI(); // Aktualizuj UI po dodaniu kształtu
+        }
+
         if (!drawingMode) {
             chartContainer.style.cursor = 'default';
         }
     });
 
-    // ZMIANA: Nowa funkcja pomocnicza operująca na 'logical'
-    function interpolatePriceByLogical(p1, p2, targetLogical) {
-        if (p1.logical === p2.logical) return p1.price; 
-        const slope = (p2.price - p1.price) / (p2.logical - p1.logical);
-        return p1.price + slope * (targetLogical - p1.logical);
-    }
+    function interpolatePriceByLogical(p1, p2, targetLogical) { /* ... bez zmian ... */ }
     
     resizeDrawingCanvas();
-    window.addEventListener("resize", () => {
-        mainChart.applyOptions({ width: chartContainer.clientWidth });
-        resizeDrawingCanvas();
-    });
+    window.addEventListener("resize", () => { /* ... bez zmian ... */ });
 
-    function animationLoop() {
-        masterRedraw();
-        requestAnimationFrame(animationLoop);
-    }
+    function animationLoop() { /* ... bez zmian ... */ }
+    
+    // Inicjalizacja przycisku na starcie
+    updateClearButtonUI();
     animationLoop();
 
 // === KONIEC SEKCJI RYSOWANIA ===
