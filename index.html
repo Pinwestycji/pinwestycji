@@ -118,9 +118,13 @@
                                         <label for="lineWidth" class="mb-0 small">Grubość:</label>
                                         <input type="number" id="lineWidth" class="form-control form-control-sm" value="2" min="1" max="10" style="width: 60px;">
                                         
-                                        <button id="clearDrawingButton" class="btn btn-sm btn-danger">
-                                            <i class="fas fa-trash fa-sm"></i> Wyczyść
-                                        </button>
+                                        <div class="btn-group" id="clear-button-container">
+                                            <button id="clearDrawingButton" class="btn btn-sm btn-danger">
+                                                <i class="fas fa-trash fa-sm"></i> Wyczyść wszystko
+                                            </button>
+                                            <div class="dropdown-menu" id="drawnShapesList">
+                                                </div>
+                                        </div>
                                     </div>
                                 </div>
                                 
