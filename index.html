@@ -118,9 +118,16 @@
                                         <label for="lineWidth" class="mb-0 small">Grubość:</label>
                                         <input type="number" id="lineWidth" class="form-control form-control-sm" value="2" min="1" max="10" style="width: 60px;">
                                         
-                                        <button id="clearDrawingButton" class="btn btn-sm btn-danger">
-                                            <i class="fas fa-trash fa-sm"></i> Wyczyść
-                                        </button>
+                                        <div class="btn-group" id="clearButtonGroup">
+                                            <button id="clearDrawingButton" class="btn btn-sm btn-danger">
+                                                <i class="fas fa-trash fa-sm"></i> Wyczyść
+                                            </button>
+                                            <button id="clearDropdownToggle" type="button" class="btn btn-sm btn-danger dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="display: none;">
+                                                <span class="sr-only">Toggle Dropdown</span>
+                                            </button>
+                                            <div class="dropdown-menu dropdown-menu-right" id="clearDropdownMenu">
+                                                </div>
+                                        </div>
                                     </div>
                                 </div>
                                 
