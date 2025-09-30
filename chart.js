@@ -79,11 +79,16 @@ document.addEventListener('DOMContentLoaded', function() {
      * Aktualizuje właściwość pointer-events dla kanwy rysującej.
      * 'auto' pozwala na interakcję, 'none' ją wyłącza.
      */
+    // Plik: chart.js
+
+    // NOWA WERSJA - POPRAWNA
     function updateCanvasPointerEvents() {
-        const newMode = (drawingMode || selectedShapeId) ? 'auto' : 'none';
-        if (drawingCanvas.style.pointerEvents !== newMode) {
-            console.log(`%c[PointerEvents] Zmiana trybu interakcji kanwy na: ${newMode}`, 'color: orange; font-weight: bold;', { drawingMode, selectedShapeId });
-            drawingCanvas.style.pointerEvents = newMode;
+        // Kanwa ma być interaktywna TYLKO wtedy, gdy jakiś kształt jest zaznaczony do edycji.
+        // W każdym innym przypadku (rysowanie, normalne przeglądanie) musi być "przezroczysta".
+        if (selectedShapeId) { 
+            drawingCanvas.style.pointerEvents = 'auto';
+        } else {
+            drawingCanvas.style.pointerEvents = 'none';
         }
     }
 
