@@ -479,39 +479,30 @@ document.addEventListener('DOMContentLoaded', function() {
     // ZMIANA: Zapisujemy punkt z 'logical' zamiast 'time'
 
 
+    // Plik: chart.js
+    // ZASTĄP CAŁĄ TĘ FUNKCJĘ
+    
     mainChart.subscribeClick((param) => {
-        // === NOWA, POPRAWIONA LOGIKA ===
-    
-        // Jeśli jesteśmy w trybie przeciągania, nic nie rób. To zdarzenie jest obsługiwane przez canvas.
-        if (isDragging) {
-            return;
-        }
-    
-        // SCENARIUSZ 1: Nie jesteśmy w trybie rysowania (obsługa zaznaczania/odznaczania)
+        // Ta funkcja jest wywoływana, gdy kanwa jest nieaktywna (pointer-events: 'none')
+        
+        // SCENARIUSZ 1: Nie rysujemy - obsługa PIERWSZEGO zaznaczenia
         if (!drawingMode) {
             if (hoveredShapeId) {
-                // Kliknięto na istniejący kształt, więc go zaznaczamy
                 selectedShapeId = hoveredShapeId;
-            } else {
-                // Kliknięto w puste miejsce, więc odznaczamy wszystko
-                selectedShapeId = null;
+                updateCanvasPointerEvents(); // Zaznaczono kształt -> uaktywnij kanwę do edycji
             }
-            // Po każdej zmianie zaznaczenia, aktualizujemy stan kanwy i kończymy.
-            updateCanvasPointerEvents();
-            return; 
-        }
-    
-        // SCENARIUSZ 2: Jesteśmy w trybie rysowania
-        if (!param.point) {
+            // Jeśli nie trafiliśmy w kształt, nic nie robimy.
+            // Odznaczanie jest teraz obsługiwane przez handleMouseDown na kanwie.
             return;
         }
+    
+        // SCENARIUSZ 2: Rysujemy nowy kształt
+        if (!param.point) return;
     
         const price = candlestickSeries.coordinateToPrice(param.point.y);
         const logical = mainChart.timeScale().coordinateToLogical(param.point.x);
     
-        if (price === null || logical === null) {
-            return;
-        }
+        if (price === null || logical === null) return;
     
         const currentPoint = { logical: logical, price: price };
         drawingPoints.push(currentPoint);
@@ -546,7 +537,7 @@ document.addEventListener('DOMContentLoaded', function() {
             drawingMode = null;
             drawingPoints = [];
             updateClearButtonUI();
-            updateCanvasPointerEvents(); // Wyłącz interaktywność kanwy po zakończeniu rysowania
+            updateCanvasPointerEvents(); // Zakończono rysowanie -> dezaktywuj kanwę
             chartContainer.style.cursor = 'default';
         }
     });
@@ -569,26 +560,50 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     // Plik: chart.js
 
+    // Plik: chart.js
+    // ZASTĄP CAŁĄ TĘ FUNKCJĘ
+    
     function handleMouseDown(e) {
-        if (!selectedShapeId) return;
+        // Ta funkcja działa tylko gdy pointer-events='auto'
+        
+        // Ignoruj, jeśli jesteśmy w trakcie rysowania nowego kształtu
+        if (drawingMode) return;
+        
+        // Jeśli z jakiegoś powodu nie ma zaznaczonego kształtu, wyłącz interaktywność i zakończ.
+        if (!selectedShapeId) {
+            updateCanvasPointerEvents();
+            return;
+        }
     
         const rect = drawingCanvas.getBoundingClientRect();
         const mousePoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    
         const selectedShape = drawnShapes.find(s => s.id === selectedShapeId);
+    
+        // To nie powinno się zdarzyć, ale dla bezpieczeństwa
         if (!selectedShape) return;
     
         const handles = getShapeHandles(selectedShape);
+        let clickedOnHandle = false;
+    
         for (let i = 0; i < handles.length; i++) {
             const handle = handles[i];
             const distance = Math.sqrt((mousePoint.x - handle.x)**2 + (mousePoint.y - handle.y)**2);
-            if (distance <= HANDLE_SIZE) {
+            
+            // Zwiększamy nieco obszar trafienia dla wygody
+            if (distance <= HANDLE_SIZE + 2) {
                 isDragging = true;
                 draggedHandleIndex = i;
-                // Zapobiegaj normalnej interakcji z wykresem podczas przeciągania
                 mainChart.applyOptions({ handleScroll: false, handleScale: false }); 
-                return;
+                e.stopPropagation(); // Kluczowe: zatrzymaj propagację eventu, aby wykres go nie przechwycił
+                clickedOnHandle = true;
+                break; 
             }
+        }
+    
+        // Jeśli kliknięto na kanwę, ale NIE na uchwyt, oznacza to ODZNACZENIE kształtu.
+        if (!clickedOnHandle) {
+            selectedShapeId = null;
+            updateCanvasPointerEvents(); // Dezaktywuj kanwę i przywróć interakcję z wykresem
         }
     }
     
