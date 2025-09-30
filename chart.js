@@ -46,12 +46,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // === SEKCJA RYSOWANIA - WERSJA OPARTA NA INDEKSACH LOGICZNYCH ===
     
+    
     let drawingMode = null; 
     let drawingPoints = [];
     let drawnShapes = [];
     let currentMousePoint = null; 
-
+    let chartPaneDimensions = { x: 0, y: 0, width: 0, height: 0 }; // <--- DODAJ TĘ LINIĘ
+    
     let lineColor = document.getElementById('lineColor').value;
+    // ... reszta bez zmian
     let lineWidth = parseInt(document.getElementById('lineWidth').value, 10);
     
     const drawingCanvas = document.getElementById("drawingCanvas");
@@ -67,11 +70,36 @@ document.addEventListener('DOMContentLoaded', function() {
         drawingMode = null;
     }
 
+    // Plik: chart.js
+
     function masterRedraw() {
         const ratio = window.devicePixelRatio || 1;
-        ctx.clearRect(0, 0, drawingCanvas.width / ratio, drawingCanvas.height / ratio);
+        const canvasWidth = drawingCanvas.width / ratio;
+        const canvasHeight = drawingCanvas.height / ratio;
+    
+        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+    
+        // === POCZĄTEK NOWEGO KODU ===
+        ctx.save(); // Zapisujemy aktualny stan kontekstu (bez przycinania)
+        
+        // Tworzymy ścieżkę przycinania
+        ctx.beginPath();
+        ctx.rect(
+            chartPaneDimensions.x, 
+            chartPaneDimensions.y, 
+            chartPaneDimensions.width, 
+            chartPaneDimensions.height
+        );
+        ctx.clip(); // Aktywujemy przycinanie - wszystko rysowane poniżej pojawi się tylko w tym prostokącie
+        // === KONIEC NOWEGO KODU ===
+    
+        // Te funkcje teraz będą rysować tylko w przyciętym obszarze
         redrawShapes();
         drawCurrentShape();
+    
+        // === POCZĄTEK NOWEGO KODU ===
+        ctx.restore(); // Przywracamy kontekst do stanu sprzed przycięcia
+        // === KONIEC NOWEGO KODU ===
     }
 
     // ZMIANA: Funkcje rysujące używają teraz 'logical' zamiast 'time'
@@ -165,14 +193,32 @@ document.addEventListener('DOMContentLoaded', function() {
         ctx.stroke();
     }
     
+    // Plik: chart.js
+
     function resizeDrawingCanvas() {
         const rect = chartContainer.getBoundingClientRect();
         const ratio = window.devicePixelRatio || 1;
+        
+        // Ustawienie rozmiarów samego płótna (tak jak było)
         drawingCanvas.style.width = rect.width + "px";
         drawingCanvas.style.height = rect.height + "px";
         drawingCanvas.width = Math.floor(rect.width * ratio);
         drawingCanvas.height = Math.floor(rect.height * ratio);
         ctx.scale(ratio, ratio);
+    
+        // === POCZĄTEK NOWEGO KODU ===
+        // Pobieramy wymiary osi, aby je "odjąć" od całego obszaru
+        const priceScaleWidth = candlestickSeries.priceScale().width();
+        const timeScaleHeight = mainChart.timeScale().height();
+    
+        // Zapisujemy wymiary obszaru WEWNĄTRZ osi
+        chartPaneDimensions = {
+            x: priceScaleWidth,
+            y: 0, // Zaczynamy od góry
+            width: rect.width - priceScaleWidth,
+            height: rect.height - timeScaleHeight
+        };
+        // === KONIEC NOWEGO KODU ===
     }
     
     window.setDrawingMode = function(mode) {
