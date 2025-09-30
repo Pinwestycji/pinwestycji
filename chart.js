@@ -57,9 +57,13 @@ document.addEventListener('DOMContentLoaded', function() {
     let shapeCounters = { trendline: 0, hline: 0, vline: 0, channel: 0 }; // <--- DODAJ TĘ LINIĘ
     let lineColor = document.getElementById('lineColor').value;
     let lineWidth = parseInt(document.getElementById('lineWidth').value, 10);
-    // === POCZĄTEK NOWEGO KODU ===
     let drawingTooltip = null; // Przechowa element tooltipa
     let hoveredShapeId = null; // Przechowa ID kształtu, nad którym jest kursor
+    // === POCZĄTEK NOWEGO KODU ===
+    let selectedShapeId = null;
+    let isDragging = false;
+    let draggedHandleIndex = null;
+    const HANDLE_SIZE = 5; // Rozmiar (promień) uchwytów w pikselach
     // === KONIEC NOWEGO KODU ===
     
     const drawingCanvas = document.getElementById("drawingCanvas");
@@ -165,6 +169,25 @@ document.addEventListener('DOMContentLoaded', function() {
             drawingTooltip.style.display = 'none';
             chartContainer.style.cursor = drawingMode ? 'crosshair' : 'default';
         }
+    }
+
+    // Plik: chart.js
+
+    function getShapeHandles(shape) {
+        const handles = [];
+        if (shape.type === 'trendline') {
+            const p1_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p1.logical), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
+            const p2_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p2.logical), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
+            if (p1_coord.x !== null) handles.push(p1_coord);
+            if (p2_coord.x !== null) handles.push(p2_coord);
+        } else if (shape.type === 'hline') {
+            // Dla linii horyzontalnej, uchwyt jest na środku widocznego obszaru
+            const y_coord = candlestickSeries.priceToCoordinate(shape.price);
+            const x_coord = chartPaneDimensions.width / 2;
+            if (y_coord !== null) handles.push({ x: x_coord, y: y_coord });
+        }
+        // Tutaj można dodać logikę dla innych typów, np. 'channel'
+        return handles;
     }
 
     function clearDrawings() {
@@ -274,13 +297,16 @@ document.addEventListener('DOMContentLoaded', function() {
         // === KONIEC NOWEGO KODU ===
     }
 
-    // ZMIANA: Funkcje rysujące używają teraz 'logical' zamiast 'time'
+    // Plik: chart.js
+
+    // Zastąp całą funkcję redrawShapes
     function redrawShapes() {
         drawnShapes.forEach(shape => {
             ctx.strokeStyle = shape.color;
             ctx.lineWidth = shape.width;
             ctx.beginPath();
     
+            // ... cała dotychczasowa logika rysowania linii (if-else dla typów) bez zmian ...
             if (shape.type === 'trendline') {
                 const p1_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p1.logical), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
                 const p2_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p2.logical), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
@@ -305,15 +331,12 @@ document.addEventListener('DOMContentLoaded', function() {
             } else if (shape.type === 'channel') {
                 const p1_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p1.logical), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
                 const p2_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p2.logical), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
-                
                 if (p1_coord.x !== null && p2_coord.x !== null) {
                     ctx.moveTo(p1_coord.x, p1_coord.y);
                     ctx.lineTo(p2_coord.x, p2_coord.y);
-                    
                     const p3_y_coord = candlestickSeries.priceToCoordinate(shape.p3.price);
                     const interpolatedPrice = interpolatePriceByLogical(shape.p1, shape.p2, shape.p3.logical);
                     const p1_y_coord_at_p3_logical = candlestickSeries.priceToCoordinate(interpolatedPrice);
-
                     if (p3_y_coord !== null && p1_y_coord_at_p3_logical !== null) {
                         const dy = p3_y_coord - p1_y_coord_at_p3_logical;
                         ctx.moveTo(p1_coord.x, p1_coord.y + dy);
@@ -322,6 +345,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
             ctx.stroke();
+    
+            // === POCZĄTEK NOWEGO KODU - RYSOWANIE UCHWYTÓW ===
+            if (shape.id === selectedShapeId) {
+                const handles = getShapeHandles(shape);
+                handles.forEach(handle => {
+                    ctx.beginPath();
+                    ctx.fillStyle = 'white';
+                    ctx.strokeStyle = shape.color;
+                    ctx.lineWidth = 2;
+                    ctx.arc(handle.x, handle.y, HANDLE_SIZE, 0, 2 * Math.PI);
+                    ctx.fill();
+                    ctx.stroke();
+                });
+            }
+            // === KONIEC NOWEGO KODU ===
         });
     }
 
@@ -423,8 +461,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     
     mainChart.subscribeClick((param) => {
+        // === POCZĄTEK NOWEJ LOGIKI ZAZNACZANIA ===
+        // Jeśli nie rysujemy, sprawdzamy, czy kliknięto na istniejący kształt
+        if (!drawingMode) {
+            if (hoveredShapeId) {
+                selectedShapeId = hoveredShapeId;
+                // Nie rób nic więcej, tylko zaznacz
+                return;
+            } else {
+                // Jeśli kliknięto w puste miejsce, odznacz wszystko
+                selectedShapeId = null;
+            }
+        }
+        // === KONIEC NOWEJ LOGIKI ZAZNACZANIA ===
+    
         if (!drawingMode || !param.point) return;
     
+        // ... reszta funkcji (rysowanie nowego kształtu) pozostaje bez zmian ...
         const price = candlestickSeries.coordinateToPrice(param.point.y);
         const logical = mainChart.timeScale().coordinateToLogical(param.point.x);
     
@@ -435,8 +488,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const currentPoint = { logical: logical, price: price };
         drawingPoints.push(currentPoint);
         
-        let shapeAdded = false; // Flaga do sprawdzenia, czy dodano kształt
-    
+        let shapeAdded = false;
+        
+        // ... cała logika 'if (drawingMode === 'hline')', 'trendline' itd. bez zmian ...
         if (drawingMode === 'hline') {
             shapeCounters.hline++;
             const id = `Pozioma ${shapeCounters.hline}`;
@@ -464,7 +518,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if(shapeAdded) {
             drawingMode = null;
             drawingPoints = [];
-            updateClearButtonUI(); // Aktualizuj przycisk po dodaniu kształtu
+            updateClearButtonUI();
         }
     
         if (!drawingMode) {
@@ -489,8 +543,90 @@ document.addEventListener('DOMContentLoaded', function() {
         masterRedraw();
         requestAnimationFrame(animationLoop);
     }
+    // Plik: chart.js
+
+    function handleMouseDown(e) {
+        if (!selectedShapeId) return;
+    
+        const rect = drawingCanvas.getBoundingClientRect();
+        const mousePoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    
+        const selectedShape = drawnShapes.find(s => s.id === selectedShapeId);
+        if (!selectedShape) return;
+    
+        const handles = getShapeHandles(selectedShape);
+        for (let i = 0; i < handles.length; i++) {
+            const handle = handles[i];
+            const distance = Math.sqrt((mousePoint.x - handle.x)**2 + (mousePoint.y - handle.y)**2);
+            if (distance <= HANDLE_SIZE) {
+                isDragging = true;
+                draggedHandleIndex = i;
+                // Zapobiegaj normalnej interakcji z wykresem podczas przeciągania
+                mainChart.applyOptions({ handleScroll: false, handleScale: false }); 
+                return;
+            }
+        }
+    }
+    
+    function handleMouseMove(e) {
+        const rect = drawingCanvas.getBoundingClientRect();
+        const mousePoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    
+        // Zmiana kursora nad uchwytem
+        let onHandle = false;
+        if (selectedShapeId) {
+            const selectedShape = drawnShapes.find(s => s.id === selectedShapeId);
+            if (selectedShape) {
+                const handles = getShapeHandles(selectedShape);
+                for (const handle of handles) {
+                    const distance = Math.sqrt((mousePoint.x - handle.x)**2 + (mousePoint.y - handle.y)**2);
+                    if (distance <= HANDLE_SIZE) {
+                        onHandle = true;
+                        break;
+                    }
+                }
+            }
+        }
+        drawingCanvas.style.cursor = onHandle ? 'move' : 'default';
+    
+    
+        if (!isDragging) return;
+    
+        const price = candlestickSeries.coordinateToPrice(mousePoint.y);
+        const logical = mainChart.timeScale().coordinateToLogical(mousePoint.x);
+    
+        if (price === null || logical === null) return;
+    
+        const selectedShape = drawnShapes.find(s => s.id === selectedShapeId);
+    
+        if (selectedShape.type === 'trendline') {
+            if (draggedHandleIndex === 0) { // Przeciągany pierwszy punkt
+                selectedShape.p1 = { price, logical };
+            } else if (draggedHandleIndex === 1) { // Przeciągany drugi punkt
+                selectedShape.p2 = { price, logical };
+            }
+        } else if (selectedShape.type === 'hline') {
+            selectedShape.price = price; // Zmieniamy tylko cenę
+        }
+    }
+    
+    function handleMouseUp(e) {
+        if (isDragging) {
+            isDragging = false;
+            draggedHandleIndex = null;
+            // Przywróć normalną interakcję z wykresem
+            mainChart.applyOptions({ handleScroll: true, handleScale: true });
+        }
+    }
+    
     animationLoop();
     updateClearButtonUI(); // <--- DODAJ TĘ LINIĘ
+
+    // === POCZĄTEK NOWEGO KODU ===
+    drawingCanvas.addEventListener('mousedown', handleMouseDown);
+    drawingCanvas.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp); // Nasłuchujemy na całym oknie
+// === KONIEC NOWEGO KODU ===
 // === KONIEC SEKCJI RYSOWANIA ===
     
 
