@@ -265,6 +265,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Plik: chart.js
 
+    
     function resizeDrawingCanvas() {
         const rect = chartContainer.getBoundingClientRect();
         const ratio = window.devicePixelRatio || 1;
@@ -276,19 +277,17 @@ document.addEventListener('DOMContentLoaded', function() {
         drawingCanvas.height = Math.floor(rect.height * ratio);
         ctx.scale(ratio, ratio);
     
-        // === POCZĄTEK NOWEGO KODU ===
         // Pobieramy wymiary osi, aby je "odjąć" od całego obszaru
         const priceScaleWidth = candlestickSeries.priceScale().width();
         const timeScaleHeight = mainChart.timeScale().height();
     
-        // Zapisujemy wymiary obszaru WEWNĄTRZ osi
+        // Zapisujemy wymiary obszaru WEWNĄTRZ osi (Z POPRAWKĄ)
         chartPaneDimensions = {
-            x: priceScaleWidth,
-            y: 0, // Zaczynamy od góry
-            width: rect.width - priceScaleWidth,
-            height: rect.height - timeScaleHeight
+            x: 0, // <-- ZMIANA: Zaczynamy od lewej krawędzi
+            y: 0, 
+            width: rect.width - priceScaleWidth, // <-- Szerokość to całość minus oś cen po prawej
+            height: rect.height - timeScaleHeight // <-- Wysokość to całość minus oś czasu na dole
         };
-        // === KONIEC NOWEGO KODU ===
     }
     
     window.setDrawingMode = function(mode) {
