@@ -51,10 +51,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let drawingPoints = [];
     let drawnShapes = [];
     let currentMousePoint = null; 
-    let chartPaneDimensions = { x: 0, y: 0, width: 0, height: 0 }; // <--- DODAJ TĘ LINIĘ
-    
+    let chartPaneDimensions = { x: 0, y: 0, width: 0, height: 0 }; 
+    let shapeCounters = { trendline: 0, hline: 0, vline: 0, channel: 0 }; // <--- DODAJ TĘ LINIĘ
     let lineColor = document.getElementById('lineColor').value;
-    // ... reszta bez zmian
     let lineWidth = parseInt(document.getElementById('lineWidth').value, 10);
     
     const drawingCanvas = document.getElementById("drawingCanvas");
@@ -64,13 +63,84 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('lineWidth').addEventListener('input', (e) => { lineWidth = parseInt(e.target.value, 10); });
     document.getElementById('clearDrawingButton').addEventListener('click', clearDrawings);
 
+
+
     function clearDrawings() {
         drawnShapes = [];
         drawingPoints = [];
         drawingMode = null;
+        // Resetujemy liczniki
+        shapeCounters = { trendline: 0, hline: 0, vline: 0, channel: 0 };
+        // Aktualizujemy UI przycisku
+        updateClearButtonUI();
     }
 
-    // Plik: chart.js
+    
+    function removeShapeById(id) {
+        drawnShapes = drawnShapes.filter(shape => shape.id !== id);
+        // Po usunięciu, musimy odświeżyć UI przycisku
+        updateClearButtonUI();
+    }
+
+    
+    function updateClearButtonUI() {
+        const mainButton = document.getElementById('clearDrawingButton');
+        const dropdownToggle = document.getElementById('clearDropdownToggle');
+        const dropdownMenu = document.getElementById('clearDropdownMenu');
+        
+        // Usuwamy wszystkie stare event listenery, aby uniknąć ich duplikacji
+        mainButton.replaceWith(mainButton.cloneNode(true));
+        document.getElementById('clearDrawingButton').addEventListener('click', clearDrawings);
+    
+    
+        if (drawnShapes.length === 0) {
+            // Stan domyślny: brak linii, przycisk czyści wszystko (co jest puste)
+            dropdownToggle.style.display = 'none';
+            dropdownMenu.innerHTML = '';
+        } else {
+            // Stan z liniami: pokazujemy strzałkę i budujemy menu
+            dropdownToggle.style.display = '';
+            dropdownMenu.innerHTML = ''; // Czyścimy stare menu
+    
+            drawnShapes.forEach(shape => {
+                const item = document.createElement('a');
+                item.className = 'dropdown-item d-flex align-items-center';
+                item.href = '#';
+                
+                // Kwadracik z kolorem
+                const colorSwatch = document.createElement('span');
+                colorSwatch.style.backgroundColor = shape.color;
+                colorSwatch.style.width = '15px';
+                colorSwatch.style.height = '15px';
+                colorSwatch.style.marginRight = '10px';
+                colorSwatch.style.border = '1px solid #ccc';
+    
+                item.appendChild(colorSwatch);
+                item.appendChild(document.createTextNode(shape.id)); // Używamy ID kształtu
+                
+                item.onclick = (e) => {
+                    e.preventDefault();
+                    removeShapeById(shape.id);
+                };
+                dropdownMenu.appendChild(item);
+            });
+    
+            // Dodajemy separator i opcję "Wyczyść wszystko"
+            const divider = document.createElement('div');
+            divider.className = 'dropdown-divider';
+            dropdownMenu.appendChild(divider);
+    
+            const clearAllItem = document.createElement('a');
+            clearAllItem.className = 'dropdown-item';
+            clearAllItem.href = '#';
+            clearAllItem.textContent = 'Wyczyść wszystko';
+            clearAllItem.onclick = (e) => {
+                e.preventDefault();
+                clearDrawings();
+            };
+            dropdownMenu.appendChild(clearAllItem);
+        }
+    }
 
     function masterRedraw() {
         const ratio = window.devicePixelRatio || 1;
@@ -241,40 +311,53 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // ZMIANA: Zapisujemy punkt z 'logical' zamiast 'time'
+
+    
     mainChart.subscribeClick((param) => {
         if (!drawingMode || !param.point) return;
-
+    
         const price = candlestickSeries.coordinateToPrice(param.point.y);
         const logical = mainChart.timeScale().coordinateToLogical(param.point.x);
-
+    
         if (price === null || logical === null) {
-            return; // Ten warunek jest teraz bezpieczny i prawidłowy
+            return;
         }
-
+    
         const currentPoint = { logical: logical, price: price };
         drawingPoints.push(currentPoint);
         
+        let shapeAdded = false; // Flaga do sprawdzenia, czy dodano kształt
+    
         if (drawingMode === 'hline') {
-            drawnShapes.push({ type: "hline", price: currentPoint.price, color: lineColor, width: lineWidth });
-            drawingMode = null;
-            drawingPoints = [];
+            shapeCounters.hline++;
+            const id = `Pozioma ${shapeCounters.hline}`;
+            drawnShapes.push({ type: "hline", id: id, price: currentPoint.price, color: lineColor, width: lineWidth });
+            shapeAdded = true;
         } else if (drawingMode === 'vline') {
-            // Dla vline 'logical' jest odpowiednikiem 'time'
-            drawnShapes.push({ type: "vline", logical: currentPoint.logical, color: lineColor, width: lineWidth });
-            drawingMode = null;
-            drawingPoints = [];
+            shapeCounters.vline++;
+            const id = `Pionowa ${shapeCounters.vline}`;
+            drawnShapes.push({ type: "vline", id: id, logical: currentPoint.logical, color: lineColor, width: lineWidth });
+            shapeAdded = true;
         } else if (drawingMode === 'trendline' && drawingPoints.length === 2) {
-            drawnShapes.push({ type: 'trendline', p1: drawingPoints[0], p2: drawingPoints[1], color: lineColor, width: lineWidth });
-            drawingMode = null;
-            drawingPoints = [];
+            shapeCounters.trendline++;
+            const id = `Linia Trendu ${shapeCounters.trendline}`;
+            drawnShapes.push({ type: 'trendline', id: id, p1: drawingPoints[0], p2: drawingPoints[1], color: lineColor, width: lineWidth });
+            shapeAdded = true;
         } else if (drawingMode === 'channel' && drawingPoints.length === 3) {
+            shapeCounters.channel++;
+            const id = `Kanał ${shapeCounters.channel}`;
             const [p1, p2, p3] = drawingPoints;
             const interpolatedPrice = interpolatePriceByLogical(p1, p2, p3.logical);
-            drawnShapes.push({ type: "channel", p1, p2, p3, interpolatedPrice: interpolatedPrice, color: lineColor, width: lineWidth });
-            drawingMode = null;
-            drawingPoints = [];
+            drawnShapes.push({ type: "channel", id: id, p1, p2, p3, interpolatedPrice: interpolatedPrice, color: lineColor, width: lineWidth });
+            shapeAdded = true;
         }
         
+        if(shapeAdded) {
+            drawingMode = null;
+            drawingPoints = [];
+            updateClearButtonUI(); // Aktualizuj przycisk po dodaniu kształtu
+        }
+    
         if (!drawingMode) {
             chartContainer.style.cursor = 'default';
         }
@@ -298,7 +381,7 @@ document.addEventListener('DOMContentLoaded', function() {
         requestAnimationFrame(animationLoop);
     }
     animationLoop();
-
+    updateClearButtonUI(); // <--- DODAJ TĘ LINIĘ
 // === KONIEC SEKCJI RYSOWANIA ===
     
 
