@@ -186,6 +186,57 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Plik: chart.js
+    // Plik: chart.js - SEKCJA RYSOWANIA
+    
+    /**
+     * Sprawdza, czy w danym punkcie na ekranie znajduje się jakiś narysowany kształt.
+     * @param {{x: number, y: number}} mousePoint - Współrzędne kliknięcia.
+     * @returns {string|null} - Zwraca ID znalezionego kształtu lub null.
+     */
+    function findShapeAtPoint(mousePoint) {
+        const HIT_THRESHOLD = 5; // Tolerancja w pikselach
+        let foundShape = null;
+    
+        // Pętla od tyłu, aby znaleźć najnowszy (najwyższy) kształt
+        for (let i = drawnShapes.length - 1; i >= 0; i--) {
+            const shape = drawnShapes[i];
+            let distance = Infinity;
+    
+            if (shape.type === 'hline') {
+                const y_coord = candlestickSeries.priceToCoordinate(shape.price);
+                if (y_coord !== null) distance = Math.abs(mousePoint.y - y_coord);
+            } else if (shape.type === 'vline') {
+                const x_coord = mainChart.timeScale().logicalToCoordinate(shape.logical);
+                if (x_coord !== null) distance = Math.abs(mousePoint.x - x_coord);
+            } else if (shape.type === 'trendline') {
+                const p1_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p1.logical), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
+                const p2_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p2.logical), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
+                if (p1_coord.x !== null && p2_coord.x !== null) {
+                    distance = getDistanceToLineSegment(mousePoint, p1_coord, p2_coord);
+                }
+            } else if (shape.type === 'channel') {
+                 const p1_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p1.logical), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
+                 const p2_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p2.logical), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
+                 if (p1_coord.x !== null && p2_coord.x !== null) {
+                    const p3_y_coord = candlestickSeries.priceToCoordinate(shape.p3.price);
+                    const interpolatedPrice = interpolatePriceByLogical(shape.p1, shape.p2, shape.p3.logical);
+                    const p1_y_coord_at_p3_logical = candlestickSeries.priceToCoordinate(interpolatedPrice);
+                    const dy = p3_y_coord - p1_y_coord_at_p3_logical;
+                    const p1_parallel = {x: p1_coord.x, y: p1_coord.y + dy};
+                    const p2_parallel = {x: p2_coord.x, y: p2_coord.y + dy};
+                    const dist1 = getDistanceToLineSegment(mousePoint, p1_coord, p2_coord);
+                    const dist2 = getDistanceToLineSegment(mousePoint, p1_parallel, p2_parallel);
+                    distance = Math.min(dist1, dist2);
+                 }
+            }
+    
+            if (distance < HIT_THRESHOLD) {
+                foundShape = shape;
+                break;
+            }
+        }
+        return foundShape ? foundShape.id : null;
+    }
 
     function getShapeHandles(shape) {
         const handles = [];
@@ -479,24 +530,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Plik: chart.js
     // ZASTĄP CAŁĄ TĘ FUNKCJĘ
+    // Plik: chart.js - ZASTĄP CAŁĄ FUNKCJĘ
     
     mainChart.subscribeClick((param) => {
-        console.log('%c[mainChart.subscribeClick] WYWOŁANO KLIKNIĘCIE NA GŁÓWNYM WYKRESIE', 'color: blue;', { drawingMode, hoveredShapeId });
-    
+        // Jeśli nie rysujemy, nasza jedyna rola to sprawdzić, czy kliknięto na kształt, aby go zaznaczyć.
         if (!drawingMode) {
-            console.log('[mainChart.subscribeClick] Tryb bez rysowania. Sprawdzam zaznaczenie...');
-            if (hoveredShapeId) {
-                console.log(`[mainChart.subscribeClick] ZNALEZIONO KSZTAŁT: ${hoveredShapeId}. Zaznaczam go.`);
-                selectedShapeId = hoveredShapeId;
-                updateCanvasPointerEvents();
-            } else {
-                 console.log('[mainChart.subscribeClick] Kliknięto w puste miejsce. Brak akcji (odznaczanie w handleMouseDown).');
+            if (param.point) {
+                const clickedShapeId = findShapeAtPoint(param.point);
+                if (clickedShapeId) {
+                    selectedShapeId = clickedShapeId;
+                    updateCanvasPointerEvents(); // Aktywuj kanwę do edycji
+                }
             }
             return;
         }
-    
+        
+        // Poniższa logika dotyczy tylko trybu rysowania
         if (!param.point) return;
-        console.log('[mainChart.subscribeClick] Tryb rysowania. Dodaję nowy punkt...');
     
         const price = candlestickSeries.coordinateToPrice(param.point.y);
         const logical = mainChart.timeScale().coordinateToLogical(param.point.x);
@@ -505,7 +555,7 @@ document.addEventListener('DOMContentLoaded', function() {
         drawingPoints.push(currentPoint);
         let shapeAdded = false;
         
-        // ... (reszta logiki rysowania bez zmian)
+        // Logika dodawania kształtów (bez zmian)
         if (drawingMode === 'hline') {
             shapeCounters.hline++; const id = `Pozioma ${shapeCounters.hline}`;
             drawnShapes.push({ type: "hline", id: id, price: currentPoint.price, color: lineColor, width: lineWidth });
@@ -527,7 +577,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         if (shapeAdded) {
-            console.log(`[mainChart.subscribeClick] DODANO KSZTAŁT: ${drawnShapes[drawnShapes.length-1].id}`);
             drawingMode = null;
             drawingPoints = [];
             updateClearButtonUI();
