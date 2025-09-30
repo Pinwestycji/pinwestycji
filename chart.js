@@ -478,27 +478,40 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ZMIANA: Zapisujemy punkt z 'logical' zamiast 'time'
 
-  
-    
+
     mainChart.subscribeClick((param) => {
+        // === NOWA, POPRAWIONA LOGIKA ===
+    
+        // Jeśli jesteśmy w trybie przeciągania, nic nie rób. To zdarzenie jest obsługiwane przez canvas.
+        if (isDragging) {
+            return;
+        }
+    
+        // SCENARIUSZ 1: Nie jesteśmy w trybie rysowania (obsługa zaznaczania/odznaczania)
         if (!drawingMode) {
             if (hoveredShapeId) {
+                // Kliknięto na istniejący kształt, więc go zaznaczamy
                 selectedShapeId = hoveredShapeId;
             } else {
+                // Kliknięto w puste miejsce, więc odznaczamy wszystko
                 selectedShapeId = null;
             }
-            updateCanvasPointerEvents(); // <-- DODAJ TĘ LINIĘ (obsługuje zaznaczanie i odznaczanie)
-            
-            // Jeśli tylko zaznaczyliśmy/odznaczyliśmy, nie kontynuuj do logiki rysowania
-            if (!hoveredShapeId) return; 
+            // Po każdej zmianie zaznaczenia, aktualizujemy stan kanwy i kończymy.
+            updateCanvasPointerEvents();
+            return; 
         }
-        
-        if (!drawingMode || !param.point) return;
+    
+        // SCENARIUSZ 2: Jesteśmy w trybie rysowania
+        if (!param.point) {
+            return;
+        }
     
         const price = candlestickSeries.coordinateToPrice(param.point.y);
         const logical = mainChart.timeScale().coordinateToLogical(param.point.x);
     
-        if (price === null || logical === null) return;
+        if (price === null || logical === null) {
+            return;
+        }
     
         const currentPoint = { logical: logical, price: price };
         drawingPoints.push(currentPoint);
@@ -529,14 +542,11 @@ document.addEventListener('DOMContentLoaded', function() {
             shapeAdded = true;
         }
         
-        if(shapeAdded) {
+        if (shapeAdded) {
             drawingMode = null;
             drawingPoints = [];
             updateClearButtonUI();
-            updateCanvasPointerEvents(); // <-- DODAJ TĘ LINIĘ (po zakończeniu rysowania)
-        }
-    
-        if (!drawingMode) {
+            updateCanvasPointerEvents(); // Wyłącz interaktywność kanwy po zakończeniu rysowania
             chartContainer.style.cursor = 'default';
         }
     });
