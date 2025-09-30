@@ -173,22 +173,54 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Plik: chart.js
 
+        // --- getShapeHandles ---
     function getShapeHandles(shape) {
         const handles = [];
+    
         if (shape.type === 'trendline') {
-            const p1_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p1.logical), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
-            const p2_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p2.logical), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
-            if (p1_coord.x !== null) handles.push(p1_coord);
-            if (p2_coord.x !== null) handles.push(p2_coord);
+            const p1_coord = { 
+                x: mainChart.timeScale().logicalToCoordinate(shape.p1.logical), 
+                y: candlestickSeries.priceToCoordinate(shape.p1.price) 
+            };
+            const p2_coord = { 
+                x: mainChart.timeScale().logicalToCoordinate(shape.p2.logical), 
+                y: candlestickSeries.priceToCoordinate(shape.p2.price) 
+            };
+            if (p1_coord.x !== null && p1_coord.y !== null) handles.push(p1_coord);
+            if (p2_coord.x !== null && p2_coord.y !== null) handles.push(p2_coord);
+    
         } else if (shape.type === 'hline') {
-            // Dla linii horyzontalnej, uchwyt jest na środku widocznego obszaru
             const y_coord = candlestickSeries.priceToCoordinate(shape.price);
             const x_coord = chartPaneDimensions.width / 2;
             if (y_coord !== null) handles.push({ x: x_coord, y: y_coord });
+    
+        } else if (shape.type === 'vline') {
+            const x_coord = mainChart.timeScale().logicalToCoordinate(shape.logical);
+            const y_coord = chartPaneDimensions.height / 2;
+            if (x_coord !== null) handles.push({ x: x_coord, y: y_coord });
+    
+        } else if (shape.type === 'channel') {
+            const p1_coord = { 
+                x: mainChart.timeScale().logicalToCoordinate(shape.p1.logical), 
+                y: candlestickSeries.priceToCoordinate(shape.p1.price) 
+            };
+            const p2_coord = { 
+                x: mainChart.timeScale().logicalToCoordinate(shape.p2.logical), 
+                y: candlestickSeries.priceToCoordinate(shape.p2.price) 
+            };
+            const p3_coord = { 
+                x: mainChart.timeScale().logicalToCoordinate(shape.p3.logical), 
+                y: candlestickSeries.priceToCoordinate(shape.p3.price) 
+            };
+    
+            if (p1_coord.x !== null && p1_coord.y !== null) handles.push(p1_coord);
+            if (p2_coord.x !== null && p2_coord.y !== null) handles.push(p2_coord);
+            if (p3_coord.x !== null && p3_coord.y !== null) handles.push(p3_coord);
         }
-        // Tutaj można dodać logikę dla innych typów, np. 'channel'
+    
         return handles;
     }
+
 
     function clearDrawings() {
         drawnShapes = [];
@@ -544,42 +576,19 @@ document.addEventListener('DOMContentLoaded', function() {
         requestAnimationFrame(animationLoop);
     }
     // Plik: chart.js
-
-    function handleMouseDown(e) {
-        if (!selectedShapeId) return;
-    
-        const rect = drawingCanvas.getBoundingClientRect();
-        const mousePoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    
-        const selectedShape = drawnShapes.find(s => s.id === selectedShapeId);
-        if (!selectedShape) return;
-    
-        const handles = getShapeHandles(selectedShape);
-        for (let i = 0; i < handles.length; i++) {
-            const handle = handles[i];
-            const distance = Math.sqrt((mousePoint.x - handle.x)**2 + (mousePoint.y - handle.y)**2);
-            if (distance <= HANDLE_SIZE) {
-                isDragging = true;
-                draggedHandleIndex = i;
-                // Zapobiegaj normalnej interakcji z wykresem podczas przeciągania
-                mainChart.applyOptions({ handleScroll: false, handleScale: false }); 
-                return;
-            }
-        }
-    }
-    
+    // --- handleMouseMove ---
     function handleMouseMove(e) {
         const rect = drawingCanvas.getBoundingClientRect();
         const mousePoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     
-        // Zmiana kursora nad uchwytem
+        // zmiana kursora gdy na uchwycie
         let onHandle = false;
         if (selectedShapeId) {
             const selectedShape = drawnShapes.find(s => s.id === selectedShapeId);
             if (selectedShape) {
                 const handles = getShapeHandles(selectedShape);
                 for (const handle of handles) {
-                    const distance = Math.sqrt((mousePoint.x - handle.x)**2 + (mousePoint.y - handle.y)**2);
+                    const distance = Math.sqrt((mousePoint.x - handle.x) ** 2 + (mousePoint.y - handle.y) ** 2);
                     if (distance <= HANDLE_SIZE) {
                         onHandle = true;
                         break;
@@ -589,26 +598,40 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         drawingCanvas.style.cursor = onHandle ? 'move' : 'default';
     
-    
         if (!isDragging) return;
     
         const price = candlestickSeries.coordinateToPrice(mousePoint.y);
         const logical = mainChart.timeScale().coordinateToLogical(mousePoint.x);
-    
         if (price === null || logical === null) return;
     
         const selectedShape = drawnShapes.find(s => s.id === selectedShapeId);
+        if (!selectedShape) return;
     
+        // aktualizacja shape zależnie od typu
         if (selectedShape.type === 'trendline') {
-            if (draggedHandleIndex === 0) { // Przeciągany pierwszy punkt
+            if (draggedHandleIndex === 0) {
                 selectedShape.p1 = { price, logical };
-            } else if (draggedHandleIndex === 1) { // Przeciągany drugi punkt
+            } else if (draggedHandleIndex === 1) {
                 selectedShape.p2 = { price, logical };
             }
+    
         } else if (selectedShape.type === 'hline') {
-            selectedShape.price = price; // Zmieniamy tylko cenę
+            selectedShape.price = price;
+    
+        } else if (selectedShape.type === 'vline') {
+            selectedShape.logical = logical;
+    
+        } else if (selectedShape.type === 'channel') {
+            if (draggedHandleIndex === 0) {
+                selectedShape.p1 = { price, logical };
+            } else if (draggedHandleIndex === 1) {
+                selectedShape.p2 = { price, logical };
+            } else if (draggedHandleIndex === 2) {
+                selectedShape.p3 = { price, logical };
+            }
         }
     }
+
     
     function handleMouseUp(e) {
         if (isDragging) {
