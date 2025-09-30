@@ -632,15 +632,42 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // --- handleMouseDown ---
+    function handleMouseDown(e) {
+        if (!selectedShapeId) return;
     
+        const rect = drawingCanvas.getBoundingClientRect();
+        const mousePoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    
+        const selectedShape = drawnShapes.find(s => s.id === selectedShapeId);
+        if (!selectedShape) return;
+    
+        const handles = getShapeHandles(selectedShape);
+        for (let i = 0; i < handles.length; i++) {
+            const handle = handles[i];
+            const distance = Math.sqrt((mousePoint.x - handle.x) ** 2 + (mousePoint.y - handle.y) ** 2);
+            if (distance <= HANDLE_SIZE) {
+                isDragging = true;
+                draggedHandleIndex = i;
+                // blokujemy scroll i zoom podczas przeciągania
+                mainChart.applyOptions({ handleScroll: false, handleScale: false });
+                return;
+            }
+        }
+    }
+
+
+    
+       // --- handleMouseUp ---
     function handleMouseUp(e) {
         if (isDragging) {
             isDragging = false;
             draggedHandleIndex = null;
-            // Przywróć normalną interakcję z wykresem
+            // przywracamy scroll i zoom wykresu
             mainChart.applyOptions({ handleScroll: true, handleScale: true });
         }
     }
+
     
     animationLoop();
     updateClearButtonUI(); // <--- DODAJ TĘ LINIĘ
