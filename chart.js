@@ -76,6 +76,22 @@ document.addEventListener('DOMContentLoaded', function() {
     // Plik: chart.js - SEKCJA RYSOWANIA
 
     /**
+     * Aktualizuje właściwość pointer-events dla kanwy rysującej.
+     * 'auto' pozwala na interakcję, 'none' ją wyłącza.
+     */
+    function updateCanvasPointerEvents() {
+        if (drawingMode || selectedShapeId) {
+            // Jeśli rysujemy lub coś jest zaznaczone, kanwa musi być interaktywna
+            drawingCanvas.style.pointerEvents = 'auto';
+        } else {
+            // W przeciwnym razie, pozwól myszy na interakcję z wykresem poniżej
+            drawingCanvas.style.pointerEvents = 'none';
+        }
+    }
+
+    // Plik: chart.js - SEKCJA RYSOWANIA
+
+    /**
      * Oblicza najkrótszą odległość od punktu p do odcinka linii (p1, p2).
      * @param {{x: number, y: number}} p - Punkt (np. kursor myszy).
      * @param {{x: number, y: number}} p1 - Początek odcinka.
@@ -190,14 +206,16 @@ document.addEventListener('DOMContentLoaded', function() {
         return handles;
     }
 
+    // Plik: chart.js
+
     function clearDrawings() {
         drawnShapes = [];
         drawingPoints = [];
         drawingMode = null;
-        // Resetujemy liczniki
+        selectedShapeId = null; // <-- WAŻNE: Dodaj też resetowanie zaznaczenia
         shapeCounters = { trendline: 0, hline: 0, vline: 0, channel: 0 };
-        // Aktualizujemy UI przycisku
         updateClearButtonUI();
+        updateCanvasPointerEvents(); // <-- DODAJ TĘ LINIĘ
     }
 
     
@@ -434,6 +452,7 @@ document.addEventListener('DOMContentLoaded', function() {
         drawingMode = mode;
         drawingPoints = [];
         chartContainer.style.cursor = 'crosshair';
+        updateCanvasPointerEvents(); // <-- DODAJ TĘ LINIĘ
     };
 
     // ZMIANA: Pobieramy 'logical' zamiast 'time'
@@ -459,38 +478,33 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ZMIANA: Zapisujemy punkt z 'logical' zamiast 'time'
 
+  
     
     mainChart.subscribeClick((param) => {
-        // === POCZĄTEK NOWEJ LOGIKI ZAZNACZANIA ===
-        // Jeśli nie rysujemy, sprawdzamy, czy kliknięto na istniejący kształt
         if (!drawingMode) {
             if (hoveredShapeId) {
                 selectedShapeId = hoveredShapeId;
-                // Nie rób nic więcej, tylko zaznacz
-                return;
             } else {
-                // Jeśli kliknięto w puste miejsce, odznacz wszystko
                 selectedShapeId = null;
             }
+            updateCanvasPointerEvents(); // <-- DODAJ TĘ LINIĘ (obsługuje zaznaczanie i odznaczanie)
+            
+            // Jeśli tylko zaznaczyliśmy/odznaczyliśmy, nie kontynuuj do logiki rysowania
+            if (!hoveredShapeId) return; 
         }
-        // === KONIEC NOWEJ LOGIKI ZAZNACZANIA ===
-    
+        
         if (!drawingMode || !param.point) return;
     
-        // ... reszta funkcji (rysowanie nowego kształtu) pozostaje bez zmian ...
         const price = candlestickSeries.coordinateToPrice(param.point.y);
         const logical = mainChart.timeScale().coordinateToLogical(param.point.x);
     
-        if (price === null || logical === null) {
-            return;
-        }
+        if (price === null || logical === null) return;
     
         const currentPoint = { logical: logical, price: price };
         drawingPoints.push(currentPoint);
         
         let shapeAdded = false;
         
-        // ... cała logika 'if (drawingMode === 'hline')', 'trendline' itd. bez zmian ...
         if (drawingMode === 'hline') {
             shapeCounters.hline++;
             const id = `Pozioma ${shapeCounters.hline}`;
@@ -519,13 +533,13 @@ document.addEventListener('DOMContentLoaded', function() {
             drawingMode = null;
             drawingPoints = [];
             updateClearButtonUI();
+            updateCanvasPointerEvents(); // <-- DODAJ TĘ LINIĘ (po zakończeniu rysowania)
         }
     
         if (!drawingMode) {
             chartContainer.style.cursor = 'default';
         }
     });
-
     // ZMIANA: Nowa funkcja pomocnicza operująca na 'logical'
     function interpolatePriceByLogical(p1, p2, targetLogical) {
         if (p1.logical === p2.logical) return p1.price; 
@@ -568,13 +582,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+        // Plik: chart.js
+    
     function handleMouseMove(e) {
         const rect = drawingCanvas.getBoundingClientRect();
         const mousePoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     
-        // Zmiana kursora nad uchwytem
+        // --- NOWA, LEPSZA LOGIKA KURSORA ---
         let onHandle = false;
-        if (selectedShapeId) {
+        if (selectedShapeId && !isDragging) { // Sprawdzaj tylko, gdy nie przeciągasz
             const selectedShape = drawnShapes.find(s => s.id === selectedShapeId);
             if (selectedShape) {
                 const handles = getShapeHandles(selectedShape);
@@ -587,8 +603,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         }
-        drawingCanvas.style.cursor = onHandle ? 'move' : 'default';
     
+        if (onHandle || isDragging) {
+            drawingCanvas.style.cursor = 'move';
+        } else if (drawingMode) {
+            drawingCanvas.style.cursor = 'crosshair';
+        } else {
+            drawingCanvas.style.cursor = 'default'; // lub 'none' jeśli chcesz, by kursor zależał od wykresu pod spodem
+        }
+        // --- KONIEC NOWEJ LOGIKI KURSORA ---
     
         if (!isDragging) return;
     
@@ -600,23 +623,26 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedShape = drawnShapes.find(s => s.id === selectedShapeId);
     
         if (selectedShape.type === 'trendline') {
-            if (draggedHandleIndex === 0) { // Przeciągany pierwszy punkt
+            if (draggedHandleIndex === 0) {
                 selectedShape.p1 = { price, logical };
-            } else if (draggedHandleIndex === 1) { // Przeciągany drugi punkt
+            } else if (draggedHandleIndex === 1) {
                 selectedShape.p2 = { price, logical };
             }
         } else if (selectedShape.type === 'hline') {
-            selectedShape.price = price; // Zmieniamy tylko cenę
+            selectedShape.price = price;
         }
     }
     
-    function handleMouseUp(e) {
+     function handleMouseUp(e) {
         if (isDragging) {
             isDragging = false;
             draggedHandleIndex = null;
             // Przywróć normalną interakcję z wykresem
             mainChart.applyOptions({ handleScroll: true, handleScale: true });
         }
+        // Po puszczeniu myszy, stan się nie zmienia (kształt wciąż jest zaznaczony)
+        // ale na wszelki wypadek można tu zostawić wywołanie
+        updateCanvasPointerEvents();
     }
     
     animationLoop();
