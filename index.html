@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Moje Portfolio - Analizy GPW</title>
+
+    <script type="text/javascript" src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="chart.js" defer></script>
+
+    <link href="vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
+    <link
+        href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i"
+        rel="stylesheet">
+
+    <link href="css/sb-admin-2.min.css" rel="stylesheet">
+    <link href="css/custom.css" rel="stylesheet">
+
+    
+</head>
+
+<body id="page-top">
+    <div id="drawingTooltip" style="position: absolute; display: none; padding: 4px 8px; background-color: rgba(0, 0, 0, 0.75); color: white; border-radius: 4px; font-size: 12px; z-index: 100; pointer-events: none;"></div>
+    <div id="wrapper">
+
+        <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
+
+            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="index.html">
+                <div class="sidebar-brand-icon rotate-n-15">
+                    <i class="fas fa-laugh-wink"></i>
+                </div>
+                <div class="sidebar-brand-text mx-3">SB Admin <sup>2</sup></div>
+            </a>
+
+            <hr class="sidebar-divider my-0">
+
+            <li class="nav-item active">
+                <a class="nav-link" href="index.html">
+                    <i class="fas fa-fw fa-tachometer-alt"></i>
+                    <span>Dashboard</span></a>
+            </li>
+
+            </ul>
+        <div id="content-wrapper" class="d-flex flex-column">
+
+            <div id="content">
+
+                <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
+
+                    <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
+                        <i class="fa fa-bars"></i>
+                    </button>
+
+                    <form class="d-none d-sm-inline-block form-inline mr-auto ml-md-3 my-2 my-md-0 mw-100 navbar-search" style="position: relative;">
+                        <div class="input-group">
+                           <input type="text" id="stockTickerInput" class="form-control bg-light border-0 small" placeholder="Wyszukaj spółkę..." autocomplete="off">
+                            <div class="input-group-append">
+                                <button class="btn btn-primary" type="button" id="searchButton">
+                                    <i class="fas fa-search fa-sm"></i>
+                                </button>
+                            </div>
+                            <div id="searchDropdown" class="list-group" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 1000; display: none;">
+                                </div>
+                        </div>
+                    </form>
+
+                    <ul class="navbar-nav ml-auto">
+                        </ul>
+
+                </nav>
+                <div class="container-fluid">
+
+                    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                        <h1 class="h3 mb-0 text-gray-800">Moje Portfolio Inwestycyjne</h1>
+                        <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm"><i
+                                class="fas fa-download fa-sm text-white-50"></i> Generate Report</a>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <div class="card shadow mb-4">
+                                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                                    <h6 id="chart-title" class="m-0 font-weight-bold text-primary">Wykres Świecowy (GPW)</h6>
+                                    <!-- Przycisk Linie -->
+                                    <div class="btn-group">
+                                      <button class="btn btn-sm btn-warning dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        <i class="fas fa-draw-polygon fa-sm"></i> Linie
+                                      </button>
+                                      <div class="dropdown-menu">
+                                        <a class="dropdown-item" href="#" onclick="setDrawingMode('trendline')">
+                                          <i class="fas fa-long-arrow-alt-up"></i> Linia Trendu
+                                        </a>
+                                        <a class="dropdown-item" href="#" onclick="setDrawingMode('hline')">
+                                          <i class="fas fa-arrows-alt-h"></i> Linia Pozioma
+                                        </a>
+                                        <a class="dropdown-item" href="#" onclick="setDrawingMode('vline')">
+                                          <i class="fas fa-arrows-alt-v"></i> Linia Pionowa
+                                        </a>
+                                        <a class="dropdown-item" href="#" onclick="setDrawingMode('channel')">
+                                          <i class="fas fa-stream"></i> Kanał Trendu
+                                        </a>
+                                      </div>
+                                    </div>
+
+                                    <button class="btn btn-sm btn-info" data-toggle="modal" data-target="#indicatorsModal">
+                                        <i class="fas fa-chart-line fa-sm"></i> Wskaźniki
+                                    </button>
+                                    <div id="drawing-toolbar" class="d-flex align-items-center" style="gap: 10px;">
+                                        <label for="lineColor" class="mb-0 small">Kolor:</label>
+                                        <input type="color" id="lineColor" class="form-control form-control-sm" value="#0000FF" style="width: 50px;">
+                                        
+                                        <label for="lineWidth" class="mb-0 small">Grubość:</label>
+                                        <input type="number" id="lineWidth" class="form-control form-control-sm" value="2" min="1" max="10" style="width: 60px;">
+                                        
+                                        <div class="btn-group" id="clearButtonGroup">
+                                            <button id="clearDrawingButton" class="btn btn-sm btn-danger">
+                                                <i class="fas fa-trash fa-sm"></i> Wyczyść
+                                            </button>
+                                            <button id="clearDropdownToggle" type="button" class="btn btn-sm btn-danger dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="display: none;">
+                                                <span class="sr-only">Toggle Dropdown</span>
+                                            </button>
+                                            <div class="dropdown-menu dropdown-menu-right" id="clearDropdownMenu">
+                                                </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+
+                                <div class="card-body">
+                                    <div id="charts-wrapper">
+                                        <div id="tvchart" style="position: relative; width:100%; height:450px;">
+                                            <canvas id="drawingCanvas" style="position:absolute; top:0; left:0; pointer-events:none; z-index: 2;"></canvas>
+                                        </div>
+                                        <div id="volume-chart-container" class="indicator-chart" style="width: 100%; height: 100px; display: none;"></div>
+                                        <div id="rsi-chart-container" class="indicator-chart" style="width: 100%; height: 120px; display: none;"></div>
+                                        <div id="macd-chart-container" class="indicator-chart" style="width: 100%; height: 120px; display: none;"></div>
+                                        <div id="obv-chart-container" class="indicator-chart" style="width: 100%; height: 120px; display: none;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row" id="valuationCalculatorSection">
+                        
+                            <div class="col-lg-5">
+                                <div class="card shadow mb-4">
+                                    <div class="card-header py-3">
+                                        <h6 class="m-0 font-weight-bold text-primary">Wycena Spółki<br><small class="text-muted" style="font-size: 0.65rem;">Źródło: stockwatch.pl (dane aktualizowane co miesiąc)</small></h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered" id="valuationTable" width="100%" cellspacing="0">
+                                                <tbody id="valuationTableBody">
+                                                    </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        
+                            <div class="col-lg-7">
+                                <div class="card shadow mb-4">
+                                    <div class="card-header py-3">
+                                        <h6 class="m-0 font-weight-bold text-primary">Wyliczenia</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered" id="projectionTable" width="100%" cellspacing="0">
+                                                <tbody id="projectionTableBody">
+                                                    </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="card shadow mb-4">
+                                    <div class="card-header py-3">
+                                        <h6 class="m-0 font-weight-bold text-primary">Potencjalna Cena Akcji w kolejnych 5 latach</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="projectionChart" style="width: 100%; height: 300px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        
+                        </div>
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <div id="recommendationSection"></div>
+                            </div>
+                        </div>
+                
+                    </div>
+                </div>
+                
+            <footer class="sticky-footer bg-white">
+                <div class="container my-auto">
+                    <div class="copyright text-center my-auto">
+                        <span>Copyright &copy; Damian Dżugała 2021</span>
+                    </div>
+                </div>
+            </footer>
+            </div>
+        </div>
+    <script src="vendor/jquery/jquery.min.js"></script>
+    <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+    <script src="vendor/jquery-easing/jquery.easing.min.js"></script>
+
+    <script src="js/sb-admin-2.min.js"></script>
+
+    <script type="text/template" id="kalkulator-template">
+        <div class="row">
+            <div class="col-lg-5">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            Wycena Spółki
+                            <br>
+                            <small class="text-muted" style="font-size: 0.65rem;">Źródło: stockwatch.pl (dane aktualizowane co miesiąc)</small>
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="valuationTable" width="100%" cellspacing="0">
+                                <tbody id="valuationTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    
+            <div class="col-lg-7">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Wyliczenia</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="projectionTable" width="100%" cellspacing="0">
+                                <tbody id="projectionTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Potencjalna Cena Akcji w kolejnych 5 latach</h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="projectionChart" style="width: 100%; height: 300px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </script>
+    <div class="modal fade" id="indicatorsModal" tabindex="-1" role="dialog" aria-labelledby="indicatorsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="indicatorsModalLabel">Zarządzaj Wskaźnikami Analizy Technicznej</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Dodaj nowy wskaźnik</h6>
+                            <hr>
+                            <div class="form-group">
+                                <label>Średnia krocząca (SMA, EMA, WMA)</label>
+                                <div class="input-group">
+                                    <select class="custom-select" id="maType">
+                                        <option value="SMA">SMA</option>
+                                        <option value="EMA">EMA</option>
+                                        <option value="WMA">WMA</option>
+                                    </select>
+                                    <input type="number" class="form-control" id="maPeriod" value="20" placeholder="Okres">
+                                    <div class="input-group-append">
+                                        <button class="btn btn-primary" type="button" id="addMaButton">Dodaj</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <hr>
+                            <h6>Pozostałe wskaźniki</h6>
+                            <div class="custom-control custom-switch mb-2">
+                                <input type="checkbox" class="custom-control-input" id="volumeToggle">
+                                <label class="custom-control-label" for="volumeToggle">Wolumen (Volume)</label>
+                            </div>
+                            <div class="custom-control custom-switch mb-2">
+                                <input type="checkbox" class="custom-control-input" id="rsiToggle">
+                                <label class="custom-control-label" for="rsiToggle">Wskaźnik Siły Względnej (RSI)</label>
+                            </div>
+                            <div class="custom-control custom-switch mb-2">
+                                <input type="checkbox" class="custom-control-input" id="macdToggle">
+                                <label class="custom-control-label" for="macdToggle">MACD</label>
+                            </div>
+                             <div class="custom-control custom-switch mb-2">
+                                <input type="checkbox" class="custom-control-input" id="obvToggle">
+                                <label class="custom-control-label" for="obvToggle">On-Balance Volume (OBV)</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Aktywne wskaźniki</h6>
+                            <hr>
+                            <ul class="list-group" id="activeIndicatorsList">
+                                </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Zamknij</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    
+</body>
+</html>
