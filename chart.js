@@ -1,6 +1,8 @@
 // Plik: chart.js - Wersja z zaawansowanymi wskaźnikami technicznymi
 
 document.addEventListener('DOMContentLoaded', function() {
+    
+    
     // ... (bez zmian na początku pliku, aż do sekcji rysowania)
     let companyList = []; 
     const API_URL = 'https://pinwestycji.onrender.com';
@@ -55,6 +57,10 @@ document.addEventListener('DOMContentLoaded', function() {
     let shapeCounters = { trendline: 0, hline: 0, vline: 0, channel: 0 }; // <--- DODAJ TĘ LINIĘ
     let lineColor = document.getElementById('lineColor').value;
     let lineWidth = parseInt(document.getElementById('lineWidth').value, 10);
+    // === POCZĄTEK NOWEGO KODU ===
+    let drawingTooltip = null; // Przechowa element tooltipa
+    let hoveredShapeId = null; // Przechowa ID kształtu, nad którym jest kursor
+    // === KONIEC NOWEGO KODU ===
     
     const drawingCanvas = document.getElementById("drawingCanvas");
     const ctx = drawingCanvas.getContext("2d");
@@ -63,7 +69,103 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('lineWidth').addEventListener('input', (e) => { lineWidth = parseInt(e.target.value, 10); });
     document.getElementById('clearDrawingButton').addEventListener('click', clearDrawings);
 
+    // Plik: chart.js - SEKCJA RYSOWANIA
 
+    /**
+     * Oblicza najkrótszą odległość od punktu p do odcinka linii (p1, p2).
+     * @param {{x: number, y: number}} p - Punkt (np. kursor myszy).
+     * @param {{x: number, y: number}} p1 - Początek odcinka.
+     * @param {{x: number, y: number}} p2 - Koniec odcinka.
+     * @returns {number} - Odległość w pikselach.
+     */
+    function getDistanceToLineSegment(p, p1, p2) {
+        const l2 = (p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2;
+        if (l2 === 0) return Math.sqrt((p.x - p1.x) ** 2 + (p.y - p1.y) ** 2);
+        
+        let t = ((p.x - p1.x) * (p2.x - p1.x) + (p.y - p1.y) * (p2.y - p1.y)) / l2;
+        t = Math.max(0, Math.min(1, t));
+    
+        const closestX = p1.x + t * (p2.x - p1.x);
+        const closestY = p1.y + t * (p2.y - p1.y);
+    
+        return Math.sqrt((p.x - closestX) ** 2 + (p.y - closestY) ** 2);
+    }
+
+        // Plik: chart.js - SEKCJA RYSOWANIA
+    
+    function handleTooltipLogic(param) {
+        if (!param.point || drawnShapes.length === 0 || drawingMode) {
+            drawingTooltip.style.display = 'none';
+            hoveredShapeId = null;
+            return;
+        }
+    
+        const mousePoint = { x: param.point.x, y: param.point.y };
+        const HIT_THRESHOLD = 5; // 5 pikseli tolerancji
+        let foundShape = null;
+    
+        // Pętla od tyłu, aby znaleźć najnowszy (najwyższy na warstwie) kształt
+        for (let i = drawnShapes.length - 1; i >= 0; i--) {
+            const shape = drawnShapes[i];
+            let distance = Infinity;
+    
+            if (shape.type === 'hline') {
+                const y_coord = candlestickSeries.priceToCoordinate(shape.price);
+                if (y_coord !== null) {
+                    distance = Math.abs(mousePoint.y - y_coord);
+                }
+            } else if (shape.type === 'vline') {
+                const x_coord = mainChart.timeScale().logicalToCoordinate(shape.logical);
+                if (x_coord !== null) {
+                    distance = Math.abs(mousePoint.x - x_coord);
+                }
+            } else if (shape.type === 'trendline') {
+                const p1_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p1.logical), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
+                const p2_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p2.logical), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
+                if (p1_coord.x !== null && p2_coord.x !== null) {
+                    distance = getDistanceToLineSegment(mousePoint, p1_coord, p2_coord);
+                }
+            } else if (shape.type === 'channel') {
+                 const p1_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p1.logical), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
+                 const p2_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p2.logical), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
+                 
+                 if (p1_coord.x !== null && p2_coord.x !== null) {
+                    // Obliczanie przesunięcia dla drugiej linii kanału
+                    const p3_y_coord = candlestickSeries.priceToCoordinate(shape.p3.price);
+                    const interpolatedPrice = interpolatePriceByLogical(shape.p1, shape.p2, shape.p3.logical);
+                    const p1_y_coord_at_p3_logical = candlestickSeries.priceToCoordinate(interpolatedPrice);
+                    const dy = p3_y_coord - p1_y_coord_at_p3_logical;
+                    
+                    const p1_parallel = {x: p1_coord.x, y: p1_coord.y + dy};
+                    const p2_parallel = {x: p2_coord.x, y: p2_coord.y + dy};
+    
+                    // Sprawdzamy odległość do obu linii kanału
+                    const dist1 = getDistanceToLineSegment(mousePoint, p1_coord, p2_coord);
+                    const dist2 = getDistanceToLineSegment(mousePoint, p1_parallel, p2_parallel);
+                    distance = Math.min(dist1, dist2);
+                 }
+            }
+    
+            if (distance < HIT_THRESHOLD) {
+                foundShape = shape;
+                break; // Znaleziono, przerywamy pętlę
+            }
+        }
+    
+        if (foundShape) {
+            hoveredShapeId = foundShape.id;
+            drawingTooltip.style.display = 'block';
+            drawingTooltip.textContent = foundShape.id;
+            // Pozycjonowanie tooltipa blisko kursora
+            drawingTooltip.style.left = (mousePoint.x + 15) + 'px';
+            drawingTooltip.style.top = (mousePoint.y + 15) + 'px';
+            chartContainer.style.cursor = 'pointer';
+        } else {
+            hoveredShapeId = null;
+            drawingTooltip.style.display = 'none';
+            chartContainer.style.cursor = drawingMode ? 'crosshair' : 'default';
+        }
+    }
 
     function clearDrawings() {
         drawnShapes = [];
@@ -297,7 +399,15 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // ZMIANA: Pobieramy 'logical' zamiast 'time'
+    // Plik: chart.js - SEKCJA RYSOWANIA
+
     mainChart.subscribeCrosshairMove((param) => {
+        // CAŁY STARY KOD Z TEJ FUNKCJI ZASTĄP PONIŻSZYM:
+    
+        // Logika dla podpowiedzi (tooltip)
+        handleTooltipLogic(param);
+    
+        // Poniższa logika jest potrzebna tylko podczas aktywnego rysowania
         if (!drawingMode || drawingPoints.length === 0 || !param.point) {
             currentMousePoint = null;
             return;
@@ -1228,7 +1338,9 @@ document.addEventListener('DOMContentLoaded', function() {
         mainChart.applyOptions({ width: chartContainer.clientWidth });
         projectionChart.applyOptions({ width: projectionChartContainer.clientWidth });
     });
-
+    // === POCZÁTEK NOWEGO KODU ===
+    drawingTooltip = document.getElementById('drawingTooltip');
+    // === KONIEC NOWEGO KODU ===
     // === Inicjalizacja ===
     loadCompanyData().then(() => {
         loadChartData('WIG');
