@@ -76,22 +76,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Plik: chart.js - SEKCJA RYSOWANIA
 
     /**
-     * Aktualizuje właściwość pointer-events dla kanwy rysującej.
-     * 'auto' pozwala na interakcję, 'none' ją wyłącza.
-     */
-    function updateCanvasPointerEvents() {
-        if (drawingMode || selectedShapeId) {
-            // Jeśli rysujemy lub coś jest zaznaczone, kanwa musi być interaktywna
-            drawingCanvas.style.pointerEvents = 'auto';
-        } else {
-            // W przeciwnym razie, pozwól myszy na interakcję z wykresem poniżej
-            drawingCanvas.style.pointerEvents = 'none';
-        }
-    }
-
-    // Plik: chart.js - SEKCJA RYSOWANIA
-
-    /**
      * Oblicza najkrótszą odległość od punktu p do odcinka linii (p1, p2).
      * @param {{x: number, y: number}} p - Punkt (np. kursor myszy).
      * @param {{x: number, y: number}} p1 - Początek odcinka.
@@ -215,7 +199,7 @@ document.addEventListener('DOMContentLoaded', function() {
         selectedShapeId = null; // <-- WAŻNE: Dodaj też resetowanie zaznaczenia
         shapeCounters = { trendline: 0, hline: 0, vline: 0, channel: 0 };
         updateClearButtonUI();
-        updateCanvasPointerEvents(); // <-- DODAJ TĘ LINIĘ
+   //     updateCanvasPointerEvents(); // <-- DODAJ TĘ LINIĘ
     }
 
     
@@ -224,7 +208,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Jeśli usuwamy aktualnie zaznaczony kształt, musimy go "odznaczyć"
         if (selectedShapeId === id) {
             selectedShapeId = null;
-            updateCanvasPointerEvents(); // I zaktualizować interaktywność płótna
+      //      updateCanvasPointerEvents(); // I zaktualizować interaktywność płótna
         }
         drawnShapes = drawnShapes.filter(shape => shape.id !== id);
         updateClearButtonUI();
@@ -459,7 +443,7 @@ document.addEventListener('DOMContentLoaded', function() {
         drawingPoints = [];
         selectedShapeId = null; // Odznacz wszystko, gdy zaczynasz rysować
         chartContainer.style.cursor = 'crosshair';
-        updateCanvasPointerEvents(); // <-- DODAJ TĘ LINIĘ
+   //     updateCanvasPointerEvents(); // <-- DODAJ TĘ LINIĘ
     };
 
     // ZMIANA: Pobieramy 'logical' zamiast 'time'
@@ -484,17 +468,12 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // ZMIANA: Zapisujemy punkt z 'logical' zamiast 'time'
-        // Plik: chart.js
+
     mainChart.subscribeClick((param) => {
         // 1. Logika zaznaczania (gdy NIE jesteśmy w trybie rysowania)
         if (!drawingMode) {
-            if (hoveredShapeId) {
-                selectedShapeId = hoveredShapeId; // Zaznacz kształt pod kursorem
-            } else {
-                selectedShapeId = null; // Odznacz wszystko, jeśli kliknięto w puste miejsce
-            }
-            updateCanvasPointerEvents(); // Zastosuj nową interaktywność
-            return; // Zakończ, nic więcej nie robimy w tym kliknięciu
+            selectedShapeId = hoveredShapeId || null;
+            return; // Zakończ. Kliknięcie albo zaznaczyło, albo odznaczyło kształt.
         }
     
         // 2. Logika rysowania (gdy JESTEŚMY w trybie rysowania)
@@ -502,14 +481,14 @@ document.addEventListener('DOMContentLoaded', function() {
     
         const price = candlestickSeries.coordinateToPrice(param.point.y);
         const logical = mainChart.timeScale().coordinateToLogical(param.point.x);
-    
         if (price === null || logical === null) return;
     
-        const currentPoint = { logical: logical, price: price };
+        const currentPoint = { logical, price };
         drawingPoints.push(currentPoint);
         
         let shapeAdded = false;
         
+        // ... (reszta kodu rysującego kształty pozostaje bez zmian) ...
         if (drawingMode === 'hline') {
             shapeCounters.hline++;
             const id = `Pozioma ${shapeCounters.hline}`;
@@ -535,13 +514,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         if (shapeAdded) {
-            drawingMode = null; // Zakończ tryb rysowania
+            drawingMode = null;
             drawingPoints = [];
             updateClearButtonUI();
-            updateCanvasPointerEvents(); // Zaktualizuj interaktywność po zakończeniu rysowania
-        }
-    
-        if (!drawingMode) {
             chartContainer.style.cursor = 'default';
         }
     });
@@ -567,9 +542,11 @@ document.addEventListener('DOMContentLoaded', function() {
     function handleMouseDown(e) {
         if (!selectedShapeId) return;
     
-        const rect = drawingCanvas.getBoundingClientRect();
+        // ZMIANA TUTAJ: pobieramy 'rect' z chartContainer
+        const rect = chartContainer.getBoundingClientRect(); 
         const mousePoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     
+        // ... (reszta funkcji bez zmian) ...
         const selectedShape = drawnShapes.find(s => s.id === selectedShapeId);
         if (!selectedShape) return;
     
@@ -580,7 +557,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (distance <= HANDLE_SIZE) {
                 isDragging = true;
                 draggedHandleIndex = i;
-                // Zapobiegaj normalnej interakcji z wykresem podczas przeciągania
                 mainChart.applyOptions({ handleScroll: false, handleScale: false }); 
                 return;
             }
@@ -588,15 +564,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
         // Plik: chart.js
-        
-        // Plik: chart.js
+
     function handleMouseMove(e) {
-        const rect = drawingCanvas.getBoundingClientRect();
+        // ZMIANA TUTAJ: pobieramy 'rect' z chartContainer
+        const rect = chartContainer.getBoundingClientRect();
         const mousePoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     
-        // --- NOWA, LEPSZA LOGIKA KURSORA ---
+        // ... (logika kursora pozostaje bez zmian, ale będzie teraz działać poprawnie) ...
         let onHandle = false;
-        if (selectedShapeId && !isDragging) { // Sprawdzaj tylko, gdy coś jest zaznaczone i nie przeciągasz
+        if (selectedShapeId && !isDragging) { 
             const selectedShape = drawnShapes.find(s => s.id === selectedShapeId);
             if (selectedShape) {
                 const handles = getShapeHandles(selectedShape);
@@ -610,24 +586,23 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     
+        // Zmiana kursora globalnie na kontenerze
         if (onHandle || isDragging) {
-            drawingCanvas.style.cursor = 'move';
+            chartContainer.style.cursor = 'move';
         } else if (drawingMode) {
-            drawingCanvas.style.cursor = 'crosshair';
+            chartContainer.style.cursor = 'crosshair';
         } else {
-            drawingCanvas.style.cursor = 'default';
+            chartContainer.style.cursor = 'default';
         }
-        // --- KONIEC NOWEJ LOGIKI KURSORA ---
     
+        // ... (reszta funkcji bez zmian) ...
         if (!isDragging) return;
     
         const price = candlestickSeries.coordinateToPrice(mousePoint.y);
         const logical = mainChart.timeScale().coordinateToLogical(mousePoint.x);
-    
         if (price === null || logical === null) return;
     
         const selectedShape = drawnShapes.find(s => s.id === selectedShapeId);
-    
         if (selectedShape.type === 'trendline') {
             if (draggedHandleIndex === 0) {
                 selectedShape.p1 = { price, logical };
@@ -655,9 +630,16 @@ document.addEventListener('DOMContentLoaded', function() {
     updateClearButtonUI(); // <--- DODAJ TĘ LINIĘ
 
     // === POCZĄTEK NOWEGO KODU ===
-    drawingCanvas.addEventListener('mousedown', handleMouseDown);
-    drawingCanvas.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp); // Nasłuchujemy na całym oknie
+//    drawingCanvas.addEventListener('mousedown', handleMouseDown);
+ //   drawingCanvas.addEventListener('mousemove', handleMouseMove);
+  //  window.addEventListener('mouseup', handleMouseUp); // Nasłuchujemy na całym oknie
+
+    // Plik: chart.js (na samym dole)
+    
+    // NOWA, POPRAWNA WERSJA:
+    chartContainer.addEventListener('mousedown', handleMouseDown);
+    chartContainer.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
 // === KONIEC NOWEGO KODU ===
 // === KONIEC SEKCJI RYSOWANIA ===
     
