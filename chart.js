@@ -95,8 +95,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return Math.sqrt((p.x - closestX) ** 2 + (p.y - closestY) ** 2);
     }
 
-        // Plik: chart.js - SEKCJA RYSOWANIA
-    
+        // Plik: chart.js - funkcja handleTooltipLogic
     function handleTooltipLogic(param) {
         if (!param.point || drawnShapes.length === 0 || drawingMode) {
             drawingTooltip.style.display = 'none';
@@ -105,14 +104,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     
         const mousePoint = { x: param.point.x, y: param.point.y };
-        const HIT_THRESHOLD = 5; // 5 pikseli tolerancji
+        const HIT_THRESHOLD = 5;
         let foundShape = null;
     
-        // Pętla od tyłu, aby znaleźć najnowszy (najwyższy na warstwie) kształt
         for (let i = drawnShapes.length - 1; i >= 0; i--) {
             const shape = drawnShapes[i];
             let distance = Infinity;
-    
+            // ... (cała logika obliczania odległości bez zmian) ...
             if (shape.type === 'hline') {
                 const y_coord = candlestickSeries.priceToCoordinate(shape.price);
                 if (y_coord !== null) {
@@ -132,18 +130,13 @@ document.addEventListener('DOMContentLoaded', function() {
             } else if (shape.type === 'channel') {
                  const p1_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p1.logical), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
                  const p2_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p2.logical), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
-                 
                  if (p1_coord.x !== null && p2_coord.x !== null) {
-                    // Obliczanie przesunięcia dla drugiej linii kanału
                     const p3_y_coord = candlestickSeries.priceToCoordinate(shape.p3.price);
                     const interpolatedPrice = interpolatePriceByLogical(shape.p1, shape.p2, shape.p3.logical);
                     const p1_y_coord_at_p3_logical = candlestickSeries.priceToCoordinate(interpolatedPrice);
                     const dy = p3_y_coord - p1_y_coord_at_p3_logical;
-                    
                     const p1_parallel = {x: p1_coord.x, y: p1_coord.y + dy};
                     const p2_parallel = {x: p2_coord.x, y: p2_coord.y + dy};
-    
-                    // Sprawdzamy odległość do obu linii kanału
                     const dist1 = getDistanceToLineSegment(mousePoint, p1_coord, p2_coord);
                     const dist2 = getDistanceToLineSegment(mousePoint, p1_parallel, p2_parallel);
                     distance = Math.min(dist1, dist2);
@@ -152,22 +145,21 @@ document.addEventListener('DOMContentLoaded', function() {
     
             if (distance < HIT_THRESHOLD) {
                 foundShape = shape;
-                break; // Znaleziono, przerywamy pętlę
+                break;
             }
         }
     
         if (foundShape) {
-            hoveredShapeId = foundShape.id;
+            hoveredShapeId = foundShape.id; // Ustawiamy, nad czym jest kursor
             drawingTooltip.style.display = 'block';
             drawingTooltip.textContent = foundShape.id;
-            // Pozycjonowanie tooltipa blisko kursora
             drawingTooltip.style.left = (mousePoint.x + 15) + 'px';
             drawingTooltip.style.top = (mousePoint.y + 15) + 'px';
-            chartContainer.style.cursor = 'pointer';
+            // USUNIĘTO LINIĘ: chartContainer.style.cursor = 'pointer';
         } else {
-            hoveredShapeId = null;
+            hoveredShapeId = null; // Zerujemy, jeśli kursor nie jest nad niczym
             drawingTooltip.style.display = 'none';
-            chartContainer.style.cursor = drawingMode ? 'crosshair' : 'default';
+            // USUNIĘTO LINIĘ: chartContainer.style.cursor = ...;
         }
     }
 
@@ -181,12 +173,24 @@ document.addEventListener('DOMContentLoaded', function() {
             if (p1_coord.x !== null) handles.push(p1_coord);
             if (p2_coord.x !== null) handles.push(p2_coord);
         } else if (shape.type === 'hline') {
-            // Dla linii horyzontalnej, uchwyt jest na środku widocznego obszaru
             const y_coord = candlestickSeries.priceToCoordinate(shape.price);
-            const x_coord = chartPaneDimensions.width / 2;
+            const x_coord = chartPaneDimensions.x + chartPaneDimensions.width / 2; // Środek widocznego obszaru
             if (y_coord !== null) handles.push({ x: x_coord, y: y_coord });
+        } 
+        // === POCZĄTEK NOWEGO KODU ===
+        else if (shape.type === 'vline') {
+            const x_coord = mainChart.timeScale().logicalToCoordinate(shape.logical);
+            const y_coord = chartPaneDimensions.y + chartPaneDimensions.height / 2; // Środek widocznego obszaru
+            if (x_coord !== null) handles.push({ x: x_coord, y: y_coord });
+        } else if (shape.type === 'channel') {
+            const p1_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p1.logical), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
+            const p2_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p2.logical), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
+            const p3_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p3.logical), y: candlestickSeries.priceToCoordinate(shape.p3.price) };
+            if (p1_coord.x !== null) handles.push(p1_coord);
+            if (p2_coord.x !== null) handles.push(p2_coord);
+            if (p3_coord.x !== null) handles.push(p3_coord);
         }
-        // Tutaj można dodać logikę dla innych typów, np. 'channel'
+        // === KONIEC NOWEGO KODU ===
         return handles;
     }
 
@@ -566,12 +570,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Plik: chart.js
 
     function handleMouseMove(e) {
-        // ZMIANA TUTAJ: pobieramy 'rect' z chartContainer
         const rect = chartContainer.getBoundingClientRect();
         const mousePoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     
-        // ... (logika kursora pozostaje bez zmian, ale będzie teraz działać poprawnie) ...
+        // --- ZAKTUALIZOWANA LOGIKA KURORA I PRZECIĄGANIA ---
+    
         let onHandle = false;
+        // Sprawdzamy, czy kursor jest nad uchwytem ZAZNACZONEGO kształtu
         if (selectedShapeId && !isDragging) { 
             const selectedShape = drawnShapes.find(s => s.id === selectedShapeId);
             if (selectedShape) {
@@ -585,24 +590,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         }
-    
-        // Zmiana kursora globalnie na kontenerze
+        
+        // Ustawiamy styl kursora na podstawie wszystkich możliwych stanów
         if (onHandle || isDragging) {
-            chartContainer.style.cursor = 'move';
+            chartContainer.style.cursor = 'move'; // Kursor "przesuń" nad uchwytem lub podczas przeciągania
+        } else if (hoveredShapeId) {
+            chartContainer.style.cursor = 'pointer'; // Kursor "rączki" nad DOWOLNYM kształtem
         } else if (drawingMode) {
-            chartContainer.style.cursor = 'crosshair';
+            chartContainer.style.cursor = 'crosshair'; // Kursor rysowania
         } else {
-            chartContainer.style.cursor = 'default';
+            chartContainer.style.cursor = 'default'; // Domyślny kursor
         }
-    
-        // ... (reszta funkcji bez zmian) ...
+        
+        // Logika przeciągania - jeśli nie przeciągamy, kończymy
         if (!isDragging) return;
-    
+        
         const price = candlestickSeries.coordinateToPrice(mousePoint.y);
         const logical = mainChart.timeScale().coordinateToLogical(mousePoint.x);
         if (price === null || logical === null) return;
     
         const selectedShape = drawnShapes.find(s => s.id === selectedShapeId);
+        
         if (selectedShape.type === 'trendline') {
             if (draggedHandleIndex === 0) {
                 selectedShape.p1 = { price, logical };
@@ -611,7 +619,20 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } else if (selectedShape.type === 'hline') {
             selectedShape.price = price;
+        } 
+        // === POCZĄTEK NOWEGO KODU ===
+        else if (selectedShape.type === 'vline') {
+            selectedShape.logical = logical; // Zmieniamy tylko pozycję w czasie
+        } else if (selectedShape.type === 'channel') {
+            if (draggedHandleIndex === 0) { // Przeciągany uchwyt p1
+                selectedShape.p1 = { price, logical };
+            } else if (draggedHandleIndex === 1) { // Przeciągany uchwyt p2
+                selectedShape.p2 = { price, logical };
+            } else if (draggedHandleIndex === 2) { // Przeciągany uchwyt p3
+                selectedShape.p3 = { price, logical };
+            }
         }
+        // === KONIEC NOWEGO KODU ===
     }
     
      function handleMouseUp(e) {
