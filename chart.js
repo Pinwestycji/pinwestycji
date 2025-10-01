@@ -219,9 +219,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     
+    // Plik: chart.js
     function removeShapeById(id) {
+        // Jeśli usuwamy aktualnie zaznaczony kształt, musimy go "odznaczyć"
+        if (selectedShapeId === id) {
+            selectedShapeId = null;
+            updateCanvasPointerEvents(); // I zaktualizować interaktywność płótna
+        }
         drawnShapes = drawnShapes.filter(shape => shape.id !== id);
-        // Po usunięciu, musimy odświeżyć UI przycisku
         updateClearButtonUI();
     }
 
@@ -448,9 +453,11 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
     
+        // Plik: chart.js
     window.setDrawingMode = function(mode) {
         drawingMode = mode;
         drawingPoints = [];
+        selectedShapeId = null; // Odznacz wszystko, gdy zaczynasz rysować
         chartContainer.style.cursor = 'crosshair';
         updateCanvasPointerEvents(); // <-- DODAJ TĘ LINIĘ
     };
@@ -477,23 +484,21 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // ZMIANA: Zapisujemy punkt z 'logical' zamiast 'time'
-
-  
-    
+        // Plik: chart.js
     mainChart.subscribeClick((param) => {
+        // 1. Logika zaznaczania (gdy NIE jesteśmy w trybie rysowania)
         if (!drawingMode) {
             if (hoveredShapeId) {
-                selectedShapeId = hoveredShapeId;
+                selectedShapeId = hoveredShapeId; // Zaznacz kształt pod kursorem
             } else {
-                selectedShapeId = null;
+                selectedShapeId = null; // Odznacz wszystko, jeśli kliknięto w puste miejsce
             }
-            updateCanvasPointerEvents(); // <-- DODAJ TĘ LINIĘ (obsługuje zaznaczanie i odznaczanie)
-            
-            // Jeśli tylko zaznaczyliśmy/odznaczyliśmy, nie kontynuuj do logiki rysowania
-            if (!hoveredShapeId) return; 
+            updateCanvasPointerEvents(); // Zastosuj nową interaktywność
+            return; // Zakończ, nic więcej nie robimy w tym kliknięciu
         }
-        
-        if (!drawingMode || !param.point) return;
+    
+        // 2. Logika rysowania (gdy JESTEŚMY w trybie rysowania)
+        if (!param.point) return;
     
         const price = candlestickSeries.coordinateToPrice(param.point.y);
         const logical = mainChart.timeScale().coordinateToLogical(param.point.x);
@@ -529,11 +534,11 @@ document.addEventListener('DOMContentLoaded', function() {
             shapeAdded = true;
         }
         
-        if(shapeAdded) {
-            drawingMode = null;
+        if (shapeAdded) {
+            drawingMode = null; // Zakończ tryb rysowania
             drawingPoints = [];
             updateClearButtonUI();
-            updateCanvasPointerEvents(); // <-- DODAJ TĘ LINIĘ (po zakończeniu rysowania)
+            updateCanvasPointerEvents(); // Zaktualizuj interaktywność po zakończeniu rysowania
         }
     
         if (!drawingMode) {
@@ -583,14 +588,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
         // Plik: chart.js
-    
+        
+        // Plik: chart.js
     function handleMouseMove(e) {
         const rect = drawingCanvas.getBoundingClientRect();
         const mousePoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     
         // --- NOWA, LEPSZA LOGIKA KURSORA ---
         let onHandle = false;
-        if (selectedShapeId && !isDragging) { // Sprawdzaj tylko, gdy nie przeciągasz
+        if (selectedShapeId && !isDragging) { // Sprawdzaj tylko, gdy coś jest zaznaczone i nie przeciągasz
             const selectedShape = drawnShapes.find(s => s.id === selectedShapeId);
             if (selectedShape) {
                 const handles = getShapeHandles(selectedShape);
@@ -609,7 +615,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (drawingMode) {
             drawingCanvas.style.cursor = 'crosshair';
         } else {
-            drawingCanvas.style.cursor = 'default'; // lub 'none' jeśli chcesz, by kursor zależał od wykresu pod spodem
+            drawingCanvas.style.cursor = 'default';
         }
         // --- KONIEC NOWEJ LOGIKI KURSORA ---
     
