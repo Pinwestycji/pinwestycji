@@ -174,17 +174,17 @@ document.addEventListener('DOMContentLoaded', function() {
             if (p2_coord.x !== null) handles.push(p2_coord);
     
             if (shape.type === 'channel') {
-                // === NOWA LOGIKA: Obliczamy pozycję trzeciego uchwytu na podstawie offsetu ===
-                const interpolatedPrice = interpolatePriceByLogical(shape.p1, shape.p2, shape.p3.logical);
+                // === FINALNA LOGIKA: Obliczamy pozycję trzeciego uchwytu na podstawie proporcji i offsetu ===
+                const handle3_logical = shape.p1.logical + shape.offsetRatio * (shape.p2.logical - shape.p1.logical);
+                const interpolatedPrice = interpolatePriceByLogical(shape.p1, shape.p2, handle3_logical);
                 const handle3_price = interpolatedPrice + shape.priceOffset;
     
-                const handle3_x = mainChart.timeScale().logicalToCoordinate(shape.p3.logical);
+                const handle3_x = mainChart.timeScale().logicalToCoordinate(handle3_logical);
                 const handle3_y = candlestickSeries.priceToCoordinate(handle3_price);
     
                 if (handle3_x !== null && handle3_y !== null) {
                     handles.push({ x: handle3_x, y: handle3_y });
                 }
-                // === KONIEC NOWEJ LOGIKI ===
             }
         } else if (shape.type === 'hline') {
             const y_coord = candlestickSeries.priceToCoordinate(shape.price);
@@ -342,7 +342,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     ctx.moveTo(x_coord, 0);
                     ctx.lineTo(x_coord, drawingCanvas.height / ratio);
                 }
-            } else if (shape.type === 'channel') {
+            }  else if (shape.type === 'channel') {
                 const p1_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p1.logical), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
                 const p2_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p2.logical), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
                 
@@ -351,7 +351,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     ctx.moveTo(p1_coord.x, p1_coord.y);
                     ctx.lineTo(p2_coord.x, p2_coord.y);
             
-                    // === NOWA LOGIKA: Rysujemy linię równoległą używając stałego offsetu ===
+                    // === FINALNA LOGIKA: Rysujemy linię równoległą używając stałego offsetu ceny ===
                     const p1_parallel_price = shape.p1.price + shape.priceOffset;
                     const p2_parallel_price = shape.p2.price + shape.priceOffset;
             
@@ -362,7 +362,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         ctx.moveTo(p1_coord.x, p1_parallel_y);
                         ctx.lineTo(p2_coord.x, p2_parallel_y);
                     }
-                    // === KONIEC NOWEJ LOGIKI ===
                 }
             }
             ctx.stroke();
@@ -522,18 +521,22 @@ document.addEventListener('DOMContentLoaded', function() {
             shapeCounters.channel++;
             const id = `Kanał ${shapeCounters.channel}`;
             const [p1, p2, p3] = drawingPoints;
-            
-            // === NOWA LOGIKA: Obliczamy i zapisujemy stały offset ===
+        
+            // === FINALNA LOGIKA: Obliczamy i zapisujemy WZGLĘDNĄ pozycję ===
+            const logicalRange = p2.logical - p1.logical;
+            const offsetRatio = logicalRange !== 0 ? (p3.logical - p1.logical) / logicalRange : 0;
+        
             const interpolatedPrice = interpolatePriceByLogical(p1, p2, p3.logical);
-            const priceOffset = p3.price - interpolatedPrice; // To jest nasz stały offset
+            const priceOffset = p3.price - interpolatedPrice;
             
             drawnShapes.push({ 
                 type: "channel", 
                 id: id, 
-                p1, p2, p3, // Wciąż zapisujemy p3 na potrzeby edycji
-                priceOffset: priceOffset // Zapisujemy nową, kluczową właściwość
+                p1, p2,
+                offsetRatio,  // Zapisujemy proporcję poziomą
+                priceOffset   // Zapisujemy przesunięcie pionowe
             });
-            // === KONIEC NOWEJ LOGIKI ===
+            // === KONIEC FINALNEJ LOGIKI ===
             
             shapeAdded = true;
         }
@@ -591,6 +594,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Plik: chart.js
 
    // Plik: chart.js - ZASTĄP CAŁĄ FUNKCJĘ
+
     function handleMouseMove(e) {
         const rect = chartContainer.getBoundingClientRect();
         const mousePoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
@@ -633,11 +637,12 @@ document.addEventListener('DOMContentLoaded', function() {
             } else if (draggedHandleIndex === 1) {
                 selectedShape.p2 = { price, logical };
             } else if (draggedHandleIndex === 2) {
-                // === NOWA LOGIKA: Obliczamy nowy offset i aktualizujemy p3.price ===
-                const interpolatedPrice = interpolatePriceByLogical(selectedShape.p1, selectedShape.p2, selectedShape.p3.logical);
-                selectedShape.priceOffset = price - interpolatedPrice; // Oblicz nowy offset na podstawie pozycji myszy
-                selectedShape.p3.price = price; // Zaktualizuj p3.price, aby odzwierciedlało nową pozycję
-                // === KONIEC NOWEJ LOGIKI ===
+                // === FINALNA LOGIKA: Obliczamy nowy offset i ratio na podstawie pozycji myszy ===
+                const logicalRange = selectedShape.p2.logical - selectedShape.p1.logical;
+                selectedShape.offsetRatio = logicalRange !== 0 ? (logical - selectedShape.p1.logical) / logicalRange : 0;
+                
+                const interpolatedPrice = interpolatePriceByLogical(selectedShape.p1, selectedShape.p2, logical);
+                selectedShape.priceOffset = price - interpolatedPrice;
             }
         }
     }
