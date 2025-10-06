@@ -664,10 +664,26 @@ document.addEventListener('DOMContentLoaded', function() {
             // --- AKTUALIZACJA POŁOŻENIA p3 PRZY ZMIANIE NACHYLENIA p1/p2 ---
             if (draggedHandleIndex === 0 || draggedHandleIndex === 1) {
                 const { p1, p2, p3 } = selectedShape;
+            
+                // Obliczamy aktualne położenie p3 względem nowego nachylenia
                 const interpolatedPrice = interpolatePriceByLogical(p1, p2, p3.logical);
-                const dy = p3.price - interpolatedPrice; // zachowaj przesunięcie pionowe
-                selectedShape.p3.price = interpolatePriceByLogical(p1, p2, p3.logical) + dy;
+                const oldBasePrice = interpolatePriceByLogical(p1, p2, p3.logical);
+                const dy = p3.price - oldBasePrice; // pionowe przesunięcie między p3 a bazową linią
+            
+                // 🔧 Kluczowa poprawka:
+                // Przeliczamy "nowe logiczne położenie" uchwytu p3 wzdłuż drugiej linii kanału
+                // zachowując proporcję jego pozycji między p1 a p2 (żeby "trzymał się" kanału)
+                const logicalRatio = (p3.logical - p1.logical) / (p2.logical - p1.logical);
+                const newLogical = p1.logical + logicalRatio * (p2.logical - p1.logical);
+            
+                // Nowy interpolowany punkt na bazowej linii (po zmianie nachylenia)
+                const newBasePrice = interpolatePriceByLogical(p1, p2, newLogical);
+            
+                // Ustawiamy p3 tak, by pozostał na równoległej linii
+                selectedShape.p3.logical = newLogical;
+                selectedShape.p3.price = newBasePrice + dy;
             }
+
         }
 
 
