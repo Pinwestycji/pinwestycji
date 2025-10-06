@@ -591,16 +591,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const rect = chartContainer.getBoundingClientRect();
         const mousePoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     
-        // --- ZAKTUALIZOWANA LOGIKA KURORA I PRZECIĄGANIA ---
-    
         let onHandle = false;
-        // Sprawdzamy, czy kursor jest nad uchwytem ZAZNACZONEGO kształtu
-        if (selectedShapeId && !isDragging) { 
+        if (selectedShapeId && !isDragging) {
             const selectedShape = drawnShapes.find(s => s.id === selectedShapeId);
             if (selectedShape) {
                 const handles = getShapeHandles(selectedShape);
                 for (const handle of handles) {
-                    const distance = Math.sqrt((mousePoint.x - handle.x)**2 + (mousePoint.y - handle.y)**2);
+                    const distance = Math.sqrt((mousePoint.x - handle.x) ** 2 + (mousePoint.y - handle.y) ** 2);
                     if (distance <= HANDLE_SIZE) {
                         onHandle = true;
                         break;
@@ -608,27 +605,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         }
-        
-        // Ustawiamy styl kursora na podstawie wszystkich możliwych stanów
+    
         if (onHandle || isDragging) {
-            chartContainer.style.cursor = 'move'; // Kursor "przesuń" nad uchwytem lub podczas przeciągania
+            chartContainer.style.cursor = 'move';
         } else if (hoveredShapeId) {
-            chartContainer.style.cursor = 'pointer'; // Kursor "rączki" nad DOWOLNYM kształtem
+            chartContainer.style.cursor = 'pointer';
         } else if (drawingMode) {
-            chartContainer.style.cursor = 'crosshair'; // Kursor rysowania
+            chartContainer.style.cursor = 'crosshair';
         } else {
-            chartContainer.style.cursor = 'default'; // Domyślny kursor
+            chartContainer.style.cursor = 'default';
         }
-        
-        // Logika przeciągania - jeśli nie przeciągamy, kończymy
+    
         if (!isDragging) return;
-        
+    
         const price = candlestickSeries.coordinateToPrice(mousePoint.y);
         const logical = mainChart.timeScale().coordinateToLogical(mousePoint.x);
         if (price === null || logical === null) return;
     
         const selectedShape = drawnShapes.find(s => s.id === selectedShapeId);
-        
+        if (!selectedShape) return;
+    
         if (selectedShape.type === 'trendline') {
             if (draggedHandleIndex === 0) {
                 selectedShape.p1 = { price, logical };
@@ -637,61 +633,52 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } else if (selectedShape.type === 'hline') {
             selectedShape.price = price;
-        } 
-        // === POCZĄTEK NOWEGO KODU ===
-        else if (selectedShape.type === 'vline') {
-            selectedShape.logical = logical; // Zmieniamy tylko pozycję w czasie
-        }else if (selectedShape.type === 'channel') {
+        } else if (selectedShape.type === 'vline') {
+            selectedShape.logical = logical;
+        } else if (selectedShape.type === 'channel') {
+    
             // --- RUCH GŁÓWNEJ LINII (p1, p2) ---
-            if (draggedHandleIndex === 0) { 
+            if (draggedHandleIndex === 0) {
                 selectedShape.p1 = { price, logical };
-            } else if (draggedHandleIndex === 1) { 
+            } else if (draggedHandleIndex === 1) {
                 selectedShape.p2 = { price, logical };
             }
-        
+    
             // --- RUCH DRUGIEJ LINII (p3) – tylko pionowy ---
             else if (draggedHandleIndex === 2) {
-                // Trzymamy p3.logical stały (nie pozwalamy przesuwać poziomo)
+                // Lock logiczne X
                 const lockedLogical = selectedShape.p3.logical;
-        
-                // Obliczamy bazowy punkt linii głównej przy tym samym logical
+                // Obliczamy bazowy punkt na linii głównej dla tego samego logical
                 const interpolatedPrice = interpolatePriceByLogical(selectedShape.p1, selectedShape.p2, lockedLogical);
-                const dy = price - interpolatedPrice; // różnica względem linii bazowej
-        
+                const dy = price - interpolatedPrice;
                 selectedShape.p3.price = interpolatedPrice + dy;
             }
-        
-            // --- AKTUALIZACJA POŁOŻENIA p3 PRZY ZMIANIE NACHYLENIA p1/p2 ---
+    
+            // --- DYNAMICZNA AKTUALIZACJA p3 PODCZAS ZMIANY NACHYLENIA ---
             if (draggedHandleIndex === 0 || draggedHandleIndex === 1) {
                 const { p1, p2, p3 } = selectedShape;
-            
-                // Obliczamy aktualne położenie p3 względem nowego nachylenia
-                const interpolatedPrice = interpolatePriceByLogical(p1, p2, p3.logical);
-                const oldBasePrice = interpolatePriceByLogical(p1, p2, p3.logical);
-                const dy = p3.price - oldBasePrice; // pionowe przesunięcie między p3 a bazową linią
-            
-                // 🔧 Kluczowa poprawka:
-                // Przeliczamy "nowe logiczne położenie" uchwytu p3 wzdłuż drugiej linii kanału
-                // zachowując proporcję jego pozycji między p1 a p2 (żeby "trzymał się" kanału)
-                const logicalRatio = (p3.logical - p1.logical) / (p2.logical - p1.logical);
-                const newLogical = p1.logical + logicalRatio * (p2.logical - p1.logical);
-            
-                // Nowy interpolowany punkt na bazowej linii (po zmianie nachylenia)
-                const newBasePrice = interpolatePriceByLogical(p1, p2, newLogical);
-            
-                // Ustawiamy p3 tak, by pozostał na równoległej linii
-                selectedShape.p3.logical = newLogical;
+    
+                // bazowy punkt na nowej linii głównej przy logicznym położeniu p3
+                const newBasePrice = interpolatePriceByLogical(p1, p2, p3.logical);
+    
+                // różnica między starą a nową linią w tym samym punkcie logicznym
+                const oldBasePrice = selectedShape.interpolatedPrice
+                    ? selectedShape.interpolatedPrice
+                    : newBasePrice;
+    
+                const dy = p3.price - oldBasePrice;
+    
+                // zapisz nowy interpolowany punkt (dla kolejnych obliczeń)
+                selectedShape.interpolatedPrice = newBasePrice;
+    
+                // przesuń p3 tak, aby trzymał się nowego kąta linii bazowej
                 selectedShape.p3.price = newBasePrice + dy;
             }
-
         }
-
-
-        // ... cała logika poruszania uchwytów
+    
         masterRedraw();
-
-            // === KONIEC NOWEGO KODU ===
     }
+
     
      function handleMouseUp(e) {
         if (isDragging) {
