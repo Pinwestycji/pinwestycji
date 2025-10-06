@@ -183,13 +183,31 @@ document.addEventListener('DOMContentLoaded', function() {
             const y_coord = chartPaneDimensions.y + chartPaneDimensions.height / 2; // Środek widocznego obszaru
             if (x_coord !== null) handles.push({ x: x_coord, y: y_coord });
         } else if (shape.type === 'channel') {
-            const p1_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p1.logical), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
-            const p2_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p2.logical), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
-            const p3_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p3.logical), y: candlestickSeries.priceToCoordinate(shape.p3.price) };
+            const p1_coord = { 
+                x: mainChart.timeScale().logicalToCoordinate(shape.p1.logical), 
+                y: candlestickSeries.priceToCoordinate(shape.p1.price) 
+            };
+            const p2_coord = { 
+                x: mainChart.timeScale().logicalToCoordinate(shape.p2.logical), 
+                y: candlestickSeries.priceToCoordinate(shape.p2.price) 
+            };
+        
+            // Obliczamy przesunięcie pionowe kanału
+            const interpolatedPrice = interpolatePriceByLogical(shape.p1, shape.p2, shape.p3.logical);
+            const baseYatP3 = candlestickSeries.priceToCoordinate(interpolatedPrice);
+            const offsetY = candlestickSeries.priceToCoordinate(shape.p3.price) - baseYatP3;
+        
+            // Punkt odpowiadający faktycznej pozycji uchwytu na drugiej linii kanału
+            const p3_actual_coord = { 
+                x: mainChart.timeScale().logicalToCoordinate(shape.p3.logical), 
+                y: baseYatP3 + offsetY 
+            };
+        
             if (p1_coord.x !== null) handles.push(p1_coord);
             if (p2_coord.x !== null) handles.push(p2_coord);
-            if (p3_coord.x !== null) handles.push(p3_coord);
+            if (p3_actual_coord.x !== null) handles.push(p3_actual_coord);
         }
+
         // === KONIEC NOWEGO KODU ===
         return handles;
     }
@@ -623,31 +641,26 @@ document.addEventListener('DOMContentLoaded', function() {
         // === POCZĄTEK NOWEGO KODU ===
         else if (selectedShape.type === 'vline') {
             selectedShape.logical = logical; // Zmieniamy tylko pozycję w czasie
-        } else if (shape.type === 'channel') {
-            const p1_coord = { 
-                x: mainChart.timeScale().logicalToCoordinate(shape.p1.logical), 
-                y: candlestickSeries.priceToCoordinate(shape.p1.price) 
-            };
-            const p2_coord = { 
-                x: mainChart.timeScale().logicalToCoordinate(shape.p2.logical), 
-                y: candlestickSeries.priceToCoordinate(shape.p2.price) 
-            };
+        }else if (selectedShape.type === 'channel') {
+            if (draggedHandleIndex === 0) { 
+                selectedShape.p1 = { price, logical };
+            } else if (draggedHandleIndex === 1) { 
+                selectedShape.p2 = { price, logical };
+            } else if (draggedHandleIndex === 2) { 
+                selectedShape.p3 = { price, logical };
+            }
         
-            // Obliczamy przesunięcie pionowe kanału
-            const interpolatedPrice = interpolatePriceByLogical(shape.p1, shape.p2, shape.p3.logical);
-            const baseYatP3 = candlestickSeries.priceToCoordinate(interpolatedPrice);
-            const offsetY = candlestickSeries.priceToCoordinate(shape.p3.price) - baseYatP3;
-        
-            // Punkt odpowiadający faktycznej pozycji uchwytu na drugiej linii kanału
-            const p3_actual_coord = { 
-                x: mainChart.timeScale().logicalToCoordinate(shape.p3.logical), 
-                y: baseYatP3 + offsetY 
-            };
-        
-            if (p1_coord.x !== null) handles.push(p1_coord);
-            if (p2_coord.x !== null) handles.push(p2_coord);
-            if (p3_actual_coord.x !== null) handles.push(p3_actual_coord);
+            // --- 🔧 DODAJ TEN FRAGMENT ---
+            // Po każdej zmianie p1 lub p2 przelicz pozycję p3, aby kanał pozostał równoległy
+            if (draggedHandleIndex === 0 || draggedHandleIndex === 1) {
+                const { p1, p2, p3 } = selectedShape;
+                const interpolatedPrice = interpolatePriceByLogical(p1, p2, p3.logical);
+                const dy = p3.price - interpolatedPrice;
+                selectedShape.p3.price = interpolatePriceByLogical(p1, p2, p3.logical) + dy;
+            }
+            // --- KONIEC POPRAWKI ---
         }
+
 
             // === KONIEC NOWEGO KODU ===
     }
