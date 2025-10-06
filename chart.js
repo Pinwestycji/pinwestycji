@@ -96,6 +96,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
         // Plik: chart.js - funkcja handleTooltipLogic
+  
     function handleTooltipLogic(param) {
         if (!param.point || drawnShapes.length === 0 || drawingMode) {
             drawingTooltip.style.display = 'none';
@@ -110,7 +111,7 @@ document.addEventListener('DOMContentLoaded', function() {
         for (let i = drawnShapes.length - 1; i >= 0; i--) {
             const shape = drawnShapes[i];
             let distance = Infinity;
-            // ... (cała logika obliczania odległości bez zmian) ...
+    
             if (shape.type === 'hline') {
                 const y_coord = candlestickSeries.priceToCoordinate(shape.price);
                 if (y_coord !== null) {
@@ -127,21 +128,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (p1_coord.x !== null && p2_coord.x !== null) {
                     distance = getDistanceToLineSegment(mousePoint, p1_coord, p2_coord);
                 }
-            } else if (shape.type === 'channel') {
-                 const p1_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p1.logical), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
-                 const p2_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p2.logical), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
-                 if (p1_coord.x !== null && p2_coord.x !== null) {
-                    const p3_y_coord = candlestickSeries.priceToCoordinate(shape.p3.price);
-                    const interpolatedPrice = interpolatePriceByLogical(shape.p1, shape.p2, shape.p3.logical);
-                    const p1_y_coord_at_p3_logical = candlestickSeries.priceToCoordinate(interpolatedPrice);
-                    const dy = p3_y_coord - p1_y_coord_at_p3_logical;
-                    const p1_parallel = {x: p1_coord.x, y: p1_coord.y + dy};
-                    const p2_parallel = {x: p2_coord.x, y: p2_coord.y + dy};
+            } 
+            // === POCZĄTEK NOWEJ, POPRAWIONEJ LOGIKI DLA KANAŁU ===
+            else if (shape.type === 'channel') {
+                const p1_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p1.logical), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
+                const p2_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p2.logical), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
+                
+                if (p1_coord.x !== null && p2_coord.x !== null) {
+                    // Obliczamy pozycje linii równoległej na podstawie zapisanego offsetu
+                    const p1_parallel_price = shape.p1.price + shape.priceOffset;
+                    const p2_parallel_price = shape.p2.price + shape.priceOffset;
+                    const p1_parallel_y = candlestickSeries.priceToCoordinate(p1_parallel_price);
+                    const p2_parallel_y = candlestickSeries.priceToCoordinate(p2_parallel_price);
+                    
+                    const p1_parallel_coord = { x: p1_coord.x, y: p1_parallel_y };
+                    const p2_parallel_coord = { x: p2_coord.x, y: p2_parallel_y };
+    
+                    // Sprawdzamy odległość do obu linii
                     const dist1 = getDistanceToLineSegment(mousePoint, p1_coord, p2_coord);
-                    const dist2 = getDistanceToLineSegment(mousePoint, p1_parallel, p2_parallel);
+                    const dist2 = getDistanceToLineSegment(mousePoint, p1_parallel_coord, p2_parallel_coord);
                     distance = Math.min(dist1, dist2);
-                 }
+                }
             }
+            // === KONIEC NOWEJ LOGIKI ===
     
             if (distance < HIT_THRESHOLD) {
                 foundShape = shape;
@@ -150,16 +159,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     
         if (foundShape) {
-            hoveredShapeId = foundShape.id; // Ustawiamy, nad czym jest kursor
+            hoveredShapeId = foundShape.id;
             drawingTooltip.style.display = 'block';
             drawingTooltip.textContent = foundShape.id;
             drawingTooltip.style.left = (mousePoint.x + 15) + 'px';
             drawingTooltip.style.top = (mousePoint.y + 15) + 'px';
-            // USUNIĘTO LINIĘ: chartContainer.style.cursor = 'pointer';
         } else {
-            hoveredShapeId = null; // Zerujemy, jeśli kursor nie jest nad niczym
+            hoveredShapeId = null;
             drawingTooltip.style.display = 'none';
-            // USUNIĘTO LINIĘ: chartContainer.style.cursor = ...;
         }
     }
 
