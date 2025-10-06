@@ -644,7 +644,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         // Po puszczeniu myszy, stan się nie zmienia (kształt wciąż jest zaznaczony)
         // ale na wszelki wypadek można tu zostawić wywołanie
-        updateCanvasPointerEvents();
+      //  updateCanvasPointerEvents();
     }
     
     animationLoop();
