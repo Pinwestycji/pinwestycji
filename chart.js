@@ -623,15 +623,41 @@ document.addEventListener('DOMContentLoaded', function() {
         // === POCZĄTEK NOWEGO KODU ===
         else if (selectedShape.type === 'vline') {
             selectedShape.logical = logical; // Zmieniamy tylko pozycję w czasie
-        } else if (selectedShape.type === 'channel') {
-            if (draggedHandleIndex === 0) { // Przeciągany uchwyt p1
-                selectedShape.p1 = { price, logical };
-            } else if (draggedHandleIndex === 1) { // Przeciągany uchwyt p2
-                selectedShape.p2 = { price, logical };
-            } else if (draggedHandleIndex === 2) { // Przeciągany uchwyt p3
-                selectedShape.p3 = { price, logical };
+        }else if (selectedShape.type === 'channel') {
+            // --- POCZĄTEK POPRAWIONEGO KODU ---
+
+            // Kiedy przeciągamy jeden z uchwytów głównej linii (p1 lub p2)
+            if (draggedHandleIndex === 0 || draggedHandleIndex === 1) {
+                // 1. Obliczamy aktualny offset cenowy, aby go zachować po przesunięciu.
+                //    Sprawdzamy, jaka jest różnica w cenie między punktem p3 a główną linią w tym samym miejscu w czasie.
+                const oldInterpolatedPrice = interpolatePriceByLogical(selectedShape.p1, selectedShape.p2, selectedShape.p3.logical);
+                const priceOffset = selectedShape.p3.price - oldInterpolatedPrice;
+
+                // 2. Aktualizujemy punkt p1 lub p2, tak jak do tej pory.
+                if (draggedHandleIndex === 0) {
+                    selectedShape.p1 = { price, logical };
+                } else { // draggedHandleIndex === 1
+                    selectedShape.p2 = { price, logical };
+                }
+
+                // 3. <<< KLUCZOWA ZMIANA >>>
+                //    Po przesunięciu głównej linii, musimy zaktualizować cenę punktu p3.
+                //    Obliczamy nową cenę na głównej linii i dodajemy do niej zachowany wcześniej offset.
+                const newInterpolatedPrice = interpolatePriceByLogical(selectedShape.p1, selectedShape.p2, selectedShape.p3.logical);
+                selectedShape.p3.price = newInterpolatedPrice + priceOffset;
+            
+            // Kiedy przeciągamy uchwyt linii równoległej (p3)
+            } else if (draggedHandleIndex === 2) {
+                // <<< KLUCZOWA ZMIANA >>>
+                //    Aktualizujemy TYLKO cenę (oś Y) punktu p3.
+                //    Jego pozycja w czasie (oś X, czyli 'logical') pozostaje bez zmian.
+                //    To sprawi, że uchwyt będzie poruszał się tylko w górę i w dół.
+                selectedShape.p3.price = price;
             }
+            // --- KONIEC POPRAWIONEGO KODU ---
         }
+
+// ... fragment kodu po ...
         // === KONIEC NOWEGO KODU ===
     }
     
