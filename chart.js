@@ -624,15 +624,26 @@ document.addEventListener('DOMContentLoaded', function() {
         else if (selectedShape.type === 'vline') {
             selectedShape.logical = logical; // Zmieniamy tylko pozycję w czasie
         } else if (selectedShape.type === 'channel') {
-            if (draggedHandleIndex === 0) { // Przeciągany uchwyt p1
+            if (draggedHandleIndex === 0) { 
                 selectedShape.p1 = { price, logical };
-            } else if (draggedHandleIndex === 1) { // Przeciągany uchwyt p2
+            } else if (draggedHandleIndex === 1) { 
                 selectedShape.p2 = { price, logical };
-            } else if (draggedHandleIndex === 2) { // Przeciągany uchwyt p3
+            } else if (draggedHandleIndex === 2) { 
                 selectedShape.p3 = { price, logical };
             }
+    
+        // --- 🔧 DODAJ TEN FRAGMENT ---
+            // Po każdej zmianie p1 lub p2 przelicz pozycję p3, aby kanał pozostał równoległy
+            if (draggedHandleIndex === 0 || draggedHandleIndex === 1) {
+                const { p1, p2, p3 } = selectedShape;
+                const interpolatedPrice = interpolatePriceByLogical(p1, p2, p3.logical);
+                const dy = p3.price - interpolatedPrice;
+                selectedShape.p3.price = interpolatePriceByLogical(p1, p2, p3.logical) + dy;
+            }
+            // --- KONIEC POPRAWKI ---
+
         }
-        // === KONIEC NOWEGO KODU ===
+            // === KONIEC NOWEGO KODU ===
     }
     
      function handleMouseUp(e) {
