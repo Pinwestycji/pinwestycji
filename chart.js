@@ -655,25 +655,28 @@ document.addEventListener('DOMContentLoaded', function() {
             }
     
             // --- DYNAMICZNA AKTUALIZACJA p3 PODCZAS ZMIANY NACHYLENIA ---
+           
             if (draggedHandleIndex === 0 || draggedHandleIndex === 1) {
                 const { p1, p2, p3 } = selectedShape;
-    
-                // bazowy punkt na nowej linii głównej przy logicznym położeniu p3
-                const newBasePrice = interpolatePriceByLogical(p1, p2, p3.logical);
-    
-                // różnica między starą a nową linią w tym samym punkcie logicznym
-                const oldBasePrice = selectedShape.interpolatedPrice
-                    ? selectedShape.interpolatedPrice
-                    : newBasePrice;
-    
+            
+                // Obliczamy proporcję pozycji p3 względem p1–p2 (w ujęciu logicznym)
+                const logicalRatio = (p3.logical - p1.logical) / (p2.logical - p1.logical);
+            
+                // Nowe logiczne położenie p3 (zachowujemy proporcję położenia)
+                const newLogical = p1.logical + logicalRatio * (p2.logical - p1.logical);
+            
+                // Wyznaczamy bazowy punkt na nowej linii głównej (po zmianie kąta/długości)
+                const newBasePrice = interpolatePriceByLogical(p1, p2, newLogical);
+            
+                // Wyznaczamy różnicę pionową między starą pozycją p3 a starą linią bazową
+                const oldBasePrice = interpolatePriceByLogical(p1, p2, p3.logical);
                 const dy = p3.price - oldBasePrice;
-    
-                // zapisz nowy interpolowany punkt (dla kolejnych obliczeń)
-                selectedShape.interpolatedPrice = newBasePrice;
-    
-                // przesuń p3 tak, aby trzymał się nowego kąta linii bazowej
+            
+                // Aktualizujemy p3 względem nowej geometrii kanału
+                selectedShape.p3.logical = newLogical;
                 selectedShape.p3.price = newBasePrice + dy;
             }
+
         }
     
         masterRedraw();
