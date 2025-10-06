@@ -656,26 +656,54 @@ document.addEventListener('DOMContentLoaded', function() {
     
             // --- DYNAMICZNA AKTUALIZACJA p3 PODCZAS ZMIANY NACHYLENIA ---
            
+        
             if (draggedHandleIndex === 0 || draggedHandleIndex === 1) {
                 const { p1, p2, p3 } = selectedShape;
             
-                // Obliczamy proporcję pozycji p3 względem p1–p2 (w ujęciu logicznym)
-                const logicalRatio = (p3.logical - p1.logical) / (p2.logical - p1.logical);
+                // --- 1️⃣ Przelicz punkty na współrzędne ekranowe ---
+                const p1c = {
+                    x: mainChart.timeScale().logicalToCoordinate(p1.logical),
+                    y: candlestickSeries.priceToCoordinate(p1.price),
+                };
+                const p2c = {
+                    x: mainChart.timeScale().logicalToCoordinate(p2.logical),
+                    y: candlestickSeries.priceToCoordinate(p2.price),
+                };
+                const p3c = {
+                    x: mainChart.timeScale().logicalToCoordinate(p3.logical),
+                    y: candlestickSeries.priceToCoordinate(p3.price),
+                };
             
-                // Nowe logiczne położenie p3 (zachowujemy proporcję położenia)
-                const newLogical = p1.logical + logicalRatio * (p2.logical - p1.logical);
+                if (!p1c.x || !p2c.x || !p3c.x) return; // bezpieczeństwo
             
-                // Wyznaczamy bazowy punkt na nowej linii głównej (po zmianie kąta/długości)
-                const newBasePrice = interpolatePriceByLogical(p1, p2, newLogical);
+                // --- 2️⃣ Oblicz wektor głównej linii i jej normalny (prostopadły) ---
+                const dx = p2c.x - p1c.x;
+                const dy = p2c.y - p1c.y;
+                const length = Math.sqrt(dx * dx + dy * dy);
+                if (length === 0) return;
             
-                // Wyznaczamy różnicę pionową między starą pozycją p3 a starą linią bazową
-                const oldBasePrice = interpolatePriceByLogical(p1, p2, p3.logical);
-                const dy = p3.price - oldBasePrice;
+                const nx = -dy / length; // jednostkowy wektor normalny (X)
+                const ny = dx / length;  // jednostkowy wektor normalny (Y)
             
-                // Aktualizujemy p3 względem nowej geometrii kanału
-                selectedShape.p3.logical = newLogical;
-                selectedShape.p3.price = newBasePrice + dy;
+                // --- 3️⃣ Wyznacz przesunięcie p3 względem linii głównej ---
+                const dist = ((p3c.x - p1c.x) * nx) + ((p3c.y - p1c.y) * ny);
+            
+                // --- 4️⃣ Wyznacz proporcję logiczną p3 na osi głównej ---
+                const proj = ((p3c.x - p1c.x) * dx + (p3c.y - p1c.y) * dy) / (length * length);
+                const clampedProj = Math.max(0, Math.min(1, proj)); // zabezpieczenie 0–1
+                const newX = p1c.x + dx * clampedProj + nx * dist;
+                const newY = p1c.y + dy * clampedProj + ny * dist;
+            
+                // --- 5️⃣ Przelicz z powrotem na logical + price ---
+                const newLogical = mainChart.timeScale().coordinateToLogical(newX);
+                const newPrice = candlestickSeries.coordinateToPrice(newY);
+            
+                if (newLogical !== null && newPrice !== null) {
+                    selectedShape.p3.logical = newLogical;
+                    selectedShape.p3.price = newPrice;
+                }
             }
+
 
         }
     
