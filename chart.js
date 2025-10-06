@@ -624,38 +624,51 @@ document.addEventListener('DOMContentLoaded', function() {
         else if (selectedShape.type === 'vline') {
             selectedShape.logical = logical; // Zmieniamy tylko pozycję w czasie
         }else if (selectedShape.type === 'channel') {
-            // --- POCZĄTEK POPRAWIONEGO KODU ---
-
             // Kiedy przeciągamy jeden z uchwytów głównej linii (p1 lub p2)
             if (draggedHandleIndex === 0 || draggedHandleIndex === 1) {
-                // 1. Obliczamy aktualny offset cenowy, aby go zachować po przesunięciu.
-                //    Sprawdzamy, jaka jest różnica w cenie między punktem p3 a główną linią w tym samym miejscu w czasie.
-                const oldInterpolatedPrice = interpolatePriceByLogical(selectedShape.p1, selectedShape.p2, selectedShape.p3.logical);
-                const priceOffset = selectedShape.p3.price - oldInterpolatedPrice;
+                // --- POCZĄTEK NOWEJ, POPRAWIONEJ LOGIKI ---
 
-                // 2. Aktualizujemy punkt p1 lub p2, tak jak do tej pory.
+                // 1. Zapisujemy pozycje punktów PRZED modyfikacją, aby mieć punkt odniesienia.
+                const oldP1 = { ...selectedShape.p1 };
+                const oldP2 = { ...selectedShape.p2 };
+                const oldP3 = { ...selectedShape.p3 };
+
+                // 2. Obliczamy offset cenowy (wartość Y), który chcemy zachować.
+                const oldInterpolatedPrice = interpolatePriceByLogical(oldP1, oldP2, oldP3.logical);
+                const priceOffset = oldP3.price - oldInterpolatedPrice;
+
+                // 3. <<< KLUCZOWA ZMIANA 1 >>>
+                //    Obliczamy WZGLĘDNĄ pozycję punktu p3 na osi czasu (wartość X).
+                //    To zapewni, że p3 będzie "podążać" za linią w poziomie.
+                const logicalRange = oldP2.logical - oldP1.logical;
+                // Unikamy dzielenia przez zero, jeśli punkty są w tej samej pionowej linii.
+                const logicalRatio = logicalRange !== 0 ? (oldP3.logical - oldP1.logical) / logicalRange : 0;
+
+                // 4. Aktualizujemy główny, przeciągany punkt (p1 lub p2) do pozycji kursora.
                 if (draggedHandleIndex === 0) {
                     selectedShape.p1 = { price, logical };
                 } else { // draggedHandleIndex === 1
                     selectedShape.p2 = { price, logical };
                 }
 
-                // 3. <<< KLUCZOWA ZMIANA >>>
-                //    Po przesunięciu głównej linii, musimy zaktualizować cenę punktu p3.
-                //    Obliczamy nową cenę na głównej linii i dodajemy do niej zachowany wcześniej offset.
+                // 5. Obliczamy NOWĄ, PEŁNĄ pozycję punktu p3.
+                // 5a. <<< KLUCZOWA ZMIANA 2 >>> Nowa pozycja w czasie (X) na podstawie zapisanego `logicalRatio`.
+                const newLogicalRange = selectedShape.p2.logical - selectedShape.p1.logical;
+                selectedShape.p3.logical = selectedShape.p1.logical + (newLogicalRange * logicalRatio);
+
+                // 5b. Nowa pozycja w cenie (Y) na podstawie zapisanego `priceOffset`.
                 const newInterpolatedPrice = interpolatePriceByLogical(selectedShape.p1, selectedShape.p2, selectedShape.p3.logical);
                 selectedShape.p3.price = newInterpolatedPrice + priceOffset;
-            
+                
+                // --- KONIEC NOWEJ, POPRAWIONEJ LOGIKI ---
+
             // Kiedy przeciągamy uchwyt linii równoległej (p3)
             } else if (draggedHandleIndex === 2) {
-                // <<< KLUCZOWA ZMIANA >>>
-                //    Aktualizujemy TYLKO cenę (oś Y) punktu p3.
-                //    Jego pozycja w czasie (oś X, czyli 'logical') pozostaje bez zmian.
-                //    To sprawi, że uchwyt będzie poruszał się tylko w górę i w dół.
+                // Ta część jest już poprawna i pozostaje bez zmian.
                 selectedShape.p3.price = price;
             }
-            // --- KONIEC POPRAWIONEGO KODU ---
         }
+// ... fragment kodu po ...
 
 // ... fragment kodu po ...
         // === KONIEC NOWEGO KODU ===
