@@ -642,25 +642,37 @@ document.addEventListener('DOMContentLoaded', function() {
         else if (selectedShape.type === 'vline') {
             selectedShape.logical = logical; // Zmieniamy tylko pozycję w czasie
         }else if (selectedShape.type === 'channel') {
+            // --- RUCH GŁÓWNEJ LINII (p1, p2) ---
             if (draggedHandleIndex === 0) { 
                 selectedShape.p1 = { price, logical };
             } else if (draggedHandleIndex === 1) { 
                 selectedShape.p2 = { price, logical };
-            } else if (draggedHandleIndex === 2) { 
-                selectedShape.p3 = { price, logical };
             }
         
-            // --- 🔧 DODAJ TEN FRAGMENT ---
-            // Po każdej zmianie p1 lub p2 przelicz pozycję p3, aby kanał pozostał równoległy
+            // --- RUCH DRUGIEJ LINII (p3) – tylko pionowy ---
+            else if (draggedHandleIndex === 2) {
+                // Trzymamy p3.logical stały (nie pozwalamy przesuwać poziomo)
+                const lockedLogical = selectedShape.p3.logical;
+        
+                // Obliczamy bazowy punkt linii głównej przy tym samym logical
+                const interpolatedPrice = interpolatePriceByLogical(selectedShape.p1, selectedShape.p2, lockedLogical);
+                const dy = price - interpolatedPrice; // różnica względem linii bazowej
+        
+                selectedShape.p3.price = interpolatedPrice + dy;
+            }
+        
+            // --- AKTUALIZACJA POŁOŻENIA p3 PRZY ZMIANIE NACHYLENIA p1/p2 ---
             if (draggedHandleIndex === 0 || draggedHandleIndex === 1) {
                 const { p1, p2, p3 } = selectedShape;
                 const interpolatedPrice = interpolatePriceByLogical(p1, p2, p3.logical);
-                const dy = p3.price - interpolatedPrice;
+                const dy = p3.price - interpolatedPrice; // zachowaj przesunięcie pionowe
                 selectedShape.p3.price = interpolatePriceByLogical(p1, p2, p3.logical) + dy;
             }
-            // --- KONIEC POPRAWKI ---
         }
 
+
+        // ... cała logika poruszania uchwytów
+        masterRedraw();
 
             // === KONIEC NOWEGO KODU ===
     }
