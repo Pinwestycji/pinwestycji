@@ -279,6 +279,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Plik: chart.js
+
     function masterRedraw() {
         const ratio = window.devicePixelRatio || 1;
         const canvasWidth = drawingCanvas.width / ratio;
@@ -286,10 +288,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
         ctx.clearRect(0, 0, canvasWidth, canvasHeight);
     
-        // === POCZĄTEK NOWEGO KODU ===
+        // --- POCZĄTEK NOWEGO KODU ---
         ctx.save(); // Zapisujemy aktualny stan kontekstu (bez przycinania)
         
-        // Tworzymy ścieżkę przycinania
+        // Tworzymy ścieżkę przycinania na podstawie wymiarów panelu wykresu
         ctx.beginPath();
         ctx.rect(
             chartPaneDimensions.x, 
@@ -298,15 +300,15 @@ document.addEventListener('DOMContentLoaded', function() {
             chartPaneDimensions.height
         );
         ctx.clip(); // Aktywujemy przycinanie - wszystko rysowane poniżej pojawi się tylko w tym prostokącie
-        // === KONIEC NOWEGO KODU ===
+        // --- KONIEC NOWEGO KODU ---
     
         // Te funkcje teraz będą rysować tylko w przyciętym obszarze
         redrawShapes();
         drawCurrentShape();
     
-        // === POCZĄTEK NOWEGO KODU ===
-        ctx.restore(); // Przywracamy kontekst do stanu sprzed przycięcia
-        // === KONIEC NOWEGO KODU ===
+        // --- POCZĄTEK NOWEGO KODU ---
+        ctx.restore(); // Przywracamy kontekst do stanu sprzed przycięcia (usuwamy maskę)
+        // --- KONIEC NOWEGO KODU ---
     }
 
     // Plik: chart.js
