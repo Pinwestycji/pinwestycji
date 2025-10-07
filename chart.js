@@ -624,49 +624,36 @@ document.addEventListener('DOMContentLoaded', function() {
         else if (selectedShape.type === 'vline') {
             selectedShape.logical = logical; // Zmieniamy tylko pozycję w czasie
         }else if (selectedShape.type === 'channel') {
-            // Kiedy przeciągamy jeden z uchwytów głównej linii (p1 lub p2)
             if (draggedHandleIndex === 0 || draggedHandleIndex === 1) {
-                // --- POCZĄTEK NOWEJ, POPRAWNEJ LOGIKI ---
-
-                // 1. Zapisujemy pozycje punktów PRZED modyfikacją.
                 const oldP1 = { ...selectedShape.p1 };
                 const oldP2 = { ...selectedShape.p2 };
                 const oldP3 = { ...selectedShape.p3 };
 
-                // 2. Obliczamy offset cenowy (oś Y) - ta logika działała dobrze i zostaje.
                 const oldInterpolatedPrice = interpolatePriceByLogical(oldP1, oldP2, oldP3.logical);
                 const priceOffset = oldP3.price - oldInterpolatedPrice;
 
-                // 3. <<< NOWA, UPROSZCZONA LOGIKA DLA OSI X >>>
-                //    Obliczamy offset punktu p3 względem ŚRODKA linii p1-p2 na osi czasu.
                 const oldMidpointLogical = (oldP1.logical + oldP2.logical) / 2;
                 const logicalOffset = oldP3.logical - oldMidpointLogical;
 
-                // 4. Aktualizujemy główny, przeciągany punkt (p1 lub p2) do pozycji kursora.
                 if (draggedHandleIndex === 0) {
                     selectedShape.p1 = { price, logical };
-                } else { // draggedHandleIndex === 1
+                } else {
                     selectedShape.p2 = { price, logical };
                 }
 
-                // 5. Obliczamy NOWĄ, PEŁNĄ pozycję punktu p3.
-                // 5a. Nowa pozycja w czasie (X) na podstawie nowego środka i zapisanego offsetu.
                 const newMidpointLogical = (selectedShape.p1.logical + selectedShape.p2.logical) / 2;
-                selectedShape.p3.logical = newMidpointLogical + logicalOffset;
+                
+                // <<< KLUCZOWA ZMIANA: Zaokrąglamy OSTATECZNY wynik >>>
+                // To zapobiega błędom precyzji i niestabilności, które powodują miganie.
+                selectedShape.p3.logical = Math.round(newMidpointLogical + logicalOffset);
 
-                // 5b. Nowa pozycja w cenie (Y) na podstawie nowej linii i zapisanego offsetu cenowego.
                 const newInterpolatedPrice = interpolatePriceByLogical(selectedShape.p1, selectedShape.p2, selectedShape.p3.logical);
                 selectedShape.p3.price = newInterpolatedPrice + priceOffset;
-                
-                // --- KONIEC NOWEJ, POPRAWNEJ LOGIKI ---
 
-            // Kiedy przeciągamy uchwyt linii równoległej (p3)
             } else if (draggedHandleIndex === 2) {
-                // Ta część jest poprawna i pozostaje bez zmian.
                 selectedShape.p3.price = price;
             }
         }
-// ... fragment kodu po ...
 
 // ... fragment kodu po ...
         // === KONIEC NOWEGO KODU ===
