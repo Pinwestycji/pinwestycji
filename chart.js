@@ -63,6 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let selectedShapeId = null;
     let isDragging = false;
     let draggedHandleIndex = null;
+    let dragStartOffsets = { price: 0, logical: 0 }; // <<< DODAJ TĘ LINIĘ
     const HANDLE_SIZE = 5; // Rozmiar (promień) uchwytów w pikselach
     // === KONIEC NOWEGO KODU ===
     
@@ -546,11 +547,9 @@ document.addEventListener('DOMContentLoaded', function() {
     function handleMouseDown(e) {
         if (!selectedShapeId) return;
     
-        // ZMIANA TUTAJ: pobieramy 'rect' z chartContainer
         const rect = chartContainer.getBoundingClientRect(); 
         const mousePoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     
-        // ... (reszta funkcji bez zmian) ...
         const selectedShape = drawnShapes.find(s => s.id === selectedShapeId);
         if (!selectedShape) return;
     
@@ -562,6 +561,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 isDragging = true;
                 draggedHandleIndex = i;
                 mainChart.applyOptions({ handleScroll: false, handleScale: false }); 
+    
+                // --- POCZĄTEK NOWEGO KODU ---
+                // Jeśli przeciągamy uchwyt kanału, oblicz i zapisz PRECYZYJNE offsety
+                if (selectedShape.type === 'channel' && (draggedHandleIndex === 0 || draggedHandleIndex === 1)) {
+                    const p1 = selectedShape.p1;
+                    const p2 = selectedShape.p2;
+                    const p3 = selectedShape.p3;
+    
+                    // Precyzyjny offset ceny (oś Y)
+                    const interpolatedPrice = interpolatePriceByLogical(p1, p2, p3.logical);
+                    dragStartOffsets.price = p3.price - interpolatedPrice;
+    
+                    // Precyzyjny offset w czasie (oś X)
+                    const midpointLogical = (p1.logical + p2.logical) / 2;
+                    dragStartOffsets.logical = p3.logical - midpointLogical;
+                }
+                // --- KONIEC NOWEGO KODU ---
                 return;
             }
         }
@@ -625,32 +641,26 @@ document.addEventListener('DOMContentLoaded', function() {
             selectedShape.logical = logical; // Zmieniamy tylko pozycję w czasie
         }else if (selectedShape.type === 'channel') {
             if (draggedHandleIndex === 0 || draggedHandleIndex === 1) {
-                const oldP1 = { ...selectedShape.p1 };
-                const oldP2 = { ...selectedShape.p2 };
-                const oldP3 = { ...selectedShape.p3 };
+                // --- POCZĄTEK CAŁKOWICIE NOWEJ, UPROSZCZONEJ LOGIKI ---
 
-                const oldInterpolatedPrice = interpolatePriceByLogical(oldP1, oldP2, oldP3.logical);
-                const priceOffset = oldP3.price - oldInterpolatedPrice;
-
-                const oldMidpointLogical = (oldP1.logical + oldP2.logical) / 2;
-                const logicalOffset = oldP3.logical - oldMidpointLogical;
-
+                // 1. Zaktualizuj przeciągany punkt (p1 lub p2) - bez zmian
                 if (draggedHandleIndex === 0) {
                     selectedShape.p1 = { price, logical };
-                } else {
+                } else { // draggedHandleIndex === 1
                     selectedShape.p2 = { price, logical };
                 }
 
+                // 2. Oblicz nową pozycję p3, używając ZAPISANYCH, CZYSTYCH offsetów
                 const newMidpointLogical = (selectedShape.p1.logical + selectedShape.p2.logical) / 2;
-                
-                // <<< KLUCZOWA ZMIANA: Zaokrąglamy OSTATECZNY wynik >>>
-                // To zapobiega błędom precyzji i niestabilności, które powodują miganie.
-                selectedShape.p3.logical = Math.round(newMidpointLogical + logicalOffset);
+                selectedShape.p3.logical = Math.round(newMidpointLogical + dragStartOffsets.logical);
 
                 const newInterpolatedPrice = interpolatePriceByLogical(selectedShape.p1, selectedShape.p2, selectedShape.p3.logical);
-                selectedShape.p3.price = newInterpolatedPrice + priceOffset;
+                selectedShape.p3.price = newInterpolatedPrice + dragStartOffsets.price;
+                
+                // --- KONIEC NOWEJ LOGIKI ---
 
             } else if (draggedHandleIndex === 2) {
+                // Ta część pozostaje bez zmian
                 selectedShape.p3.price = price;
             }
         }
@@ -659,16 +669,19 @@ document.addEventListener('DOMContentLoaded', function() {
         // === KONIEC NOWEGO KODU ===
     }
     
-     function handleMouseUp(e) {
+    // Plik: chart.js
+
+    function handleMouseUp(e) {
         if (isDragging) {
             isDragging = false;
             draggedHandleIndex = null;
-            // Przywróć normalną interakcję z wykresem
             mainChart.applyOptions({ handleScroll: true, handleScale: true });
+    
+            // --- POCZĄTEK NOWEGO KODU ---
+            // Wyczyść zapisane offsety po zakończeniu przeciągania
+            dragStartOffsets = { price: 0, logical: 0 };
+            // --- KONIEC NOWEGO KODU ---
         }
-        // Po puszczeniu myszy, stan się nie zmienia (kształt wciąż jest zaznaczony)
-        // ale na wszelki wypadek można tu zostawić wywołanie
-      //  updateCanvasPointerEvents();
     }
     
     animationLoop();
