@@ -641,7 +641,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     selectedShape.p2 = { price, logical };
                 }
 
-                const newMidpointLogical = (selectedShape.p1.logical + selectedShape.p2.logical) / 2;
+                const newMidpointLogical = (selectedShape.p1.logical + selectedShape.p2.logical);
                 
                 // <<< KLUCZOWA ZMIANA: Zaokrąglamy OSTATECZNY wynik >>>
                 // To zapobiega błędom precyzji i niestabilności, które powodują miganie.
