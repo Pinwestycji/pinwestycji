@@ -311,16 +311,15 @@ document.addEventListener('DOMContentLoaded', function() {
         // --- KONIEC NOWEGO KODU ---
     }
 
-    // Plik: chart.js
-
-    // Zastąp całą funkcję redrawShapes
+   // Plik: chart.js
+    // Zastąp całą starą funkcję redrawShapes tą nową wersją
+    
     function redrawShapes() {
         drawnShapes.forEach(shape => {
             ctx.strokeStyle = shape.color;
             ctx.lineWidth = shape.width;
             ctx.beginPath();
     
-            // ... cała dotychczasowa logika rysowania linii (if-else dla typów) bez zmian ...
             if (shape.type === 'trendline') {
                 const p1_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p1.logical), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
                 const p2_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p2.logical), y: candlestickSeries.priceToCoordinate(shape.p2.price) };
@@ -331,16 +330,20 @@ document.addEventListener('DOMContentLoaded', function() {
             } else if (shape.type === 'hline') {
                 const y_coord = candlestickSeries.priceToCoordinate(shape.price);
                 if (y_coord !== null) {
-                    const ratio = window.devicePixelRatio || 1;
-                    ctx.moveTo(0, y_coord);
-                    ctx.lineTo(drawingCanvas.width / ratio, y_coord);
+                    // === POCZĄTEK POPRAWKI ===
+                    // Rysujemy linię tylko w granicach panelu wykresu
+                    ctx.moveTo(chartPaneDimensions.x, y_coord);
+                    ctx.lineTo(chartPaneDimensions.x + chartPaneDimensions.width, y_coord);
+                    // === KONIEC POPRAWKI ===
                 }
             } else if (shape.type === 'vline') {
                 const x_coord = mainChart.timeScale().logicalToCoordinate(shape.logical);
                 if (x_coord !== null) {
-                    const ratio = window.devicePixelRatio || 1;
-                    ctx.moveTo(x_coord, 0);
-                    ctx.lineTo(x_coord, drawingCanvas.height / ratio);
+                    // === POCZĄTEK POPRAWKI ===
+                    // Rysujemy linię tylko w granicach panelu wykresu
+                    ctx.moveTo(x_coord, chartPaneDimensions.y);
+                    ctx.lineTo(x_coord, chartPaneDimensions.y + chartPaneDimensions.height);
+                    // === KONIEC POPRAWKI ===
                 }
             } else if (shape.type === 'channel') {
                 const p1_coord = { x: mainChart.timeScale().logicalToCoordinate(shape.p1.logical), y: candlestickSeries.priceToCoordinate(shape.p1.price) };
@@ -360,7 +363,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             ctx.stroke();
     
-            // === POCZĄTEK NOWEGO KODU - RYSOWANIE UCHWYTÓW ===
+            // Rysowanie uchwytów (bez zmian)
             if (shape.id === selectedShapeId) {
                 const handles = getShapeHandles(shape);
                 handles.forEach(handle => {
@@ -373,7 +376,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     ctx.stroke();
                 });
             }
-            // === KONIEC NOWEGO KODU ===
         });
     }
 
