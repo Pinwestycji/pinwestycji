@@ -301,16 +301,6 @@ document.addEventListener('DOMContentLoaded', function() {
         );
         ctx.clip();
     
-        // === POCZĄTEK KODU DIAGNOSTYCZNEGO ===
-        // Narysuj półprzezroczysty prostokąt, aby zobaczyć granice
-        ctx.fillStyle = 'rgba(255, 0, 0, 0.2)'; // Czerwony, 20% przezroczystości
-        ctx.fillRect(
-            chartPaneDimensions.x, 
-            chartPaneDimensions.y, 
-            chartPaneDimensions.width, 
-            chartPaneDimensions.height
-        );
-        // === KONIEC KODU DIAGNOSTYCZNEGO ===
     
         redrawShapes();
         drawCurrentShape();
@@ -543,11 +533,14 @@ document.addEventListener('DOMContentLoaded', function() {
         return p1.price + slope * (targetLogical - p1.logical);
     }
     
-    resizeDrawingCanvas();
-    window.addEventListener("resize", () => {
-        mainChart.applyOptions({ width: chartContainer.clientWidth });
-        resizeDrawingCanvas();
-    });
+    function onChartResize() {
+        const rect = chartContainer.getBoundingClientRect();
+        mainChart.resize(rect.width, rect.height);
+        
+        setTimeout(() => {
+            resizeDrawingCanvas();
+        }, 0);
+    }
 
     function animationLoop() {
         masterRedraw();
@@ -692,6 +685,19 @@ document.addEventListener('DOMContentLoaded', function() {
             dragStartData = { priceOffset: 0, logicalRatio: 0.5 }; // <<< ZAKTUALIZUJ TĘ LINIĘ
         }
     }
+
+    // Nasłuchuj na zmianę widocznego zakresu (scroll, zoom)
+    mainChart.timeScale().subscribeVisibleTimeRangeChange(() => {
+        resizeDrawingCanvas(); 
+    });
+    
+    // Nasłuchuj na zmianę rozmiaru okna przeglądarki
+    window.addEventListener("resize", onChartResize);
+    
+    // Wywołaj raz na starcie, aby zainicjować wymiary
+    onChartResize();
+    
+
     
     animationLoop();
     updateClearButtonUI(); // <--- DODAJ TĘ LINIĘ
