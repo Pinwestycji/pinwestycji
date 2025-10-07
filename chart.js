@@ -434,7 +434,7 @@ document.addEventListener('DOMContentLoaded', function() {
         ctx.scale(ratio, ratio);
     
         // Pobieramy wymiary osi, aby je "odjąć" od całego obszaru
-        const priceScaleWidth = candlestickSeries.priceScale().width();
+        const priceScaleWidth = mainChart.priceScale().width();
         const timeScaleHeight = mainChart.timeScale().height();
     
         // Zapisujemy wymiary obszaru WEWNĄTRZ osi (Z POPRAWKĄ)
