@@ -65,8 +65,10 @@ document.addEventListener('DOMContentLoaded', function() {
     let draggedHandleIndex = null;
     let dragStartData = { priceOffset: 0, logicalRatio: 0.5 }; // <<< ZAKTUALIZUJ TĘ LINIĘ
     // === POCZĄTEK NOWEGO KODU ===
-    let drawingHistory = []; // Będzie przechowywać historię stanów rysunków
-    let undoButton = document.getElementById('undoButton'); // Uchwyt do przycisku
+    let undoStack = []; // Zmieniamy nazwę dla jasności
+    let redoStack = []; // Dodajemy stos dla akcji "Ponów"
+    const undoButton = document.getElementById('undoButton');
+    const redoButton = document.getElementById('redoButton');
     // === KONIEC NOWEGO KODU ===
     const HANDLE_SIZE = 5; // Rozmiar (promień) uchwytów w pikselach
     // === KONIEC NOWEGO KODU ===
@@ -84,44 +86,74 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // === POCZĄTEK NOWEGO KODU - LOGIKA COFANIA ===
     
-    /**
-     * Zapisuje aktualny stan narysowanych kształtów w historii.
-     */
-    function saveHistoryState() {
-        // Używamy JSON.parse(JSON.stringify(...)) do stworzenia głębokiej kopii,
-        // aby historia była niezależna od przyszłych modyfikacji tablicy drawnShapes.
-        const currentState = JSON.parse(JSON.stringify(drawnShapes));
-        drawingHistory.push(currentState);
-        updateUndoButtonUI();
-    }
+    // Plik: chart.js (w sekcji rysowania, w miejsce starych funkcji historii)
+
+// === POCZĄTEK NOWEJ LOGIKI HISTORII (UNDO/REDO) ===
+
+/**
+ * Zapisuje aktualny stan rysunków, przygotowując do nowej akcji.
+ * Ta funkcja jest wywoływana PRZED każdą zmianą.
+ */
+function recordState() {
+    // Tworzymy głęboką kopię aktualnego stanu i wrzucamy na stos Undo
+    undoStack.push(JSON.parse(JSON.stringify(drawnShapes)));
     
-    /**
-     * Aktualizuje stan przycisku "Cofnij" (włączony/wyłączony).
-     */
-    function updateUndoButtonUI() {
-        // Przycisk jest aktywny tylko jeśli w historii jest więcej niż jeden stan
-        // (stan początkowy + co najmniej jedna zmiana).
-        undoButton.disabled = drawingHistory.length <= 1;
-    }
-    
-    /**
-     * Cofa ostatnią akcję rysowania.
-     */
-    function undoLastAction() {
-        if (drawingHistory.length <= 1) return; // Nie ma czego cofać
-    
-        // Usuwamy aktualny stan z historii
-        drawingHistory.pop();
-        // Pobieramy poprzedni stan, który jest teraz ostatnim na liście
-        const previousState = drawingHistory[drawingHistory.length - 1];
-    
-        // Przywracamy stan rysunków (znowu jako głęboka kopia)
-        drawnShapes = JSON.parse(JSON.stringify(previousState));
-    
-        // Aktualizujemy interfejs
-        updateClearButtonUI();
-        updateUndoButtonUI();
-    }
+    // Każda nowa akcja użytkownika czyści historię "Redo",
+    // ponieważ tworzy nową gałąź w historii zmian.
+    redoStack = [];
+
+    updateHistoryButtonsUI();
+}
+
+/**
+ * Cofa ostatnią akcję.
+ */
+function undoLastAction() {
+    if (undoStack.length === 0) return;
+
+    // Aktualny stan wrzucamy na stos Redo, aby można go było przywrócić
+    redoStack.push(JSON.parse(JSON.stringify(drawnShapes)));
+
+    // Pobieramy poprzedni stan ze stosu Undo
+    const previousState = undoStack.pop();
+    drawnShapes = previousState;
+
+    updateAllUI();
+}
+
+/**
+ * Ponawia ostatnio cofniętą akcję.
+ */
+function redoLastAction() {
+    if (redoStack.length === 0) return;
+
+    // Aktualny stan wrzucamy z powrotem na stos Undo
+    undoStack.push(JSON.parse(JSON.stringify(drawnShapes)));
+
+    // Pobieramy stan do przywrócenia ze stosu Redo
+    const nextState = redoStack.pop();
+    drawnShapes = nextState;
+
+    updateAllUI();
+}
+
+/**
+ * Centralna funkcja do aktualizacji UI po zmianach.
+ */
+function updateAllUI() {
+    updateClearButtonUI();
+    updateHistoryButtonsUI();
+}
+
+/**
+ * Aktualizuje stan przycisków Cofnij/Ponów.
+ */
+function updateHistoryButtonsUI() {
+    undoButton.disabled = undoStack.length === 0;
+    redoButton.disabled = redoStack.length === 0;
+}
+
+// === KONIEC NOWEJ LOGIKI HISTORII ===
 
 // === KONIEC NOWEGO KODU ===
 
@@ -246,34 +278,31 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Plik: chart.js
 
-    // Plik: chart.js -> clearDrawings (POPRAWIONA WERSJA)
+    // Plik: chart.js -> clearDrawings
     function clearDrawings() {
-        const wasNotEmpty = drawnShapes.length > 0;
-    
+        if (drawnShapes.length > 0) {
+            recordState(); // <-- ZAPISZ STAN PRZED WYCZYSZCZENIEM
+        }
+        
         drawnShapes = [];
         drawingPoints = [];
         drawingMode = null;
         selectedShapeId = null;
         shapeCounters = { trendline: 0, hline: 0, vline: 0, channel: 0 };
         
-        // Zapisz nowy, pusty stan, jeśli poprzedni nie był pusty.
-        if (wasNotEmpty) {
-            saveHistoryState();
-        }
-        updateClearButtonUI();
+        updateAllUI();
     }
 
     
     // Plik: chart.js
+    // Plik: chart.js -> removeShapeById
     function removeShapeById(id) {
-        // Jeśli usuwamy aktualnie zaznaczony kształt, musimy go "odznaczyć"
         if (selectedShapeId === id) {
             selectedShapeId = null;
-      //      updateCanvasPointerEvents(); // I zaktualizować interaktywność płótna
         }
+        recordState(); // <-- ZAPISZ STAN PRZED USUNIĘCIEM
         drawnShapes = drawnShapes.filter(shape => shape.id !== id);
-        saveHistoryState(); // <-- DODAJ TĘ LINIĘ
-        updateClearButtonUI();
+        updateAllUI(); // Użyj nowej funkcji
     }
 
     
@@ -555,16 +584,19 @@ document.addEventListener('DOMContentLoaded', function() {
         if (drawingMode === 'hline') {
             shapeCounters.hline++;
             const id = `Pozioma ${shapeCounters.hline}`;
+            recordState(); // <-- ZAPISZ STAN PRZED ZMIANĄ
             drawnShapes.push({ type: "hline", id: id, price: currentPoint.price, color: lineColor, width: lineWidth });
             shapeAdded = true;
         } else if (drawingMode === 'vline') {
             shapeCounters.vline++;
             const id = `Pionowa ${shapeCounters.vline}`;
+            recordState(); // <-- ZAPISZ STAN PRZED ZMIANĄ
             drawnShapes.push({ type: "vline", id: id, logical: currentPoint.logical, color: lineColor, width: lineWidth });
             shapeAdded = true;
         } else if (drawingMode === 'trendline' && drawingPoints.length === 2) {
             shapeCounters.trendline++;
             const id = `Linia Trendu ${shapeCounters.trendline}`;
+            recordState(); // <-- ZAPISZ STAN PRZED ZMIANĄ
             drawnShapes.push({ type: 'trendline', id: id, p1: drawingPoints[0], p2: drawingPoints[1], color: lineColor, width: lineWidth });
             shapeAdded = true;
         } else if (drawingMode === 'channel' && drawingPoints.length === 3) {
@@ -572,6 +604,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const id = `Kanał ${shapeCounters.channel}`;
             const [p1, p2, p3] = drawingPoints;
             const interpolatedPrice = interpolatePriceByLogical(p1, p2, p3.logical);
+            recordState(); // <-- ZAPISZ STAN PRZED ZMIANĄ
             drawnShapes.push({ type: "channel", id: id, p1, p2, p3, interpolatedPrice: interpolatedPrice, color: lineColor, width: lineWidth });
             shapeAdded = true;
         }
@@ -579,8 +612,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (shapeAdded) {
             drawingMode = null;
             drawingPoints = [];
-            saveHistoryState(); // <-- DODAJ TĘ LINIĘ
-            updateClearButtonUI();
+            // Już nie potrzebujemy tutaj zapisu historii
+            updateAllUI(); // Używamy nowej, centralnej funkcji
             chartContainer.style.cursor = 'default';
         }
     });
@@ -773,11 +806,10 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('mouseup', handleMouseUp);
 // === KONIEC NOWEGO KODU ===
 
-    // === POCZĄTEK NOWEGO KODU - LISTENER DLA COFNIJ ===
+    // === ZMIEŃ STARY LISTENER NA TE DWA ===
     undoButton.addEventListener('click', undoLastAction);
-    // === KONIEC NOWEGO KODU ===
-// === KONIEC SEKCJI RYSOWANIA ===
-    
+    redoButton.addEventListener('click', redoLastAction);
+        
 
     // === LOGIKA APLIKACJI ===
     async function loadCompanyData() {
@@ -856,10 +888,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         clearDrawings(); // Czyścimy rysunki przy zmianie spółki
 
-        // === POCZĄTEK NOWEGO KODU - RESET HISTORII ===
-        drawingHistory = [];
-        saveHistoryState(); // Inicjalizujemy historię z czystym, pustym stanem
-        // === KONIEC NOWEGO KODU ===
+        // === ZMIEŃ BLOK RESETOWANIA HISTORII NA TEN ===
+        undoStack = [];
+        redoStack = [];
+        updateHistoryButtonsUI(); // Zaktualizuj przyciski (wyłącz je)
+        // === KONIEC ZMIAN ===
     
         try {
             const stooqResponse = await fetch(`${API_URL}/api/data/${ticker}`);
