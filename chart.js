@@ -64,6 +64,10 @@ document.addEventListener('DOMContentLoaded', function() {
     let isDragging = false;
     let draggedHandleIndex = null;
     let dragStartData = { priceOffset: 0, logicalRatio: 0.5 }; // <<< ZAKTUALIZUJ TĘ LINIĘ
+    // === POCZĄTEK NOWEGO KODU ===
+    let drawingHistory = []; // Będzie przechowywać historię stanów rysunków
+    let undoButton = document.getElementById('undoButton'); // Uchwyt do przycisku
+    // === KONIEC NOWEGO KODU ===
     const HANDLE_SIZE = 5; // Rozmiar (promień) uchwytów w pikselach
     // === KONIEC NOWEGO KODU ===
     
@@ -75,6 +79,51 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('clearDrawingButton').addEventListener('click', clearDrawings);
 
     // Plik: chart.js - SEKCJA RYSOWANIA
+
+    // Plik: chart.js (w sekcji rysowania)
+
+    // === POCZĄTEK NOWEGO KODU - LOGIKA COFANIA ===
+    
+    /**
+     * Zapisuje aktualny stan narysowanych kształtów w historii.
+     */
+    function saveHistoryState() {
+        // Używamy JSON.parse(JSON.stringify(...)) do stworzenia głębokiej kopii,
+        // aby historia była niezależna od przyszłych modyfikacji tablicy drawnShapes.
+        const currentState = JSON.parse(JSON.stringify(drawnShapes));
+        drawingHistory.push(currentState);
+        updateUndoButtonUI();
+    }
+    
+    /**
+     * Aktualizuje stan przycisku "Cofnij" (włączony/wyłączony).
+     */
+    function updateUndoButtonUI() {
+        // Przycisk jest aktywny tylko jeśli w historii jest więcej niż jeden stan
+        // (stan początkowy + co najmniej jedna zmiana).
+        undoButton.disabled = drawingHistory.length <= 1;
+    }
+    
+    /**
+     * Cofa ostatnią akcję rysowania.
+     */
+    function undoLastAction() {
+        if (drawingHistory.length <= 1) return; // Nie ma czego cofać
+    
+        // Usuwamy aktualny stan z historii
+        drawingHistory.pop();
+        // Pobieramy poprzedni stan, który jest teraz ostatnim na liście
+        const previousState = drawingHistory[drawingHistory.length - 1];
+    
+        // Przywracamy stan rysunków (znowu jako głęboka kopia)
+        drawnShapes = JSON.parse(JSON.stringify(previousState));
+    
+        // Aktualizujemy interfejs
+        updateClearButtonUI();
+        updateUndoButtonUI();
+    }
+
+// === KONIEC NOWEGO KODU ===
 
     /**
      * Oblicza najkrótszą odległość od punktu p do odcinka linii (p1, p2).
@@ -197,14 +246,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Plik: chart.js
 
+    // Plik: chart.js -> clearDrawings (POPRAWIONA WERSJA)
     function clearDrawings() {
+        const wasNotEmpty = drawnShapes.length > 0;
+    
         drawnShapes = [];
         drawingPoints = [];
         drawingMode = null;
-        selectedShapeId = null; // <-- WAŻNE: Dodaj też resetowanie zaznaczenia
+        selectedShapeId = null;
         shapeCounters = { trendline: 0, hline: 0, vline: 0, channel: 0 };
+        
+        // Zapisz nowy, pusty stan, jeśli poprzedni nie był pusty.
+        if (wasNotEmpty) {
+            saveHistoryState();
+        }
         updateClearButtonUI();
-   //     updateCanvasPointerEvents(); // <-- DODAJ TĘ LINIĘ
     }
 
     
@@ -216,6 +272,7 @@ document.addEventListener('DOMContentLoaded', function() {
       //      updateCanvasPointerEvents(); // I zaktualizować interaktywność płótna
         }
         drawnShapes = drawnShapes.filter(shape => shape.id !== id);
+        saveHistoryState(); // <-- DODAJ TĘ LINIĘ
         updateClearButtonUI();
     }
 
@@ -522,6 +579,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (shapeAdded) {
             drawingMode = null;
             drawingPoints = [];
+            saveHistoryState(); // <-- DODAJ TĘ LINIĘ
             updateClearButtonUI();
             chartContainer.style.cursor = 'default';
         }
@@ -714,6 +772,10 @@ document.addEventListener('DOMContentLoaded', function() {
     chartContainer.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
 // === KONIEC NOWEGO KODU ===
+
+    // === POCZĄTEK NOWEGO KODU - LISTENER DLA COFNIJ ===
+    undoButton.addEventListener('click', undoLastAction);
+    // === KONIEC NOWEGO KODU ===
 // === KONIEC SEKCJI RYSOWANIA ===
     
 
@@ -793,6 +855,11 @@ document.addEventListener('DOMContentLoaded', function() {
         recommendationSection.innerHTML = '';
         
         clearDrawings(); // Czyścimy rysunki przy zmianie spółki
+
+        // === POCZĄTEK NOWEGO KODU - RESET HISTORII ===
+        drawingHistory = [];
+        saveHistoryState(); // Inicjalizujemy historię z czystym, pustym stanem
+        // === KONIEC NOWEGO KODU ===
     
         try {
             const stooqResponse = await fetch(`${API_URL}/api/data/${ticker}`);
