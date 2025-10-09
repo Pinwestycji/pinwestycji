@@ -840,7 +840,7 @@ function updateHistoryButtonsUI() {
 
     // === LOGIKA APLIKACJI ===
 
-    // Plik: chart.js (w sekcji LOGIKA APLIKACJI)
+    // Plik: chart.js (ZASTĄP TĘ FUNKCJĘ)
 
     /**
      * Inicjalizuje i konfiguruje bibliotekę Date Range Picker.
@@ -848,7 +848,14 @@ function updateHistoryButtonsUI() {
     function initializeDateRangePicker() {
         if (rawDailyData.length === 0) return;
     
-        // Ustaw domyślny zakres: ostatnie 5 lat lub od początku, jeśli danych jest mniej
+        // === POCZĄTEK POPRAWKI: Zapewnienie czystej reinicjalizacji ===
+        // Sprawdzamy, czy kalendarz już istnieje. Jeśli tak, niszczymy starą instancję.
+        // To zapobiega błędom przy przełączaniu między spółkami o różnych zakresach dat.
+        if ($('#dateRangePicker').data('daterangepicker')) {
+            $('#dateRangePicker').data('daterangepicker').remove();
+        }
+        // === KONIEC POPRAWKI ===
+    
         const lastDate = moment.unix(rawDailyData[rawDailyData.length - 1].time);
         const fiveYearsAgo = moment(lastDate).subtract(5, 'years');
         const firstDate = moment.unix(rawDailyData[0].time);
@@ -862,13 +869,15 @@ function updateHistoryButtonsUI() {
             endDate: selectedEndDate,
             minDate: firstDate,
             maxDate: lastDate,
+            // === POCZĄTEK GŁÓWNEJ POPRAWKI: Użycie `lastDate` zamiast `moment()` ===
             ranges: {
-               'Ostatnie 30 Dni': [moment().subtract(29, 'days'), moment()],
-               'Bieżący Rok': [moment().startOf('year'), moment().endOf('year')],
-               'Ostatni Rok': [moment().subtract(1, 'year').startOf('year'), moment().subtract(1, 'year').endOf('year')],
-               'Ostatnie 5 Lat': [moment().subtract(5, 'years'), moment()],
+               'Ostatnie 30 Dni': [moment(lastDate).subtract(29, 'days'), moment(lastDate)],
+               'Bieżący Rok': [moment(lastDate).startOf('year'), moment(lastDate)],
+               'Ostatni Rok': [moment(lastDate).subtract(1, 'year').startOf('year'), moment(lastDate).subtract(1, 'year').endOf('year')],
+               'Ostatnie 5 Lat': [moment(lastDate).subtract(5, 'years'), moment(lastDate)],
                'Cały Zakres': [firstDate, lastDate]
             },
+            // === KONIEC GŁÓWNEJ POPRAWKI ===
             locale: {
                 "format": "DD/MM/YYYY",
                 "separator": " - ",
@@ -879,10 +888,10 @@ function updateHistoryButtonsUI() {
                 "customRangeLabel": "Własny zakres",
                 "weekLabel": "T",
                 "daysOfWeek": ["Nd", "Pn", "Wt", "Śr", "Cz", "Pt", "So"],
-                "monthNames": ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpieñ", "Wrzesień", "Październik", "Listopad", "Grudzień"],
+                "monthNames": ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"],
                 "firstDay": 1
             }
-        }, function(start, end, label) {
+        }, function(start, end) {
             // Ta funkcja jest wywoływana po kliknięciu "Zastosuj"
             selectedStartDate = start;
             selectedEndDate = end;
@@ -895,8 +904,6 @@ function updateHistoryButtonsUI() {
         // Ustaw początkowy tekst w przycisku
         $('#dateRangePicker span').html(selectedStartDate.format('DD/MM/YYYY') + ' - ' + selectedEndDate.format('DD/MM/YYYY'));
     }
-
-    // Plik: chart.js (w sekcji LOGIKA APLIKACJI)
 
     /**
      * Centralna funkcja, która filtruje dane wg daty, agreguje wg interwału i aktualizuje wykres.
