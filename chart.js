@@ -840,21 +840,18 @@ function updateHistoryButtonsUI() {
 
     // === LOGIKA APLIKACJI ===
 
-    // Plik: chart.js (ZASTĄP TĘ FUNKCJĘ)
-
+   // Plik: chart.js (ZASTĄP CAŁĄ STARĄ FUNKCJĘ TĄ NOWĄ WERSJĄ)
+    
     /**
      * Inicjalizuje i konfiguruje bibliotekę Date Range Picker.
      */
     function initializeDateRangePicker() {
         if (rawDailyData.length === 0) return;
     
-        // === POCZĄTEK POPRAWKI: Zapewnienie czystej reinicjalizacji ===
         // Sprawdzamy, czy kalendarz już istnieje. Jeśli tak, niszczymy starą instancję.
-        // To zapobiega błędom przy przełączaniu między spółkami o różnych zakresach dat.
         if ($('#dateRangePicker').data('daterangepicker')) {
             $('#dateRangePicker').data('daterangepicker').remove();
         }
-        // === KONIEC POPRAWKI ===
     
         const lastDate = moment.unix(rawDailyData[rawDailyData.length - 1].time);
         const fiveYearsAgo = moment(lastDate).subtract(5, 'years');
@@ -869,7 +866,7 @@ function updateHistoryButtonsUI() {
             endDate: selectedEndDate,
             minDate: firstDate,
             maxDate: lastDate,
-            // === POCZĄTEK GŁÓWNEJ POPRAWKI: Użycie `lastDate` zamiast `moment()` ===
+            // === KLUCZOWA POPRAWKA ZNAJDUJE SIĘ TUTAJ ===
             ranges: {
                'Ostatnie 30 Dni': [moment(lastDate).subtract(29, 'days'), moment(lastDate)],
                'Bieżący Rok': [moment(lastDate).startOf('year'), moment(lastDate)],
@@ -877,7 +874,7 @@ function updateHistoryButtonsUI() {
                'Ostatnie 5 Lat': [moment(lastDate).subtract(5, 'years'), moment(lastDate)],
                'Cały Zakres': [firstDate, lastDate]
             },
-            // === KONIEC GŁÓWNEJ POPRAWKI ===
+            // === KONIEC POPRAWKI ===
             locale: {
                 "format": "DD/MM/YYYY",
                 "separator": " - ",
