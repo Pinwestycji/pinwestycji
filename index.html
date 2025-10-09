@@ -86,56 +86,67 @@
                             <div class="card shadow mb-4">
                                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                                     <h6 id="chart-title" class="m-0 font-weight-bold text-primary">Wykres Świecowy (GPW)</h6>
-                                    <!-- Przycisk Linie -->
-                                    <div class="btn-group">
-                                      <button class="btn btn-sm btn-warning dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                        <i class="fas fa-draw-polygon fa-sm"></i> Linie
-                                      </button>
-                                      <div class="dropdown-menu">
-                                        <a class="dropdown-item" href="#" onclick="setDrawingMode('trendline')">
-                                          <i class="fas fa-long-arrow-alt-up"></i> Linia Trendu
-                                        </a>
-                                        <a class="dropdown-item" href="#" onclick="setDrawingMode('hline')">
-                                          <i class="fas fa-arrows-alt-h"></i> Linia Pozioma
-                                        </a>
-                                        <a class="dropdown-item" href="#" onclick="setDrawingMode('vline')">
-                                          <i class="fas fa-arrows-alt-v"></i> Linia Pionowa
-                                        </a>
-                                        <a class="dropdown-item" href="#" onclick="setDrawingMode('channel')">
-                                          <i class="fas fa-stream"></i> Kanał Trendu
-                                        </a>
-                                      </div>
-                                    </div>
-
-                                    <button class="btn btn-sm btn-info" data-toggle="modal" data-target="#indicatorsModal">
-                                        <i class="fas fa-chart-line fa-sm"></i> Wskaźniki
-                                    </button>
-                                    <div id="drawing-toolbar" class="d-flex align-items-center" style="gap: 10px;">
-                                        <label for="lineColor" class="mb-0 small">Kolor:</label>
-                                        <input type="color" id="lineColor" class="form-control form-control-sm" value="#0000FF" style="width: 50px;">
-                                        
-                                        <label for="lineWidth" class="mb-0 small">Grubość:</label>
-                                        <input type="number" id="lineWidth" class="form-control form-control-sm" value="2" min="1" max="10" style="width: 60px;">
-                                        
-                                        <div class="btn-group" id="clearButtonGroup">
-                                            <button id="clearDrawingButton" class="btn btn-sm btn-danger">
-                                                <i class="fas fa-trash fa-sm"></i> Wyczyść
-                                            </button>
-                                            <button id="clearDropdownToggle" type="button" class="btn btn-sm btn-danger dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="display: none;">
-                                                <span class="sr-only">Toggle Dropdown</span>
-                                            </button>
-                                            <div class="dropdown-menu dropdown-menu-right" id="clearDropdownMenu">
-                                                </div>
-                                        </div>
+                                    
+                                    <!-- === POCZĄTEK NOWEGO KONTENERA NA WSZYSTKIE PRZYCISKI === -->
+                                    <div class="d-flex flex-row align-items-center" style="gap: 15px;">
+                                    
+                                        <!-- Przycisk Linie -->
                                         <div class="btn-group">
-                                            <button id="undoButton" class="btn btn-sm btn-secondary" disabled>
-                                                <i class="fas fa-undo fa-sm"></i>
-                                            </button>
-                                            <button id="redoButton" class="btn btn-sm btn-secondary" disabled>
-                                                <i class="fas fa-redo fa-sm ml-1"></i>
-                                            </button>
+                                          <button class="btn btn-sm btn-warning dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                            <i class="fas fa-draw-polygon fa-sm"></i> Linie
+                                          </button>
+                                          <div class="dropdown-menu">
+                                            <a class="dropdown-item" href="#" onclick="setDrawingMode('trendline')">
+                                              <i class="fas fa-long-arrow-alt-up"></i> Linia Trendu
+                                            </a>
+                                            <a class="dropdown-item" href="#" onclick="setDrawingMode('hline')">
+                                              <i class="fas fa-arrows-alt-h"></i> Linia Pozioma
+                                            </a>
+                                            <a class="dropdown-item" href="#" onclick="setDrawingMode('vline')">
+                                              <i class="fas fa-arrows-alt-v"></i> Linia Pionowa
+                                            </a>
+                                            <a class="dropdown-item" href="#" onclick="setDrawingMode('channel')">
+                                              <i class="fas fa-stream"></i> Kanał Trendu
+                                            </a>
+                                          </div>
                                         </div>
+                                
+                                        <!-- Przycisk Wskaźniki -->
+                                        <button class="btn btn-sm btn-info" data-toggle="modal" data-target="#indicatorsModal">
+                                            <i class="fas fa-chart-line fa-sm"></i> Wskaźniki
+                                        </button>
+                                        
+                                        <!-- Pasek narzędzi rysowania (został bez zmian, tylko jest wewnątrz nowego kontenera) -->
+                                        <div id="drawing-toolbar" class="d-flex align-items-center" style="gap: 10px;">
+                                            <label for="lineColor" class="mb-0 small">Kolor:</label>
+                                            <input type="color" id="lineColor" class="form-control form-control-sm" value="#0000FF" style="width: 50px;">
+                                            
+                                            <label for="lineWidth" class="mb-0 small">Grubość:</label>
+                                            <input type="number" id="lineWidth" class="form-control form-control-sm" value="2" min="1" max="10" style="width: 60px;">
+                                            
+                                            <div class="btn-group" id="clearButtonGroup">
+                                                <button id="clearDrawingButton" class="btn btn-sm btn-danger">
+                                                    <i class="fas fa-trash fa-sm"></i> Wyczyść
+                                                </button>
+                                                <button id="clearDropdownToggle" type="button" class="btn btn-sm btn-danger dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="display: none;">
+                                                    <span class="sr-only">Toggle Dropdown</span>
+                                                </button>
+                                                <div class="dropdown-menu dropdown-menu-right" id="clearDropdownMenu">
+                                                    </div>
+                                            </div>
+                                            <div class="btn-group">
+                                                <button id="undoButton" class="btn btn-sm btn-secondary" disabled>
+                                                    <i class="fas fa-undo fa-sm"></i>
+                                                </button>
+                                                <button id="redoButton" class="btn btn-sm btn-secondary" disabled>
+                                                    <i class="fas fa-redo fa-sm ml-1"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
                                     </div>
+                                    <!-- === KONIEC NOWEGO KONTENERA === -->
+                                    
                                 </div>
                                 
 
