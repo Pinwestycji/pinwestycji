@@ -8,6 +8,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const API_URL = 'https://pinwestycji.onrender.com';
     const indexTickers = ['WIG20', 'WIG', 'MWIG40', 'SWIG80', 'WIG-UKRAIN'];
 
+    // === POCZĄTEK NOWEGO KODU ===
+    let rawDailyData = []; // Będzie przechowywać oryginalne, niezmienione dane dzienne
+    let activeInterval = 'D'; // Domyślny interwał
+    // === KONIEC NOWEGO KODU ===
+
     // === GŁÓWNE WYKRESY ===
     const chartContainer = document.getElementById('tvchart');
     const mainChart = LightweightCharts.createChart(chartContainer, {
@@ -538,6 +543,26 @@ function updateHistoryButtonsUI() {
    //     updateCanvasPointerEvents(); // <-- DODAJ TĘ LINIĘ
     };
 
+    // === POCZĄTEK NOWEGO KODU - FUNKCJA ZMIANY INTERWAŁU ===
+    /**
+     * Ustawia nowy interwał wykresu, przelicza dane i odświeża widok.
+     * @param {string} interval - 'D', 'W' lub 'M'.
+     */
+    window.setChartInterval = function(interval) {
+        if (activeInterval === interval && candlestickData.length > 0) return; // Nic się nie zmienia
+    
+        activeInterval = interval;
+        
+        // Aktualizuj tekst na przycisku
+        const intervalButton = document.getElementById('intervalButton');
+        intervalButton.textContent = `Interwał (${interval})`;
+    
+        // Przetwarzaj dane i aktualizuj wykresy
+        const aggregatedData = aggregateDataToInterval(rawDailyData, activeInterval);
+        updateAllCharts(aggregatedData);
+    }
+    // === KONIEC NOWEGO KODU ===
+
     // ZMIANA: Pobieramy 'logical' zamiast 'time'
     // Plik: chart.js - SEKCJA RYSOWANIA
 
@@ -812,6 +837,75 @@ function updateHistoryButtonsUI() {
         
 
     // === LOGIKA APLIKACJI ===
+    // Plik: chart.js (w sekcji LOGIKA APLIKACJI)
+
+    // === POCZĄTEK NOWEGO KODU - AGREGACJA DANYCH ===
+    
+    /**
+     * Agreguje dane dzienne do wybranego interwału (tygodniowego lub miesięcznego).
+     * @param {Array} dailyData - Tablica z danymi w formacie dziennym.
+     * @param {string} interval - 'W' dla tygodniowego, 'M' dla miesięcznego.
+     * @returns {Array} - Tablica z zagregowanymi danymi.
+     */
+    function aggregateDataToInterval(dailyData, interval) {
+        if (interval === 'D' || !dailyData || dailyData.length === 0) {
+            return dailyData;
+        }
+    
+        const aggregatedData = [];
+        let currentPeriodData = null;
+    
+        dailyData.forEach(d => {
+            const date = new Date(d.time * 1000);
+            let periodKey;
+    
+            if (interval === 'W') {
+                // Klucz dla tygodnia: Rok + numer tygodnia
+                const dayOfWeek = date.getUTCDay(); // 0 = Niedziela, 1 = Poniedziałek, ...
+                const firstDayOfWeek = new Date(date);
+                // Przesuwamy do poniedziałku
+                firstDayOfWeek.setUTCDate(date.getUTCDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+                periodKey = `${firstDayOfWeek.getUTCFullYear()}-${firstDayOfWeek.getUTCMonth()}-${firstDayOfWeek.getUTCDate()}`;
+            } else { // 'M'
+                // Klucz dla miesiąca: Rok + numer miesiąca
+                periodKey = `${date.getUTCFullYear()}-${date.getUTCMonth()}`;
+            }
+    
+            if (!currentPeriodData || currentPeriodData.key !== periodKey) {
+                // Zapisujemy poprzedni okres, jeśli istniał
+                if (currentPeriodData) {
+                    aggregatedData.push(currentPeriodData.data);
+                }
+                // Zaczynamy nowy okres
+                currentPeriodData = {
+                    key: periodKey,
+                    data: {
+                        time: d.time, // Czas otwarcia okresu
+                        open: d.open,
+                        high: d.high,
+                        low: d.low,
+                        close: d.close,
+                        volume: d.volume
+                    }
+                };
+            } else {
+                // Kontynuujemy bieżący okres - aktualizujemy wartości
+                currentPeriodData.data.high = Math.max(currentPeriodData.data.high, d.high);
+                currentPeriodData.data.low = Math.min(currentPeriodData.data.low, d.low);
+                currentPeriodData.data.close = d.close; // Zawsze ostatnia cena zamknięcia
+                currentPeriodData.data.volume += d.volume;
+            }
+        });
+    
+        // Dodaj ostatni, niezapisany okres
+        if (currentPeriodData) {
+            aggregatedData.push(currentPeriodData.data);
+        }
+    
+        return aggregatedData;
+    }
+    
+    // === KONIEC NOWEGO KODU ===
     async function loadCompanyData() {
             try {
                 const response = await fetch('wig_companies.csv');
@@ -901,14 +995,24 @@ function updateHistoryButtonsUI() {
                 throw new Error(`Błąd pobierania danych Stooq dla ${ticker}: ${stooqResponse.statusText}`);
             }
     
+            // Plik: chart.js -> loadChartData (NOWA WERSJA)
+            // ...
             const stooqData = await stooqResponse.json();
             if (stooqData.length === 0) {
                 alert(`Brak danych historycznych dla spółki ${ticker}.`);
                 return;
             }
-    
-            // !!! Kluczowa zmiana: Zamiast rysować bezpośrednio, wywołujemy nową funkcję
-            updateAllCharts(stooqData);
+            
+            // === POCZĄTEK MODYFIKACJI ===
+            // 1. Zapisz oryginalne dane dzienne
+            rawDailyData = stooqData;
+            
+            // 2. Wywołaj funkcję ustawiającą domyślny interwał, która zajmie się resztą
+            setChartInterval('D');
+            // === KONIEC MODYFIKACJI ===
+            
+            document.getElementById('chart-title').textContent = `Wykres Świecowy - ${ticker}`;
+            // ...
 
             document.getElementById('chart-title').textContent = `Wykres Świecowy - ${ticker}`;
     
