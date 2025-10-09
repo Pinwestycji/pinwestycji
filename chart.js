@@ -848,17 +848,17 @@ function updateHistoryButtonsUI() {
     function initializeDateRangePicker() {
         if (rawDailyData.length === 0) return;
     
-        // Sprawdzamy, czy kalendarz już istnieje. Jeśli tak, niszczymy starą instancję.
+        // Zapewnienie czystej reinicjalizacji
         if ($('#dateRangePicker').data('daterangepicker')) {
             $('#dateRangePicker').data('daterangepicker').remove();
         }
     
         const lastDate = moment.unix(rawDailyData[rawDailyData.length - 1].time);
-        const fiveYearsAgo = moment(lastDate).subtract(5, 'years');
+        const fiveYearsAgo = lastDate.clone().subtract(5, 'years'); // Używamy .clone() dla bezpieczeństwa
         const firstDate = moment.unix(rawDailyData[0].time);
     
         selectedStartDate = firstDate.isAfter(fiveYearsAgo) ? firstDate : fiveYearsAgo;
-        selectedEndDate = lastDate;
+        selectedEndDate = lastDate.clone(); // Klonujemy również tutaj dla pewności
     
         // Konfiguracja biblioteki
         $('#dateRangePicker').daterangepicker({
@@ -866,13 +866,13 @@ function updateHistoryButtonsUI() {
             endDate: selectedEndDate,
             minDate: firstDate,
             maxDate: lastDate,
-            // === KLUCZOWA POPRAWKA ZNAJDUJE SIĘ TUTAJ ===
+            // === OSTATECZNA POPRAWKA: Użycie .clone() przed każdą modyfikacją ===
             ranges: {
-               'Ostatnie 30 Dni': [moment(lastDate).subtract(29, 'days'), moment(lastDate)],
-               'Bieżący Rok': [moment(lastDate).startOf('year'), moment(lastDate)],
-               'Ostatni Rok': [moment(lastDate).subtract(1, 'year').startOf('year'), moment(lastDate).subtract(1, 'year').endOf('year')],
-               'Ostatnie 5 Lat': [moment(lastDate).subtract(5, 'years'), moment(lastDate)],
-               'Cały Zakres': [firstDate, lastDate]
+               'Ostatnie 30 Dni': [lastDate.clone().subtract(29, 'days'), lastDate.clone()],
+               'Bieżący Rok': [lastDate.clone().startOf('year'), lastDate.clone()],
+               'Ostatni Rok': [lastDate.clone().subtract(1, 'year').startOf('year'), lastDate.clone().subtract(1, 'year').endOf('year')],
+               'Ostatnie 5 Lat': [lastDate.clone().subtract(5, 'years'), lastDate.clone()],
+               'Cały Zakres': [firstDate.clone(), lastDate.clone()]
             },
             // === KONIEC POPRAWKI ===
             locale: {
@@ -889,16 +889,12 @@ function updateHistoryButtonsUI() {
                 "firstDay": 1
             }
         }, function(start, end) {
-            // Ta funkcja jest wywoływana po kliknięciu "Zastosuj"
             selectedStartDate = start;
             selectedEndDate = end;
             filterAndDisplayData();
-            
-            // Aktualizuj tekst w przycisku
             $('#dateRangePicker span').html(start.format('DD/MM/YYYY') + ' - ' + end.format('DD/MM/YYYY'));
         });
     
-        // Ustaw początkowy tekst w przycisku
         $('#dateRangePicker span').html(selectedStartDate.format('DD/MM/YYYY') + ' - ' + selectedEndDate.format('DD/MM/YYYY'));
     }
 
