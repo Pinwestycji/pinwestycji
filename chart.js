@@ -12,6 +12,11 @@ document.addEventListener('DOMContentLoaded', function() {
     let rawDailyData = []; // Będzie przechowywać oryginalne, niezmienione dane dzienne
     let activeInterval = 'D'; // Domyślny interwał
     // === KONIEC NOWEGO KODU ===
+    // === POCZĄTEK NOWEGO KODU ===
+    let selectedStartDate = null;
+    let selectedEndDate = null;
+    const INDICATOR_LOOKBACK_PERIOD = 250; // Bezpieczny bufor dla wskaźników (np. SMA 200)
+    // === KONIEC NOWEGO KODU ===
 
     // === GŁÓWNE WYKRESY ===
     const chartContainer = document.getElementById('tvchart');
@@ -548,18 +553,15 @@ function updateHistoryButtonsUI() {
      * Ustawia nowy interwał wykresu, przelicza dane i odświeża widok.
      * @param {string} interval - 'D', 'W' lub 'M'.
      */
+    // Plik: chart.js -> setChartInterval (ZASTĄP CAŁĄ FUNKCJĘ)
     window.setChartInterval = function(interval) {
-        if (activeInterval === interval && candlestickData.length > 0) return; // Nic się nie zmienia
+        if (activeInterval === interval) return;
     
         activeInterval = interval;
-        
-        // Aktualizuj tekst na przycisku
-        const intervalButton = document.getElementById('intervalButton');
-        intervalButton.textContent = `Interwał (${interval})`;
+        document.getElementById('intervalButton').textContent = `Interwał (${interval})`;
     
-        // Przetwarzaj dane i aktualizuj wykresy
-        const aggregatedData = aggregateDataToInterval(rawDailyData, activeInterval);
-        updateAllCharts(aggregatedData);
+        // Zamiast bezpośrednio aktualizować, wywołujemy nową centralną funkcję
+        filterAndDisplayData(); 
     }
     // === KONIEC NOWEGO KODU ===
 
@@ -837,6 +839,101 @@ function updateHistoryButtonsUI() {
         
 
     // === LOGIKA APLIKACJI ===
+
+    // Plik: chart.js (w sekcji LOGIKA APLIKACJI)
+
+    /**
+     * Inicjalizuje i konfiguruje bibliotekę Date Range Picker.
+     */
+    function initializeDateRangePicker() {
+        if (rawDailyData.length === 0) return;
+    
+        // Ustaw domyślny zakres: ostatnie 5 lat lub od początku, jeśli danych jest mniej
+        const lastDate = moment.unix(rawDailyData[rawDailyData.length - 1].time);
+        const fiveYearsAgo = moment(lastDate).subtract(5, 'years');
+        const firstDate = moment.unix(rawDailyData[0].time);
+    
+        selectedStartDate = firstDate.isAfter(fiveYearsAgo) ? firstDate : fiveYearsAgo;
+        selectedEndDate = lastDate;
+    
+        // Konfiguracja biblioteki
+        $('#dateRangePicker').daterangepicker({
+            startDate: selectedStartDate,
+            endDate: selectedEndDate,
+            minDate: firstDate,
+            maxDate: lastDate,
+            ranges: {
+               'Ostatnie 30 Dni': [moment().subtract(29, 'days'), moment()],
+               'Bieżący Rok': [moment().startOf('year'), moment().endOf('year')],
+               'Ostatni Rok': [moment().subtract(1, 'year').startOf('year'), moment().subtract(1, 'year').endOf('year')],
+               'Ostatnie 5 Lat': [moment().subtract(5, 'years'), moment()],
+               'Cały Zakres': [firstDate, lastDate]
+            },
+            locale: {
+                "format": "DD/MM/YYYY",
+                "separator": " - ",
+                "applyLabel": "Zastosuj",
+                "cancelLabel": "Anuluj",
+                "fromLabel": "Od",
+                "toLabel": "Do",
+                "customRangeLabel": "Własny zakres",
+                "weekLabel": "T",
+                "daysOfWeek": ["Nd", "Pn", "Wt", "Śr", "Cz", "Pt", "So"],
+                "monthNames": ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpieñ", "Wrzesień", "Październik", "Listopad", "Grudzień"],
+                "firstDay": 1
+            }
+        }, function(start, end, label) {
+            // Ta funkcja jest wywoływana po kliknięciu "Zastosuj"
+            selectedStartDate = start;
+            selectedEndDate = end;
+            filterAndDisplayData();
+            
+            // Aktualizuj tekst w przycisku
+            $('#dateRangePicker span').html(start.format('DD/MM/YYYY') + ' - ' + end.format('DD/MM/YYYY'));
+        });
+    
+        // Ustaw początkowy tekst w przycisku
+        $('#dateRangePicker span').html(selectedStartDate.format('DD/MM/YYYY') + ' - ' + selectedEndDate.format('DD/MM/YYYY'));
+    }
+
+    // Plik: chart.js (w sekcji LOGIKA APLIKACJI)
+
+    /**
+     * Centralna funkcja, która filtruje dane wg daty, agreguje wg interwału i aktualizuje wykres.
+     */
+    function filterAndDisplayData() {
+        if (!rawDailyData || rawDailyData.length === 0) return;
+    
+        // 1. Znajdź indeks pierwszej daty w naszym zakresie
+        const startIndex = rawDailyData.findIndex(d => d.time >= selectedStartDate.unix());
+        
+        if (startIndex === -1) {
+            updateAllCharts([]); // Brak danych w zakresie
+            return;
+        }
+    
+        // 2. Cofnij się o `INDICATOR_LOOKBACK_PERIOD` dla poprawności wskaźników
+        const effectiveStartIndex = Math.max(0, startIndex - INDICATOR_LOOKBACK_PERIOD);
+    
+        // 3. Filtruj dane
+        const filteredData = rawDailyData.filter(d => {
+            // Użyj danych od cofniętego startu do wybranego końca
+            const dataTime = moment.unix(d.time);
+            return dataTime.isSameOrAfter(moment.unix(rawDailyData[effectiveStartIndex].time)) && dataTime.isSameOrBefore(selectedEndDate);
+        });
+    
+        // 4. Agreguj do wybranego interwału
+        const aggregatedData = aggregateDataToInterval(filteredData, activeInterval);
+    
+        // 5. Zaktualizuj wszystkie wykresy
+        updateAllCharts(aggregatedData);
+        
+        // 6. Ustaw widoczny zakres na wykresie
+        mainChart.timeScale().setVisibleRange({
+            from: selectedStartDate.unix(),
+            to: selectedEndDate.unix(),
+        });
+    }
     // Plik: chart.js (w sekcji LOGIKA APLIKACJI)
 
     // === POCZĄTEK NOWEGO KODU - AGREGACJA DANYCH ===
@@ -1007,8 +1104,16 @@ function updateHistoryButtonsUI() {
             // 1. Zapisz oryginalne dane dzienne
             rawDailyData = stooqData;
             
-            // 2. Wywołaj funkcję ustawiającą domyślny interwał, która zajmie się resztą
-            setChartInterval('D');
+            // === ZASTĄP setChartInterval('D'); TYM BLOKIEM KODU ===
+
+            // Inicjalizuj kalendarz i ustaw domyślny widok
+            initializeDateRangePicker();
+            filterAndDisplayData(); // To wywoła widok dla domyślnych dat z kalendarza
+            
+            // Ustaw domyślny tekst przycisku interwału, ale bez ponownego przeliczania
+            document.getElementById('intervalButton').textContent = `Interwał (D)`;
+            activeInterval = 'D';
+            
             // === KONIEC MODYFIKACJI ===
             
             document.getElementById('chart-title').textContent = `Wykres Świecowy - ${ticker}`;
