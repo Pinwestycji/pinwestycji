@@ -859,6 +859,9 @@ function updateHistoryButtonsUI() {
     
         selectedStartDate = firstDate.isAfter(fiveYearsAgo) ? firstDate : fiveYearsAgo;
         selectedEndDate = lastDate.clone(); // Klonujemy również tutaj dla pewności
+
+        // === OSTATECZNA POPRAWKA: Użycie .clone() przed każdą modyfikacją ===
+        console.log('DEBUG: Wartość "lastDate" to:', lastDate.format('YYYY-MM-DD'));
     
         // Konfiguracja biblioteki
         $('#dateRangePicker').daterangepicker({
@@ -866,8 +869,7 @@ function updateHistoryButtonsUI() {
             endDate: selectedEndDate,
             minDate: firstDate,
             maxDate: lastDate,
-            // === OSTATECZNA POPRAWKA: Użycie .clone() przed każdą modyfikacją ===
-            console.log('DEBUG: Wartość "lastDate" to:', lastDate.format('YYYY-MM-DD'));
+            
             ranges: {
                'Ostatnie 30 Dni': [lastDate.clone().subtract(29, 'days'), lastDate.clone()],
                'Bieżący Rok': [lastDate.clone().startOf('year'), lastDate.clone()],
