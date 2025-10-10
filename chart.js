@@ -871,7 +871,7 @@ function updateHistoryButtonsUI() {
             maxDate: lastDate,
             
             ranges: {
-               'Ostatnie 30 Dni': [lastDate.clone().subtract(29, 'days'), lastDate.clone()],
+               'Ostatnie 30 Dni - TEST': [lastDate.clone().subtract(29, 'days'), lastDate.clone()],
                'Bieżący Rok': [lastDate.clone().startOf('year'), lastDate.clone()],
                'Ostatni Rok': [lastDate.clone().subtract(1, 'year').startOf('year'), lastDate.clone().subtract(1, 'year').endOf('year')],
                'Ostatnie 5 Lat': [lastDate.clone().subtract(5, 'years'), lastDate.clone()],
