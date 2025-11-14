@@ -39,10 +39,22 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
 
+      # Plik: .github/workflows/data_update.yml
+# ... (inne kroki) ...
+
       # Sprawdzenie, czy skrypt stworzył lub zmodyfikował pliki (data/*.json)
       - name: Commit data changes
         run: |
           git add data/*.json
+          
           # Sprawdź, czy są jakieś zmiany do zatwierdzenia
-          git diff --quiet || git commit -m "🤖 [Automated] Aktualizacja danych GPW z Stooq"
-          git push
+          # Używamy --cached, aby sprawdzić, czy coś zostało dodane do staging area
+          if ! git diff --quiet --cached; then
+            git commit -m "🤖 [Automated] Aktualizacja danych GPW z Stooq"
+            
+            # === POPRAWKA BŁĘDU 403: Jawne użycie GITHUB_TOKEN w URL ===
+            # Wymuszenie pusha z uwierzytelnieniem GITHUB_TOKEN 
+            git push https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} HEAD
+          else
+            echo "Brak zmian w danych do zatwierdzenia. Pomięcie commit/push."
+          fi
