@@ -1069,8 +1069,13 @@ function updateHistoryButtonsUI() {
                     return;
                 }
         
-                const header = rows[0].split(',');
-                const tickerIndex = header.indexOf('Ticker');
+                // === POCZĄTEK POPRAWKI BŁĘDU 'TICKER' ===
+                // 1. Dzielimy nagłówki
+                const rawHeader = rows[0].split(',');
+                
+                // 2. Oczyszczamy każdy nagłówek z cudzysłowów i białych znaków
+                const header = rawHeader.map(col => col.trim().replace(/"/g, ''));
+                // === KONIEC POPRAWKI ===
         
                 if (tickerIndex === -1) {
                     console.error("Brak kolumny 'Ticker' w wig_company_forecasts.csv");
