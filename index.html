@@ -22,9 +22,6 @@
     <link href="css/sb-admin-2.min.css" rel="stylesheet">
     <link href="css/custom.css" rel="stylesheet">
 
-    
-
-    
 </head>
 
 <body id="page-top">
@@ -34,351 +31,376 @@
 
             <a class="sidebar-brand d-flex align-items-center justify-content-center" href="index.html">
                 <div class="sidebar-brand-icon rotate-n-15">
-                    <i class="fas fa-laugh-wink"></i>
+                    <i class="fas fa-chart-line"></i>
                 </div>
-                <div class="sidebar-brand-text mx-3">SB Admin <sup>2</sup></div>
+                <div class="sidebar-brand-text mx-3">Pinwestycji</div>
             </a>
-        
+
             <hr class="sidebar-divider my-0">
-        
-            <li class="nav-item active"> <a class="nav-link" href="index.html">
-                    <i class="fas fa-fw fa-calculator"></i> <span>Kalkulator Wyceny</span></a> </li>
-        
-            <li class="nav-item">
-                <a class="nav-link" href="#"> <i class="fas fa-fw fa-book-open"></i> <span>Słowniczek</span></a>
+
+            <li class="nav-item active">
+                <a class="nav-link" href="index.html">
+                    <i class="fas fa-fw fa-tachometer-alt"></i>
+                    <span>Dashboard</span></a>
             </li>
-    
+
+            <li class="nav-item">
+                <a class="nav-link" href="glossary.html">
+                    <i class="fas fa-fw fa-book"></i>
+                    <span>Słowniczek</span></a>
+            </li>
+
+            <hr class="sidebar-divider d-none d-md-block">
+
+            <div class="text-center d-none d-md-inline">
+                <button class="rounded-circle border-0" id="sidebarToggle"></button>
+            </div>
+
         </ul>
         <div id="content-wrapper" class="d-flex flex-column">
 
             <div id="content">
 
                 <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
-
-                    <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
-                        <i class="fa fa-bars"></i>
-                    </button>
-
-                    <form class="d-none d-sm-inline-block form-inline mr-auto ml-md-3 my-2 my-md-0 mw-100 navbar-search" style="position: relative;">
-                        <div class="input-group">
-                           <input type="text" id="stockTickerInput" class="form-control bg-light border-0 small" placeholder="Wyszukaj spółkę..." autocomplete="off">
-                            <div class="input-group-append">
-                                <button class="btn btn-primary" type="button" id="searchButton">
-                                    <i class="fas fa-search fa-sm"></i>
-                                </button>
-                            </div>
-                            <div id="searchDropdown" class="list-group" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 1000; display: none;">
-                                </div>
-                        </div>
-                    </form>
-
                     <ul class="navbar-nav ml-auto">
-                        </ul>
-
+                        <li class="nav-item dropdown no-arrow mx-1">
+                            <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" role="button"
+                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-bell fa-fw"></i>
+                                <span class="badge badge-danger badge-counter" id="refreshCounter"></span>
+                            </a>
+                            <div class="dropdown-list dropdown-menu dropdown-menu-right shadow animated--grow-in"
+                                aria-labelledby="alertsDropdown">
+                                <h6 class="dropdown-header">
+                                    Status Danych
+                                </h6>
+                                <a class="dropdown-item d-flex align-items-center" href="#">
+                                    <div class="mr-3">
+                                        <div class="icon-circle bg-primary">
+                                            <i class="fas fa-file-alt text-white"></i>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="small text-gray-500" id="lastDataUpdate"></div>
+                                        <span class="font-weight-bold">Ostatnia aktualizacja danych z Stooq.pl.</span>
+                                    </div>
+                                </a>
+                                <a class="dropdown-item text-center small text-gray-500" href="#">Dane pobierane automatycznie przez GitHub Actions.</a>
+                            </div>
+                        </li>
+                    </ul>
                 </nav>
                 <div class="container-fluid">
 
-                    <!-- Plik: index.html (NOWA WERSJA) -->
-                    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                        <h1 class="h3 mb-0 text-gray-800">Moje Portfolio Inwestycyjne</h1>
-                        
-                        <!-- === POCZĄTEK NOWEGO KODU - ELEMENT KALENDARZA === -->
-                        <div id="dateRangePicker" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" style="cursor: pointer;">
-                            <i class="fa fa-calendar"></i>&nbsp;
-                            <span></span> <i class="fa fa-caret-down"></i>
+                    <h1 class="h3 mb-4 text-gray-800">Analiza Techniczna i Fundamentalna GPW</h1>
+
+                    <div class="row mb-4">
+                        <div class="col-xl-6 col-lg-8">
+                            <div class="input-group">
+                                <input type="text" class="form-control bg-light border-0 small" placeholder="Wyszukaj Ticker lub Nazwę Spółki (np. CDR, CD PROJEKT)"
+                                    aria-label="Search" aria-describedby="basic-addon2" id="stockTickerInput" autocomplete="off">
+                                <div class="input-group-append">
+                                    <button class="btn btn-primary" type="button" id="searchButton">
+                                        <i class="fas fa-search fa-sm"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="searchDropdown" class="dropdown-menu p-0 show" style="display: none; position: absolute; z-index: 1000;">
+                                <div id="searchSuggestions"></div>
+                            </div>
                         </div>
-                        <!-- === KONIEC NOWEGO KODU === -->
+                        <div class="col-xl-6 col-lg-4 mt-3 mt-xl-0 d-flex justify-content-end align-items-center">
+                             <div class="btn-group mr-3" role="group" aria-label="Interwał">
+                                <button type="button" class="btn btn-primary btn-sm active" data-interval="D">Dzienny</button>
+                                <button type="button" class="btn btn-secondary btn-sm" data-interval="W">Tygodniowy</button>
+                                <button type="button" class="btn btn-secondary btn-sm" data-interval="M">Miesięczny</button>
+                            </div>
+                            <button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#indicatorsModal">
+                                <i class="fas fa-chart-area mr-1"></i> Wskaźniki
+                            </button>
+                        </div>
                     </div>
-                    
+
+
                     <div class="row">
-                        <div class="col-lg-12">
+
+                        <div class="col-xl-8 col-lg-7">
                             <div class="card shadow mb-4">
                                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                                    <h6 id="chart-title" class="m-0 font-weight-bold text-primary">Wykres Świecowy (GPW)</h6>
-                                    
-                                    <!-- === POCZĄTEK NOWEGO KONTENERA NA WSZYSTKIE PRZYCISKI === -->
-                                    <div class="d-flex flex-row align-items-center" style="gap: 15px;">
-                                        <!-- === POCZĄTEK NOWEGO KODU - PRZYCISK INTERWAŁU === -->
-                                        <div class="btn-group">
-                                            <button id="intervalButton" class="btn btn-sm btn-light dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                                Interwał (D)
-                                            </button>
-                                            <div class="dropdown-menu">
-                                                <a class="dropdown-item" href="#" onclick="setChartInterval('D')">Dzienny (D)</a>
-                                                <a class="dropdown-item" href="#" onclick="setChartInterval('W')">Tygodniowy (W)</a>
-                                                <a class="dropdown-item" href="#" onclick="setChartInterval('M')">Miesięczny (M)</a>
-                                            </div>
-                                        </div>
-                                
-                                        <!-- Przycisk Wskaźniki -->
-                                        <button class="btn btn-sm btn-info" data-toggle="modal" data-target="#indicatorsModal">
-                                            <i class="fas fa-chart-line fa-sm"></i> Wskaźniki
-                                        </button>
-                                        <!-- Przycisk Linie -->
-                                        <div class="btn-group">
-                                          <button class="btn btn-sm btn-warning dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                            <i class="fas fa-draw-polygon fa-sm"></i> Linie
-                                          </button>
-                                          <div class="dropdown-menu">
-                                            <a class="dropdown-item" href="#" onclick="setDrawingMode('trendline')">
-                                              <i class="fas fa-long-arrow-alt-up"></i> Linia Trendu
-                                            </a>
-                                            <a class="dropdown-item" href="#" onclick="setDrawingMode('hline')">
-                                              <i class="fas fa-arrows-alt-h"></i> Linia Pozioma
-                                            </a>
-                                            <a class="dropdown-item" href="#" onclick="setDrawingMode('vline')">
-                                              <i class="fas fa-arrows-alt-v"></i> Linia Pionowa
-                                            </a>
-                                            <a class="dropdown-item" href="#" onclick="setDrawingMode('channel')">
-                                              <i class="fas fa-stream"></i> Kanał Trendu
-                                            </a>
-                                          </div>
-                                        </div>
-                                        
-                                        <!-- Pasek narzędzi rysowania (został bez zmian, tylko jest wewnątrz nowego kontenera) -->
-                                        <div id="drawing-toolbar" class="d-flex align-items-center" style="gap: 10px;">
-                                            <label for="lineColor" class="mb-0 small">Kolor:</label>
-                                            <input type="color" id="lineColor" class="form-control form-control-sm" value="#0000FF" style="width: 50px;">
-                                            
-                                            <label for="lineWidth" class="mb-0 small">Grubość:</label>
-                                            <input type="number" id="lineWidth" class="form-control form-control-sm" value="2" min="1" max="10" style="width: 60px;">
-                                            
-                                            <div class="btn-group" id="clearButtonGroup">
-                                                <button id="clearDrawingButton" class="btn btn-sm btn-danger">
-                                                    <i class="fas fa-trash fa-sm"></i> Wyczyść
-                                                </button>
-                                                <button id="clearDropdownToggle" type="button" class="btn btn-sm btn-danger dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="display: none;">
-                                                    <span class="sr-only">Toggle Dropdown</span>
-                                                </button>
-                                                <div class="dropdown-menu dropdown-menu-right" id="clearDropdownMenu">
-                                                    </div>
-                                            </div>
-                                            <div class="btn-group">
-                                                <button id="undoButton" class="btn btn-sm btn-secondary" disabled>
-                                                    <i class="fas fa-undo fa-sm"></i>
-                                                </button>
-                                                <button id="redoButton" class="btn btn-sm btn-secondary" disabled>
-                                                    <i class="fas fa-redo fa-sm ml-1"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                        
-                                    </div>
-                                    <!-- === KONIEC NOWEGO KONTENERA === -->
-                                    
+                                    <h6 class="m-0 font-weight-bold text-primary" id="mainChartTitle">Wykres Notowań (WIG)</h6>
                                 </div>
-                                
-
                                 <div class="card-body">
-                                    <div id="charts-wrapper">
-                                        <div id="tvchart" style="position: relative; width:100%; height:450px;">
-                                            <div id="drawingTooltip" style="position: absolute; display: none; padding: 4px 8px; background-color: rgba(0, 0, 0, 0.75); color: white; border-radius: 4px; font-size: 12px; z-index: 100; pointer-events: none;"></div>
-                                            <canvas id="drawingCanvas" style="position:absolute; top:0; left:0; pointer-events:none; z-index: 2;"></canvas>
-                                        </div>
-                                        <div id="volume-chart-container" class="indicator-chart" style="width: 100%; height: 100px; display: none;"></div>
-                                        <div id="rsi-chart-container" class="indicator-chart" style="width: 100%; height: 120px; display: none;"></div>
-                                        <div id="macd-chart-container" class="indicator-chart" style="width: 100%; height: 120px; display: none;"></div>
-                                        <div id="obv-chart-container" class="indicator-chart" style="width: 100%; height: 120px; display: none;"></div>
-                                    </div>
+                                    <div id="tvchart" style="height: 450px;"></div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="row" id="indexCompositionSection" style="display: none;">
-                        <div class="col-lg-12">
+                        <div class="col-xl-4 col-lg-5">
                             <div class="card shadow mb-4">
                                 <div class="card-header py-3">
-                                    <h6 id="indexCompositionTitle" class="m-0 font-weight-bold text-primary">Skład Indeksu</h6>
+                                    <h6 class="m-0 font-weight-bold text-primary">Kalkulator Wyceny (Model C/Z)</h6>
                                 </div>
                                 <div class="card-body">
-                                    <div class="table-responsive">
-                                        <table class="table table-bordered table-hover" id="indexCompositionTable" width="100%" cellspacing="0">
-                                            <thead>
-                                                <tr>
-                                                    <th>Nazwa Spółki</th>
-                                                    <th>Ticker</th>
-                                                    <th>Udział w portfelu</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="indexCompositionTableBody">
-                                                </tbody>
-                                        </table>
-                                    </div>
+                                    <table class="table table-bordered" id="valuationTable" width="100%" cellspacing="0">
+                                        <thead>
+                                            <tr>
+                                                <th>Parametr</th>
+                                                <th>Wartość</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>Aktualna Cena 
+                                                    <a href="glossary.html#AktualnaCena" target="_blank" title="Więcej informacji">
+                                                        <i class="fas fa-question-circle" style="font-size: 0.8em; color: #4e73df;"></i>
+                                                    </a>
+                                                </td>
+                                                <td id="val_current_price" class="text-right"></td>
+                                                <td></td>
+                                            </tr>
+                                            <tr>
+                                                <td>Aktualny EPS (zysk na akcję)
+                                                    <a href="glossary.html#AktualnyEPS" target="_blank" title="Więcej informacji">
+                                                        <i class="fas fa-question-circle" style="font-size: 0.8em; color: #4e73df;"></i>
+                                                    </a>
+                                                </td>
+                                                <td id="val_current_eps" class="text-right"></td>
+                                                <td></td>
+                                            </tr>
+                                            <tr>
+                                                <td>EPS za poprzedni rok
+                                                    <a href="glossary.html#EPSzaPoprzedniRok" target="_blank" title="Więcej informacji">
+                                                        <i class="fas fa-question-circle" style="font-size: 0.8em; color: #4e73df;"></i>
+                                                    </a>
+                                                </td>
+                                                <td id="val_prev_eps" class="text-right"></td>
+                                                <td></td>
+                                            </tr>
+                                            <tr>
+                                                <td>EPS na następny rok
+                                                    <a href="glossary.html#EPSnaNastepnyRok" target="_blank" title="Więcej informacji">
+                                                        <i class="fas fa-question-circle" style="font-size: 0.8em; color: #4e73df;"></i>
+                                                    </a>
+                                                </td>
+                                                <td id="val_next_eps" class="text-right"></td>
+                                                <td></td>
+                                            </tr>
+                                            <tr>
+                                                <td>Aktualny C/Z
+                                                    <a href="glossary.html#AktualnyCZ" target="_blank" title="Więcej informacji">
+                                                        <i class="fas fa-question-circle" style="font-size: 0.8em; color: #4e73df;"></i>
+                                                    </a>
+                                                </td>
+                                                <td id="val_current_pe" class="text-right"></td>
+                                                <td></td>
+                                            </tr>
+                                            <tr>
+                                                <td>Średni C/Z
+                                                    <a href="glossary.html#SredniCZ" target="_blank" title="Więcej informacji">
+                                                        <i class="fas fa-question-circle" style="font-size: 0.8em; color: #4e73df;"></i>
+                                                    </a>
+                                                </td>
+                                                <td id="val_avg_pe" class="text-right"></td>
+                                                <td></td>
+                                            </tr>
+                                            <tr>
+                                                <td>Tempo wzrostu
+                                                    <a href="glossary.html#TempoWzrostu" target="_blank" title="Więcej informacji">
+                                                        <i class="fas fa-question-circle" style="font-size: 0.8em; color: #4e73df;"></i>
+                                                    </a>
+                                                </td>
+                                                <td><input type="number" id="val_growth_rate" class="form-control form-control-sm text-right" step="0.01" min="0"></td>
+                                                <td id="val_growth_rate_unit">%</td>
+                                            </tr>
+                                            <tr class="table-info">
+                                                <td>Wycena Akcji na marzec/kwiecień 2026 rok
+                                                    <a href="glossary.html#WycenaAkcji2026" target="_blank" title="Więcej informacji">
+                                                        <i class="fas fa-question-circle" style="font-size: 0.8em; color: #4e73df;"></i>
+                                                    </a>
+                                                </td>
+                                                <td id="val_target_price" class="text-right font-weight-bold"></td>
+                                                <td id="val_target_price_unit"></td>
+                                            </tr>
+                                            <tr class="table-info">
+                                                <td>Stopa zwrotu na marzec/kwiecień 2026 rok
+                                                    <a href="glossary.html#StopaZwrotu" target="_blank" title="Więcej informacji">
+                                                        <i class="fas fa-question-circle" style="font-size: 0.8em; color: #4e73df;"></i>
+                                                    </a>
+                                                </td>
+                                                <td id="val_return_rate" class="text-right font-weight-bold"></td>
+                                                <td id="val_return_rate_unit">%</td>
+                                            </tr>
+                                            <tr>
+                                                <td colspan="3" class="text-center small">
+                                                    <a href="glossary.html#OpisMechanizmu" target="_blank" title="Szczegóły mechanizmu kalkulatora">
+                                                        Szczegóły mechanizmu kalkulatora
+                                                        <i class="fas fa-question-circle ml-1" style="font-size: 0.8em; color: #4e73df;"></i>
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="row" id="valuationCalculatorSection">
-                        
-                            <div class="col-lg-5">
-                                <div class="card shadow mb-4">
-                                    <div class="card-header py-3">
-                                        <h6 class="m-0 font-weight-bold text-primary">Wycena Spółki<br><small class="text-muted" style="font-size: 0.65rem;">Źródło: stockwatch.pl (dane aktualizowane co miesiąc)</small></h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="table-responsive">
-                                            <table class="table table-bordered" id="valuationTable" width="100%" cellspacing="0">
-                                                <tbody id="valuationTableBody">
-                                                    </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
+                    <div class="row mt-4">
+
+                        <div class="col-md-6">
+                            <div class="card shadow mb-4">
+                                <div class="card-header py-3">
+                                    <h6 class="m-0 font-weight-bold text-primary">Projekcje Zysku na Akcję (EPS)</h6>
                                 </div>
-                            </div>
-                        
-                            <div class="col-lg-7">
-                                <div class="card shadow mb-4">
-                                    <div class="card-header py-3">
-                                        <h6 class="m-0 font-weight-bold text-primary">Wyliczenia</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="table-responsive">
-                                            <table class="table table-bordered" id="projectionTable" width="100%" cellspacing="0">
-                                                <tbody id="projectionTableBody">
-                                                    </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
+                                <div class="card-body">
+                                    <table class="table table-bordered" id="epsProjectionTable" width="100%" cellspacing="0">
+                                        <thead>
+                                            <tr>
+                                                <th>Rok</th>
+                                                <th>Zysk na akcję</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>2026</td>
+                                                <td id="proj_eps_2026" class="text-right"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>2027</td>
+                                                <td id="proj_eps_2027" class="text-right"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>2028</td>
+                                                <td id="proj_eps_2028" class="text-right"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>2029</td>
+                                                <td id="proj_eps_2029" class="text-right"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>2030</td>
+                                                <td id="proj_eps_2030" class="text-right"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <p class="small text-muted mt-3">
+                                        Obliczenia: EPS na lata 2026-2030 są projekcjami opartymi na historycznym (lub wpisanym) Tempie Wzrostu. 
+                                        <a href="glossary.html#ProjekcjaEPS" target="_blank" title="Więcej informacji o metodologii">
+                                            <i class="fas fa-question-circle" style="font-size: 0.8em; color: #4e73df;"></i>
+                                        </a>
+                                    </p>
                                 </div>
-                                
-                                <div class="card shadow mb-4">
-                                    <div class="card-header py-3">
-                                        <h6 class="m-0 font-weight-bold text-primary">Potencjalna Cena Akcji w kolejnych 5 latach</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <div id="projectionChart" style="width: 100%; height: 300px;"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        
-                        </div>
-                        <div class="row">
-                            <div class="col-lg-12">
-                                <div id="recommendationSection"></div>
                             </div>
                         </div>
-                
+
+                        <div class="col-md-6">
+                            <div class="card shadow mb-4">
+                                <div class="card-header py-3">
+                                    <h6 class="m-0 font-weight-bold text-primary">Projekcje Ceny Akcji</h6>
+                                </div>
+                                <div class="card-body">
+                                    <table class="table table-bordered" id="priceProjectionTable" width="100%" cellspacing="0">
+                                        <thead>
+                                            <tr>
+                                                <th>Rok</th>
+                                                <th>Cena Akcji</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>2026</td>
+                                                <td id="proj_price_2026" class="text-right"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>2027</td>
+                                                <td id="proj_price_2027" class="text-right"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>2028</td>
+                                                <td id="proj_price_2028" class="text-right"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>2029</td>
+                                                <td id="proj_price_2029" class="text-right"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>2030</td>
+                                                <td id="proj_price_2030" class="text-right"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <p class="small text-muted mt-3">
+                                        Wycena akcji oparta jest o prognozowany EPS i historyczny Średni Wskaźnik C/Z.
+                                        <a href="glossary.html#ProjekcjaCeny" target="_blank" title="Więcej informacji o metodologii">
+                                            <i class="fas fa-question-circle" style="font-size: 0.8em; color: #4e73df;"></i>
+                                        </a>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+
+
                 </div>
-                
+                </div>
             <footer class="sticky-footer bg-white">
                 <div class="container my-auto">
                     <div class="copyright text-center my-auto">
-                        <span>Copyright &copy; Damian Dżugała 2021</span>
+                        <span>Copyright &copy; Pinwestycji 2024</span>
                     </div>
                 </div>
             </footer>
             </div>
         </div>
-    <script src="vendor/jquery/jquery.min.js"></script>
-    <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <a class="scroll-to-top rounded" href="#page-top">
+        <i class="fas fa-angle-up"></i>
+    </a>
 
-    <script src="vendor/jquery-easing/jquery.easing.min.js"></script>
-
-    <script src="js/sb-admin-2.min.js"></script>
-
-    <!-- === POCZĄTEK NOWEGO KODU - BIBLIOTEKA KALENDARZA === -->
-    <!-- 1. Moment.js (zależność dla Date Range Picker) -->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
-    
-    <!-- 2. Date Range Picker JS i CSS -->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
-    <!-- === KONIEC NOWEGO KODU === -->
-
-    <script type="text/template" id="kalkulator-template">
-        <div class="row">
-            <div class="col-lg-5">
-                <div class="card shadow mb-4">
-                    <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold text-primary">
-                            Wycena Spółki
-                            <br>
-                            <small class="text-muted" style="font-size: 0.65rem;">Źródło: stockwatch.pl (dane aktualizowane co miesiąc)</small>
-                        </h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-bordered" id="valuationTable" width="100%" cellspacing="0">
-                                <tbody id="valuationTableBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-    
-            <div class="col-lg-7">
-                <div class="card shadow mb-4">
-                    <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold text-primary">Wyliczenia</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-bordered" id="projectionTable" width="100%" cellspacing="0">
-                                <tbody id="projectionTableBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="card shadow mb-4">
-                    <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold text-primary">Potencjalna Cena Akcji w kolejnych 5 latach</h6>
-                    </div>
-                    <div class="card-body">
-                        <div id="projectionChart" style="width: 100%; height: 300px;"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </script>
     <div class="modal fade" id="indicatorsModal" tabindex="-1" role="dialog" aria-labelledby="indicatorsModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="indicatorsModalLabel">Zarządzaj Wskaźnikami Analizy Technicznej</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
+                    <h5 class="modal-title" id="indicatorsModalLabel">Zarządzaj Wskaźnikami Technicznymi</h5>
+                    <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">×</span>
                     </button>
                 </div>
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <h6>Dodaj nowy wskaźnik</h6>
+                            <h6>Dostępne wskaźniki</h6>
                             <hr>
-                            <div class="form-group">
-                                <label>Średnia krocząca (SMA, EMA, WMA)</label>
-                                <div class="input-group">
-                                    <select class="custom-select" id="maType">
-                                        <option value="SMA">SMA</option>
-                                        <option value="EMA">EMA</option>
-                                        <option value="WMA">WMA</option>
-                                    </select>
-                                    <input type="number" class="form-control" id="maPeriod" value="20" placeholder="Okres">
-                                    <div class="input-group-append">
-                                        <button class="btn btn-primary" type="button" id="addMaButton">Dodaj</button>
-                                    </div>
-                                </div>
-                            </div>
-                            <hr>
-                            <h6>Pozostałe wskaźniki</h6>
-                            <div class="custom-control custom-switch mb-2">
-                                <input type="checkbox" class="custom-control-input" id="volumeToggle">
-                                <label class="custom-control-label" for="volumeToggle">Wolumen (Volume)</label>
-                            </div>
                             <div class="custom-control custom-switch mb-2">
                                 <input type="checkbox" class="custom-control-input" id="rsiToggle">
-                                <label class="custom-control-label" for="rsiToggle">Wskaźnik Siły Względnej (RSI)</label>
+                                <label class="custom-control-label" for="rsiToggle">Wskaźnik Siły Względnej (RSI) 
+                                    <a href="glossary.html#RSI" target="_blank" title="Więcej informacji">
+                                        <i class="fas fa-question-circle" style="font-size: 0.8em; color: #4e73df;"></i>
+                                    </a>
+                                </label>
                             </div>
-                            <div class="custom-control custom-switch mb-2">
+                             <div class="custom-control custom-switch mb-2">
                                 <input type="checkbox" class="custom-control-input" id="macdToggle">
-                                <label class="custom-control-label" for="macdToggle">MACD</label>
+                                <label class="custom-control-label" for="macdToggle">MACD 
+                                    <a href="glossary.html#MACD" target="_blank" title="Więcej informacji">
+                                        <i class="fas fa-question-circle" style="font-size: 0.8em; color: #4e73df;"></i>
+                                    </a>
+                                </label>
                             </div>
                              <div class="custom-control custom-switch mb-2">
                                 <input type="checkbox" class="custom-control-input" id="obvToggle">
-                                <label class="custom-control-label" for="obvToggle">On-Balance Volume (OBV)</label>
+                                <label class="custom-control-label" for="obvToggle">On-Balance Volume (OBV) 
+                                     <a href="glossary.html#OBV" target="_blank" title="Więcej informacji">
+                                        <i class="fas fa-question-circle" style="font-size: 0.8em; color: #4e73df;"></i>
+                                    </a>
+                                </label>
+                            </div>
+                            <div class="custom-control custom-switch mb-2">
+                                <label class="custom-control-label" for="maLink">Średnie Kroczące (SMA, EMA, WMA) 
+                                     <a href="glossary.html#MovingAverages" target="_blank" title="Więcej informacji">
+                                        <i class="fas fa-question-circle" style="font-size: 0.8em; color: #4e73df;"></i>
+                                    </a>
+                                </label>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -396,6 +418,12 @@
         </div>
     </div>
     
+    <script src="vendor/jquery/jquery.min.js"></script>
+    <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+    <script src="vendor/jquery-easing/jquery.easing.min.js"></script>
+
+    <script src="js/sb-admin-2.min.js"></script>
     
 </body>
 </html>
