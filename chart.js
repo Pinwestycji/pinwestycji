@@ -1230,7 +1230,7 @@ function updateHistoryButtonsUI() {
         // === KONIEC ZMIAN ===
     
         try {
-            const stooqResponse = await fetch(`${API_URL}/api/data/${ticker}`);
+            const stooqResponse = await fetch(`./data/${ticker.toUpperCase()}.json`);
             
             if (!stooqResponse.ok) {
                 throw new Error(`Błąd pobierania danych Stooq dla ${ticker}: ${stooqResponse.statusText}`);
