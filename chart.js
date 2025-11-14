@@ -9,6 +9,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const indexTickers = ['WIG20', 'WIG', 'MWIG40', 'SWIG80', 'WIG-UKRAIN'];
 
     // === POCZĄTEK NOWEGO KODU ===
+    let rawDailyData = []; 
+    let activeInterval = 'D'; 
+    let companyForecastsMap = new Map(); // <-- DODAJ TĘ LINIĘ
+    // === KONIEC NOWEGO KODU ===
+
+    // === POCZĄTEK NOWEGO KODU ===
     let rawDailyData = []; // Będzie przechowywać oryginalne, niezmienione dane dzienne
     let activeInterval = 'D'; // Domyślny interwał
     // === KONIEC NOWEGO KODU ===
@@ -1045,6 +1051,59 @@ function updateHistoryButtonsUI() {
             }
         }
 
+
+        // Plik: chart.js
+        // Wklej tę CAŁĄ NOWĄ funkcję zaraz POD funkcją loadCompanyData
+        
+        /**
+         * Wczytuje dane prognostyczne (wskaźniki) z pliku CSV
+         * i przechowuje je w 'companyForecastsMap' dla szybkiego dostępu.
+         */
+        async function loadForecastData() {
+            try {
+                const response = await fetch('wig_company_forecasts.csv');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const csvText = await response.text();
+                const rows = csvText.trim().split(/\r?\n/);
+                
+                if (rows.length < 2) {
+                    console.error("Plik wig_company_forecasts.csv jest pusty lub niepoprawny.");
+                    return;
+                }
+        
+                const header = rows[0].split(',');
+                const tickerIndex = header.indexOf('Ticker');
+        
+                if (tickerIndex === -1) {
+                    console.error("Brak kolumny 'Ticker' w wig_company_forecasts.csv");
+                    return;
+                }
+        
+                // Przetwarzamy dane (od drugiego wiersza)
+                for (let i = 1; i < rows.length; i++) {
+                    const values = rows[i].split(',');
+                    const ticker = values[tickerIndex];
+                    
+                    if (!ticker) continue; // Pomiń wiersze bez tickera
+        
+                    const companyData = {};
+                    header.forEach((colName, index) => {
+                        companyData[colName] = values[index];
+                    });
+                    
+                    // Zapisujemy dane w Mapie, używając TICKERA jako klucza
+                    companyForecastsMap.set(ticker.toUpperCase(), companyData);
+                }
+                
+                console.log(`Załadowano dane prognostyczne dla ${companyForecastsMap.size} spółek.`);
+        
+            } catch (error) {
+                console.error("Krytyczny błąd podczas wczytywania pliku wig_company_forecasts.csv:", error);
+            }
+        }
+
         // Plik: chart.js
         // Wklej tę CAŁĄ NOWĄ funkcję gdzieś w sekcji // === LOGIKA APLIKACJI ===
         // (np. zaraz pod funkcją loadCompanyData)
@@ -1208,38 +1267,36 @@ function updateHistoryButtonsUI() {
             document.getElementById('chart-title').textContent = `Wykres Świecowy - ${ticker}`;
             // ...
 
-            document.getElementById('chart-title').textContent = `Wykres Świecowy - ${ticker}`;
+       //     document.getElementById('chart-title').textContent = `Wykres Świecowy - ${ticker}`;
     
             if (indexTickers.includes(ticker)) {
                 console.log(`Wykryto indeks giełdowy (${ticker}). Kalkulator i rekomendacje nie będą wyświetlane.`);
                 valuationSection.style.display = 'none';
                 recommendationSection.innerHTML = '';
                 
-                // === POCZĄTEK NOWEGO KODU ===
-                // Sprawdzamy, czy załadowany ticker to WIG i czy mamy listę spółek
                 if (ticker === 'WIG' && companyList.length > 0) {
-                    populateWigTable(); // Wywołujemy nową funkcję budującą tabelę
+                    populateWigTable(); 
                 }
-                // === KONIEC NOWEGO KODU ===
-                
-                return; // Ten return już tu był
+                return; 
             }
     
-            const indicatorsResponse = await fetch(`${API_URL}/api/indicators/${ticker}`);
+            // === POCZĄTEK MODYFIKACJI ===
+            // JUŻ NIE WYKONUJEMY ZAPYTANIA DO /api/indicators/
+            
             const lastPrice = stooqData[stooqData.length - 1].close;
     
-            if (indicatorsResponse.ok) {
-                try {
-                    const indicatorsData = await indicatorsResponse.json();
-                    updateValuationData(ticker, lastPrice, indicatorsData);
-                } catch (jsonError) {
-                    console.error(`Błąd parsowania JSON dla ${ticker}, mimo odpowiedzi OK.`, jsonError);
-                    updateValuationData(ticker, lastPrice, {});
-                }
+            // Pobieramy dane wskaźników bezpośrednio z wczytanej Mapy
+            const indicatorsData = companyForecastsMap.get(ticker.toUpperCase());
+
+            if (indicatorsData) {
+                // Znaleźliśmy dane w pliku CSV, przekaż je do funkcji
+                updateValuationData(ticker, lastPrice, indicatorsData);
             } else {
-                console.warn(`Serwer wskaźników zwrócił błąd: ${indicatorsResponse.status}`);
-                updateValuationData(ticker, lastPrice, {});
+                // Nie znaleziono danych dla tego tickera
+                console.warn(`Nie znaleziono wskaźników dla ${ticker} w pliku wig_company_forecasts.csv`);
+                updateValuationData(ticker, lastPrice, {}); // Wywołaj z pustym obiektem, aby ukryć kalkulator
             }
+            // === KONIEC MODYFIKACJI ===
     
         } catch (error) {
             console.error(`!!! Krytyczny błąd w loadChartData dla ${ticker}:`, error);
@@ -1971,7 +2028,13 @@ function updateHistoryButtonsUI() {
     drawingTooltip = document.getElementById('drawingTooltip');
     // === KONIEC NOWEGO KODU ===
     // === Inicjalizacja ===
-    loadCompanyData().then(() => {
-        loadChartData('WIG');
+    Promise.all([
+        loadCompanyData(),    // Wczytaj listę spółek
+        loadForecastData()    // Wczytaj dane prognostyczne (WSKAŹNIKI)
+    ]).then(() => {
+        // Obie funkcje zakończyły wczytywanie, dopiero teraz:
+        loadChartData('WIG'); // Załaduj domyślny wykres
+    }).catch(error => {
+        console.error("Błąd podczas inicjalizacji danych:", error);
     });
 });
