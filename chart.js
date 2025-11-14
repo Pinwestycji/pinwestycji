@@ -15,10 +15,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // === KONIEC NOWEGO KODU ===
 
     // === POCZĄTEK NOWEGO KODU ===
-    let rawDailyData = []; // Będzie przechowywać oryginalne, niezmienione dane dzienne
-    let activeInterval = 'D'; // Domyślny interwał
-    // === KONIEC NOWEGO KODU ===
-    // === POCZĄTEK NOWEGO KODU ===
     let selectedStartDate = null;
     let selectedEndDate = null;
     const INDICATOR_LOOKBACK_PERIOD = 250; // Bezpieczny bufor dla wskaźników (np. SMA 200)
