@@ -45,7 +45,7 @@
                     <i class="fas fa-fw fa-calculator"></i> <span>Kalkulator Wyceny</span></a> </li>
         
             <li class="nav-item">
-                <a class="nav-link" href="#"> <i class="fas fa-fw fa-book-open"></i> <span>Słowniczek</span></a>
+                <a class="nav-link" href="glossary.html"> <i class="fas fa-fw fa-book-open"></i> <span>Słowniczek</span></a>
             </li>
     
         </ul>
@@ -78,17 +78,14 @@
                 </nav>
                 <div class="container-fluid">
 
-                    <!-- Plik: index.html (NOWA WERSJA) -->
                     <div class="d-sm-flex align-items-center justify-content-between mb-4">
                         <h1 class="h3 mb-0 text-gray-800">Moje Portfolio Inwestycyjne</h1>
                         
-                        <!-- === POCZĄTEK NOWEGO KODU - ELEMENT KALENDARZA === -->
                         <div id="dateRangePicker" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" style="cursor: pointer;">
                             <i class="fa fa-calendar"></i>&nbsp;
                             <span></span> <i class="fa fa-caret-down"></i>
                         </div>
-                        <!-- === KONIEC NOWEGO KODU === -->
-                    </div>
+                        </div>
                     
                     <div class="row">
                         <div class="col-lg-12">
@@ -96,9 +93,7 @@
                                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                                     <h6 id="chart-title" class="m-0 font-weight-bold text-primary">Wykres Świecowy (GPW)</h6>
                                     
-                                    <!-- === POCZĄTEK NOWEGO KONTENERA NA WSZYSTKIE PRZYCISKI === -->
                                     <div class="d-flex flex-row align-items-center" style="gap: 15px;">
-                                        <!-- === POCZĄTEK NOWEGO KODU - PRZYCISK INTERWAŁU === -->
                                         <div class="btn-group">
                                             <button id="intervalButton" class="btn btn-sm btn-light dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                                 Interwał (D)
@@ -110,11 +105,9 @@
                                             </div>
                                         </div>
                                 
-                                        <!-- Przycisk Wskaźniki -->
                                         <button class="btn btn-sm btn-info" data-toggle="modal" data-target="#indicatorsModal">
                                             <i class="fas fa-chart-line fa-sm"></i> Wskaźniki
                                         </button>
-                                        <!-- Przycisk Linie -->
                                         <div class="btn-group">
                                           <button class="btn btn-sm btn-warning dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                             <i class="fas fa-draw-polygon fa-sm"></i> Linie
@@ -135,7 +128,6 @@
                                           </div>
                                         </div>
                                         
-                                        <!-- Pasek narzędzi rysowania (został bez zmian, tylko jest wewnątrz nowego kontenera) -->
                                         <div id="drawing-toolbar" class="d-flex align-items-center" style="gap: 10px;">
                                             <label for="lineColor" class="mb-0 small">Kolor:</label>
                                             <input type="color" id="lineColor" class="form-control form-control-sm" value="#0000FF" style="width: 50px;">
@@ -164,9 +156,7 @@
                                         </div>
                                         
                                     </div>
-                                    <!-- === KONIEC NOWEGO KONTENERA === -->
-                                    
-                                </div>
+                                    </div>
                                 
 
                                 <div class="card-body">
@@ -279,15 +269,10 @@
 
     <script src="js/sb-admin-2.min.js"></script>
 
-    <!-- === POCZĄTEK NOWEGO KODU - BIBLIOTEKA KALENDARZA === -->
-    <!-- 1. Moment.js (zależność dla Date Range Picker) -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
     
-    <!-- 2. Date Range Picker JS i CSS -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
-    <!-- === KONIEC NOWEGO KODU === -->
-
     <script type="text/template" id="kalkulator-template">
         <div class="row">
             <div class="col-lg-5">
@@ -302,7 +287,17 @@
                     <div class="card-body">
                         <div class="table-responsive">
                             <table class="table table-bordered" id="valuationTable" width="100%" cellspacing="0">
-                                <tbody id="valuationTableBody"></tbody>
+                                <tbody id="valuationTableBody">
+                                    <tr>
+                                        <td>
+                                            Aktualna Cena
+                                            <a href="glossary.html#AktualnaCena" class="ml-2 text-primary" style="font-size: 0.75rem;" title="Co to jest Aktualna Cena?">
+                                                <i class="fas fa-question-circle"></i>
+                                            </a>
+                                        </td>
+                                        <td>[WARTOSC_AKTUALNEJ_CENY]</td>
+                                    </tr>
+                                    </tbody>
                             </table>
                         </div>
                     </div>
