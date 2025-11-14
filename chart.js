@@ -1049,8 +1049,8 @@ function updateHistoryButtonsUI() {
 
 
         // Plik: chart.js
-        // Wklej tę CAŁĄ NOWĄ funkcję zaraz POD funkcją loadCompanyData
-        
+// ZASTĄP CAŁĄ funkcję async function loadForecastData() poniższym kodem
+
         /**
          * Wczytuje dane prognostyczne (wskaźniki) z pliku CSV
          * i przechowuje je w 'companyForecastsMap' dla szybkiego dostępu.
@@ -1069,23 +1069,28 @@ function updateHistoryButtonsUI() {
                     return;
                 }
         
-                // === POCZĄTEK POPRAWKI BŁĘDU 'TICKER' ===
                 // 1. Dzielimy nagłówki
                 const rawHeader = rows[0].split(',');
                 
                 // 2. Oczyszczamy każdy nagłówek z cudzysłowów i białych znaków
+                // To jest poprawka z poprzedniej wiadomości, która rozwiązuje problem 'Brak kolumny Ticker'
                 const header = rawHeader.map(col => col.trim().replace(/"/g, ''));
-                // === KONIEC POPRAWKI ===
+                
+                // Deklaracja zmiennej 'tickerIndex'
+                const tickerIndex = header.indexOf('Ticker'); 
         
                 if (tickerIndex === -1) {
-                    console.error("Brak kolumny 'Ticker' w wig_company_forecasts.csv");
-                    return;
+                    console.error("Krytyczny błąd: Brak kolumny 'Ticker' w wig_company_forecasts.csv.");
+                    return; // Funkcja wychodzi w tym miejscu, jeśli nie ma tickera
                 }
         
                 // Przetwarzamy dane (od drugiego wiersza)
                 for (let i = 1; i < rows.length; i++) {
                     const values = rows[i].split(',');
-                    const ticker = values[tickerIndex];
+                    
+                    // WAŻNE: Tutaj używamy zmiennej tickerIndex
+                    // Jeśli pętla się uruchomiła, zmienna jest zdefiniowana w tym zakresie.
+                    const ticker = values[tickerIndex]; 
                     
                     if (!ticker) continue; // Pomiń wiersze bez tickera
         
