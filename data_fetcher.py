@@ -8,15 +8,28 @@ import os
 from datetime import datetime
 
 # === KONFIGURACJA ===
+# Lista indeksów, które mają być pobierane statycznie
+INDEX_TICKERS = ['WIG', 'WIG20', 'MWIG40', 'SWIG80', 'WIG-UKRAIN'] # Dodaj tutaj wszystkie potrzebne indeksy
+
 # Lista tickerów musi być znana - musimy ją pobrać z Twojego wig_companies.csv
 def get_all_tickers(csv_path='wig_companies.csv'):
     try:
         df_companies = pd.read_csv(csv_path)
         # Zakładamy, że kolumna 'Ticker' istnieje
-        return df_companies['Ticker'].str.upper().tolist()
+        company_tickers = df_companies['Ticker'].str.upper().tolist()
+        
+        # === NOWA LOGIKA: Dodajemy tickery indeksów do listy ===
+        all_tickers = company_tickers + INDEX_TICKERS
+        
+        # Usuń potencjalne duplikaty i zachowaj porządek (opcjonalnie, ale czysto)
+        return sorted(list(set(all_tickers)))
+
     except Exception as e:
         print(f"Błąd podczas wczytywania listy tickerów: {e}")
-        return [] # Zwróć pustą listę w razie błędu
+        # W przypadku błędu, zwróć tylko listę indeksów, aby przynajmniej strona główna działała
+        return INDEX_TICKERS 
+
+# ... (reszta pliku: DATA_DIR, fetch_and_save_stooq_data, main)
 
 # Folder docelowy dla statycznych danych
 DATA_DIR = 'data'
