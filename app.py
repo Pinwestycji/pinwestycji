@@ -14,19 +14,19 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-# === POCZĄTEK ZMIAN: Wczytujemy plik wig_company_forecasts.csv ===
+# === POCZĄTEK ZMIAN: Ta sekcja nie jest już potrzebna ===
 
-indicators_summary_df = None
-try:
-    # Wczytujemy plik wig_company_forecasts.csv
-    indicators_summary_df = pd.read_csv('wig_company_forecasts.csv')
-    # Ustawiamy 'Ticker' jako indeks dla szybkiego wyszukiwania
-    indicators_summary_df.set_index('Ticker', inplace=True)
-    logging.info("Plik wig_company_forecasts.csv załadowany pomyślnie.")
-except FileNotFoundError:
-    logging.error("Krytyczny błąd: Nie znaleziono pliku wig_company_forecasts.csv!")
-except Exception as e:
-    logging.error(f"Wystąpił nieoczekiwany błąd podczas wczytywania pliku CSV: {e}")
+# indicators_summary_df = None
+# try:
+#     # Wczytujemy plik wig_company_forecasts.csv
+#     indicators_summary_df = pd.read_csv('wig_company_forecasts.csv')
+#     # Ustawiamy 'Ticker' jako indeks dla szybkiego wyszukiwania
+#     indicators_summary_df.set_index('Ticker', inplace=True)
+#     logging.info("Plik wig_company_forecasts.csv załadowany pomyślnie.")
+# except FileNotFoundError:
+#     logging.error("Krytyczny błąd: Nie znaleziono pliku wig_company_forecasts.csv!")
+# except Exception as e:
+#     logging.error(f"Wystąpił nieoczekiwany błąd podczas wczytywania pliku CSV: {e}")
 
 # === KONIEC ZMIAN ===
 
@@ -34,7 +34,7 @@ except Exception as e:
 @app.route('/api/data/<ticker>', methods=['GET'])
 def get_stooq_data(ticker):
     # Ta funkcja pozostaje bez zmian
-    # ...
+    # ... (cała funkcja zostaje)
     logging.info(f"Odebrano zapytanie do /api/data/{ticker} ze Stooq.pl")
     if not ticker: return jsonify({"error": "Brak symbolu spółki"}), 400
     try:
@@ -62,34 +62,31 @@ def get_stooq_data(ticker):
 
 
 
-# === POCZĄTEK ZMIAN: Funkcja jest już zgodna z nowym plikiem CSV ===
-@app.route('/api/indicators/<ticker>', methods=['GET'])
-def get_company_indicators(ticker):
-    if indicators_summary_df is None:
-        return jsonify({"error": "Dane wskaźnikowe są niedostępne na serwerze."}), 503
+# === POCZĄTEK ZMIAN: Funkcja nie jest już potrzebna ===
+# @app.route('/api/indicators/<ticker>', methods=['GET'])
+# def get_company_indicators(ticker):
+#     if indicators_summary_df is None:
+#         return jsonify({"error": "Dane wskaźnikowe są niedostępne na serwerze."}), 503
 
-    try:
-        # Wyszukujemy dane dla danego tickera w naszym DataFrame
-        # .loc[] jest bardzo szybkie, gdy szukamy po indeksie
-        indicator_data = indicators_summary_df.loc[ticker.upper()]
+#     try:
+#         # Wyszukujemy dane dla danego tickera w naszym DataFrame
+#         # .loc[] jest bardzo szybkie, gdy szukamy po indeksie
+#         indicator_data = indicators_summary_df.loc[ticker.upper()]
         
-        # Konwertujemy wynik do słownika i zwracamy jako JSON
-        # Ta część kodu jest uniwersalna i będzie działać poprawnie z nowymi kolumnami
-        result = indicator_data.to_dict()
-        return jsonify(result)
+#         # Konwertujemy wynik do słownika i zwracamy jako JSON
+#         # Ta część kodu jest uniwersalna i będzie działać poprawnie z nowymi kolumnami
+#         result = indicator_data.to_dict()
+#         return jsonify(result)
         
-    except KeyError:
-        # Ten błąd wystąpi, jeśli ticker nie zostanie znaleziony w indeksie DataFrame
-        return jsonify({"error": f"Nie znaleziono wskaźników dla spółki: {ticker}"}), 404
-    except Exception as e:
-        logging.error(f"Błąd w get_company_indicators dla {ticker}: {e}", exc_info=True)
-        return jsonify({"error": "Wewnętrzny błąd serwera podczas przetwarzania wskaźników."}), 500
+#     except KeyError:
+#         # Ten błąd wystąpi, jeśli ticker nie zostanie znaleziony w indeksie DataFrame
+#         return jsonify({"error": f"Nie znaleziono wskaźników dla spółki: {ticker}"}), 404
+#     except Exception as e:
+#         logging.error(f"Błąd w get_company_indicators dla {ticker}: {e}", exc_info=True)
+#         return jsonify({"error": "Wewnętrzny błąd serwera podczas przetwarzania wskaźników."}), 500
 # === KONIEC ZMIAN ===
 
 if __name__ == '__main__':
-    # Aby uruchomić lokalnie:
-    # app.run(debug=True, port=5001)
-
-    # Aby uruchomić na serwerze Render:
+    # ... (reszta bez zmian) ...
     port = int(os.environ.get("PORT", 5001))
     app.run(host='0.0.0.0', port=port)
