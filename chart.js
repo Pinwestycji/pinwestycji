@@ -1055,60 +1055,71 @@ function updateHistoryButtonsUI() {
          * Wczytuje dane prognostyczne (wskaźniki) z pliku CSV
          * i przechowuje je w 'companyForecastsMap' dla szybkiego dostępu.
          */
-        async function loadForecastData() {
-            try {
-                const response = await fetch('wig_company_forecasts.csv');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const csvText = await response.text();
-                const rows = csvText.trim().split(/\r?\n/);
-                
-                if (rows.length < 2) {
-                    console.error("Plik wig_company_forecasts.csv jest pusty lub niepoprawny.");
-                    return;
-                }
-        
-                // 1. Dzielimy nagłówki
-                const rawHeader = rows[0].split(',');
-                
-                // 2. Oczyszczamy każdy nagłówek z cudzysłowów i białych znaków
-                // To jest poprawka z poprzedniej wiadomości, która rozwiązuje problem 'Brak kolumny Ticker'
-                const header = rawHeader.map(col => col.trim().replace(/"/g, ''));
-                
-                // Deklaracja zmiennej 'tickerIndex'
-                const tickerIndex = header.indexOf('Ticker'); 
-        
-                if (tickerIndex === -1) {
-                    console.error("Krytyczny błąd: Brak kolumny 'Ticker' w wig_company_forecasts.csv.");
-                    return; // Funkcja wychodzi w tym miejscu, jeśli nie ma tickera
-                }
-        
-                // Przetwarzamy dane (od drugiego wiersza)
-                for (let i = 1; i < rows.length; i++) {
-                    const values = rows[i].split(',');
-                    
-                    // WAŻNE: Tutaj używamy zmiennej tickerIndex
-                    // Jeśli pętla się uruchomiła, zmienna jest zdefiniowana w tym zakresie.
-                    const ticker = values[tickerIndex]; 
-                    
-                    if (!ticker) continue; // Pomiń wiersze bez tickera
-        
-                    const companyData = {};
-                    header.forEach((colName, index) => {
-                        companyData[colName] = values[index];
-                    });
-                    
-                    // Zapisujemy dane w Mapie, używając TICKERA jako klucza
-                    companyForecastsMap.set(ticker.toUpperCase(), companyData);
-                }
-                
-                console.log(`Załadowano dane prognostyczne dla ${companyForecastsMap.size} spółek.`);
-        
-            } catch (error) {
-                console.error("Krytyczny błąd podczas wczytywania pliku wig_company_forecasts.csv:", error);
+        // Plik: chart.js
+// ZASTĄP CAŁĄ FUNKCJĘ async function loadForecastData() PONIŻSZYM KODEM
+    
+    /**
+     * Wczytuje dane prognostyczne (wskaźniki) z pliku CSV
+     * i przechowuje je w 'companyForecastsMap' dla szybkiego dostępu.
+     */
+    async function loadForecastData() {
+        try {
+            const response = await fetch('wig_company_forecasts.csv');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
+            
+            const csvText = await response.text();
+            const rows = csvText.trim().split(/\r?\n/);
+            
+            if (rows.length < 2) {
+                console.error("Plik wig_company_forecasts.csv jest pusty lub niepoprawny.");
+                return;
+            }
+    
+            // 1. Dzielimy nagłówki
+            const rawHeader = rows[0].split(',');
+            
+            // 2. Oczyszczamy każdy nagłówek z cudzysłowów (") i białych znaków (to rozwiązuje problem 'Ticker')
+            const header = rawHeader.map(col => col.trim().replace(/"/g, ''));
+            
+            // Deklaracja zmiennej 'tickerIndex' w głównym zakresie funkcji
+            const tickerIndex = header.indexOf('Ticker'); 
+    
+            if (tickerIndex === -1) {
+                console.error("Krytyczny błąd: Brak kolumny 'Ticker' w wig_company_forecasts.csv.");
+                return; 
+            }
+    
+            // Przetwarzamy dane (od drugiego wiersza)
+            for (let i = 1; i < rows.length; i++) {
+                // WAŻNE: Musimy obsłużyć wiersze, które też mogą mieć cudzysłowy i puste kolumny.
+                // Najprościej jest po prostu podzielić i użyć odpowiedniego indeksu.
+                const values = rows[i].split(',');
+                
+                // Użycie zmiennej 'tickerIndex' jest poprawne w tym zakresie
+                const ticker = values[tickerIndex].trim().replace(/"/g, ''); 
+                
+                if (!ticker) continue; // Pomiń wiersze bez tickera
+    
+                const companyData = {};
+                // Przechodzimy przez wszystkie kolumny i mapujemy je do obiektu
+                header.forEach((colName, index) => {
+                    // Czyścimy i przypisujemy wartość
+                    companyData[colName] = values[index] ? values[index].trim().replace(/"/g, '') : null;
+                });
+                
+                // Zapisujemy dane w Mapie, używając TICKERA jako klucza
+                companyForecastsMap.set(ticker.toUpperCase(), companyData);
+            }
+            
+            console.log(`Załadowano dane prognostyczne dla ${companyForecastsMap.size} spółek.`);
+    
+        } catch (error) {
+            console.error("Krytyczny błąd podczas wczytywania pliku wig_company_forecasts.csv:", error);
+            throw error;
         }
+    }
 
         // Plik: chart.js
         // Wklej tę CAŁĄ NOWĄ funkcję gdzieś w sekcji // === LOGIKA APLIKACJI ===
