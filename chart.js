@@ -52,6 +52,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchDropdown = document.getElementById('searchDropdown');
     const chartTitle = document.getElementById('chart-title');
     const projectionTableBody = document.getElementById('projectionTableBody');
+    // === POCZĄTEK NOWEGO KODU ===
+    const indexCompositionSection = document.getElementById('indexCompositionSection');
+    const indexCompositionTableBody = document.getElementById('indexCompositionTableBody');
+    const indexCompositionTitle = document.getElementById('indexCompositionTitle');
+    // === KONIEC NOWEGO KODU ===
 
 
     // Plik: chart.js
@@ -1006,21 +1011,100 @@ function updateHistoryButtonsUI() {
     }
     
     // === KONIEC NOWEGO KODU ===
-    async function loadCompanyData() {
+    // Plik: chart.js
+// ZNAJDŹ i ZASTĄP całą funkcję loadCompanyData następującym kodem:
+
+        // Plik: chart.js
+// ZNAJDŹ i ZASTĄP całą funkcję loadCompanyData następującym kodem:
+
+        async function loadCompanyData() {
             try {
                 const response = await fetch('wig_companies.csv');
                 const csvText = await response.text();
-                const rows = csvText.trim().split(/\r?\n/).slice(1);
+                const rows = csvText.trim().split(/\r?\n/).slice(1); // Pomiń nagłówek
+                
                 companyList = rows.map(row => {
-                    const [nazwa, ticker] = row.split(',');
-                    if (nazwa && ticker) {
-                        return { nazwa: nazwa.replace(/^"|"$/g, '').trim(), ticker: ticker.replace(/^"|"$/g, '').trim() };
+                    // Dzielimy wiersz, ale CSV może mieć wartości w cudzysłowach
+                    // Użyjemy prostej logiki: podziel po przecinku i usuń cudzysłowy
+                    const columns = row.split(',').map(cell => cell.replace(/^"|"$/g, '').trim());
+                    
+                    if (columns.length >= 9) { // Upewnijmy się, że wiersz ma wystarczająco kolumn
+                        const nazwa = columns[0];
+                        const ticker = columns[1];
+                        const udzial = columns[8]; // Kolumna "Udział w portfelu" jest 9. (indeks 8)
+                        
+                        if (nazwa && ticker && udzial) {
+                            return { nazwa: nazwa, ticker: ticker, udzial: udzial };
+                        }
                     }
                     return null;
                 }).filter(company => company !== null);
+                
             } catch (error) {
                 console.error("Błąd podczas wczytywania pliku wig_companies.csv:", error);
             }
+        }
+
+        // Plik: chart.js
+        // Wklej tę CAŁĄ NOWĄ funkcję gdzieś w sekcji // === LOGIKA APLIKACJI ===
+        // (np. zaraz pod funkcją loadCompanyData)
+        
+        /**
+         * Wypełnia tabelę składników indeksu WIG danymi z companyList
+         * i dodaje logikę klikania wierszy.
+         */
+        function populateWigTable() {
+            // Upewnijmy się, że odwołujemy się do właściwych elementów DOM
+            const indexCompSection = document.getElementById('indexCompositionSection');
+            const indexCompTableBody = document.getElementById('indexCompositionTableBody');
+            const indexCompTitle = document.getElementById('indexCompositionTitle');
+        
+            if (!companyList || companyList.length === 0) {
+                console.error("Lista spółek (companyList) jest pusta. Nie można zbudować tabeli WIG.");
+                return;
+            }
+        
+            // Filtrujemy listę, aby upewnić się, że mamy wszystkie potrzebne dane
+            const validCompanyList = companyList.filter(company => 
+                company && company.nazwa && company.ticker && company.udzial
+            );
+        
+            indexCompTitle.textContent = `Skład Indeksu WIG (${validCompanyList.length} spółek)`;
+            indexCompTableBody.innerHTML = ''; // Wyczyść stare dane
+        
+            validCompanyList.forEach(company => {
+                const tr = document.createElement('tr');
+                tr.style.cursor = 'pointer'; // Kursor "rączka"
+        
+                const tdNazwa = document.createElement('td');
+                // Używamy linka dla lepszej semantyki i wyglądu
+                tdNazwa.innerHTML = `<a href="#" data-ticker="${company.ticker}">${company.nazwa}</a>`;
+                
+                const tdTicker = document.createElement('td');
+                tdTicker.textContent = company.ticker;
+        
+                const tdUdzial = document.createElement('td');
+                tdUdzial.textContent = company.udzial;
+        
+                tr.appendChild(tdNazwa);
+                tr.appendChild(tdTicker);
+                tr.appendChild(tdUdzial);
+        
+                // === Logika kliknięcia (Zadanie 2) ===
+                tr.addEventListener('click', (e) => {
+                    e.preventDefault(); // Zapobiegaj przeładowaniu strony przez link
+                    
+                    // Ustawiamy wartość w wyszukiwarce (dla spójności)
+                    stockTickerInput.value = `${company.nazwa}-${company.ticker}`;
+                    
+                    // Ładujemy dane, tak jakby kliknięto "Szukaj"
+                    loadChartData(company.ticker);
+                });
+        
+                indexCompTableBody.appendChild(tr);
+            });
+        
+            indexCompSection.style.display = ''; // Pokaż sekcję z tabelą
         }
     
         // === NOWA FUNKCJA: Aktualizacja wszystkich wykresów na podstawie danych ===
@@ -1076,9 +1160,11 @@ function updateHistoryButtonsUI() {
     
         const valuationSection = document.getElementById('valuationCalculatorSection');
         const recommendationSection = document.getElementById('recommendationSection');
+        const indexCompositionSection = document.getElementById('indexCompositionSection'); // <-- DODANE
         
         valuationSection.style.display = 'none';
         recommendationSection.innerHTML = '';
+        indexCompositionSection.style.display = 'none'; // <-- DODANE. Domyślnie ukrywamy tabelę składu
         
         clearDrawings(); // Czyścimy rysunki przy zmianie spółki
 
@@ -1128,7 +1214,15 @@ function updateHistoryButtonsUI() {
                 console.log(`Wykryto indeks giełdowy (${ticker}). Kalkulator i rekomendacje nie będą wyświetlane.`);
                 valuationSection.style.display = 'none';
                 recommendationSection.innerHTML = '';
-                return; 
+                
+                // === POCZĄTEK NOWEGO KODU ===
+                // Sprawdzamy, czy załadowany ticker to WIG i czy mamy listę spółek
+                if (ticker === 'WIG' && companyList.length > 0) {
+                    populateWigTable(); // Wywołujemy nową funkcję budującą tabelę
+                }
+                // === KONIEC NOWEGO KODU ===
+                
+                return; // Ten return już tu był
             }
     
             const indicatorsResponse = await fetch(`${API_URL}/api/indicators/${ticker}`);
