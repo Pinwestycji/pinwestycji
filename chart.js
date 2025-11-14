@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const indexCompositionTableBody = document.getElementById('indexCompositionTableBody');
     const indexCompositionTitle = document.getElementById('indexCompositionTitle');
     // === KONIEC NOWEGO KODU ===
-
+    
 
     // Plik: chart.js
 
@@ -1370,6 +1370,34 @@ function updateHistoryButtonsUI() {
                 'Stopa zwrotu na marzec/kwiecień 2026 rok': returnRate !== 'Brak danych' ? `${returnRate} %` : 'Brak danych',
                 'Wycena Akcji na marzec/kwiecień 2026 rok': prognozaCena !== null ? `${prognozaCena.toFixed(2)} zł` : 'Brak danych'
             };
+
+                // === POCZĄTEK MODYFIKACJI: Dynamiczne budowanie tabeli wyceny ===
+            if (valuationTableBody) {
+                valuationTableBody.innerHTML = ''; // Wyczyść poprzednie wiersze
+                
+                for (const [term, value] of Object.entries(valuationData)) {
+                    
+                    // Generowanie ID: usuwamy spacje i znaki specjalne, aby utworzyć kotwicę ID.
+                    const glossaryId = term
+                        .replace(/[^a-zA-Z0-9ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/g, '')
+                        .replace(/\s/g, '');
+    
+                    const row = `
+                        <tr>
+                            <td>
+                                ${term}
+                                <a href="glossary.html#${glossaryId}" class="ml-2 text-primary" style="font-size: 0.75rem;" title="Wyjaśnienie terminu">
+                                    <i class="fas fa-question-circle"></i>
+                                </a>
+                            </td>
+                            <td>${value}</td>
+                        </tr>
+                    `;
+                    
+                    valuationTableBody.insertAdjacentHTML('beforeend', row);
+                }
+            }
+            // === KONIEC MODYFIKACJI ===
     
             let valuationHtml = '';
             for (const key in valuationData) {
