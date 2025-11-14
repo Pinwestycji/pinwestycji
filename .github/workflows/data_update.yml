@@ -1,0 +1,48 @@
+# Plik: .github/workflows/data_update.yml
+
+name: Codzienne Aktualizowanie Danych GPW
+
+on:
+  # Uruchamiamy codziennie o 7:00 (UTC)
+  # Uwaga: Czas UTC jest kluczowy! 7:00 UTC to ok. 8:00/9:00 rano czasu polskiego.
+  schedule:
+    - cron: '0 7 * * *' 
+  # Pozwól na ręczne uruchomienie z interfejsu GitHub
+  workflow_dispatch:
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Konfiguracja środowiska Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      # Instalacja niezbędnych bibliotek (pandas i requests)
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas requests
+
+      # Uruchomienie skryptu
+      - name: Run data fetcher script
+        run: python data_fetcher.py
+
+      # Konfiguracja git, aby móc zatwierdzać zmiany
+      - name: Configure Git
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
+      # Sprawdzenie, czy skrypt stworzył lub zmodyfikował pliki (data/*.json)
+      - name: Commit data changes
+        run: |
+          git add data/*.json
+          # Sprawdź, czy są jakieś zmiany do zatwierdzenia
+          git diff --quiet || git commit -m "🤖 [Automated] Aktualizacja danych GPW z Stooq"
+          git push
