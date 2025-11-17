@@ -165,3 +165,25 @@ a:hover {
 #sidebarToggleCustom i {
     color: rgba(255, 255, 255, 0.75); 
 }
+
+/* ===================================================
+   6. DODANIE CIENIA DO PASKA BOCZNEGO (SIDEBAR)
+   =================================================== */
+
+.sidebar {
+    /* Ustawia delikatny cień na prawej krawędzi paska bocznego */
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2); 
+    /* 2px: przesunięcie w poziomie (w prawo)
+       0: przesunięcie w pionie
+       5px: promień rozmycia
+       rgba(0, 0, 0, 0.2): kolor czarny z 20% przezroczystością */
+    
+    /* Zapewnia, że cień będzie widoczny i nie zostanie obcięty */
+    z-index: 1000; 
+}
+
+/* Opcjonalnie: Nadpisanie cienia dla schowanego paska bocznego, 
+   jeśli chcesz zachować cień tylko w wersji rozwiniętej. */
+.sidebar.toggled {
+    box-shadow: none; 
+}
