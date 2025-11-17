@@ -168,22 +168,20 @@ a:hover {
 
 /* ===================================================
    6. DODANIE CIENIA DO PASKA BOCZNEGO (SIDEBAR)
+   * Zwiększona specyficzność i użycie !important, aby nadpisać style szablonu.
    =================================================== */
 
-.sidebar {
+/* Używamy klasy .navbar-nav, która jest bezpośrednio na elemencie UL */
+.navbar-nav.sidebar {
     /* Ustawia delikatny cień na prawej krawędzi paska bocznego */
-    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2); 
-    /* 2px: przesunięcie w poziomie (w prawo)
-       0: przesunięcie w pionie
-       5px: promień rozmycia
-       rgba(0, 0, 0, 0.2): kolor czarny z 20% przezroczystością */
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.4) !important; 
     
-    /* Zapewnia, że cień będzie widoczny i nie zostanie obcięty */
-    z-index: 1000; 
+    /* Podnosimy z-index na bardzo wysoką wartość, aby upewnić się, że jest nad wszystkim */
+    z-index: 1050 !important; 
 }
 
-/* Opcjonalnie: Nadpisanie cienia dla schowanego paska bocznego, 
-   jeśli chcesz zachować cień tylko w wersji rozwiniętej. */
-.sidebar.toggled {
-    box-shadow: none; 
+/* Upewniamy się, że zwinięty pasek boczny ma mniejszy cień lub nie ma go wcale, 
+   co jest standardem w SB Admin 2. */
+.navbar-nav.sidebar.toggled {
+    box-shadow: none !important;
 }
