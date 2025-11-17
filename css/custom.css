@@ -9,3 +9,18 @@
   border: 1px solid #ddd; /* opcjonalnie ramka */
   box-sizing: border-box;
 }
+
+/* Nowy styl dla paska bocznego - nadpisuje .bg-gradient-primary */
+.bg-gradient-primary {
+  /* Zastępuje domyślny gradient jednolitym kolorem tła */
+  background-color: #3f404a !important;
+  
+  /* Ważne: usuwa też wszelkie inne tła, które mogły być ustawione */
+  background-image: none !important;
+}
+
+/* Opcjonalnie: Zmiana koloru dla linków w pasku bocznym na nieco jaśniejszy, 
+   aby zachować czytelność, jeśli #3f404a jest ciemniejsze niż oryginał. */
+.sidebar-dark .nav-item .nav-link {
+    color: rgba(255, 255, 255, 0.8);
+}
