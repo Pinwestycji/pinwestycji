@@ -174,7 +174,7 @@ a:hover {
 /* Używamy klasy .navbar-nav, która jest bezpośrednio na elemencie UL */
 .navbar-nav.sidebar {
     /* Ustawia delikatny cień na prawej krawędzi paska bocznego */
-    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.4) !important; 
+    box-shadow: 8px 7px 8px -8px rgba(66, 68, 90, 1);
     
     /* Podnosimy z-index na bardzo wysoką wartość, aby upewnić się, że jest nad wszystkim */
     z-index: 1050 !important; 
