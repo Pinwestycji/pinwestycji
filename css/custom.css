@@ -1,3 +1,60 @@
+/* ===================================================
+   1. GLOBALNE ZMIANY KOLORÓW TEKSTU I TŁA
+   =================================================== */
+
+/* Ustawienie koloru tekstu dla całej strony na ciemnoszary (#3f404a) */
+body {
+    color: #3f404a;
+}
+
+/* Ustawienie domyślnego koloru nagłówków na ciemnoszary */
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+    color: #3f404a !important;
+}
+
+/* Ustawienie głównego koloru motywu dla linków (np. aktywne stany, focus) */
+a {
+    color: #3f404a;
+}
+a:hover {
+    color: #3f404a; /* Nadal #3f404a lub nieco jaśniejszy, np. #5d5f6e, jeśli chcesz efektu hover */
+}
+
+
+/* ===================================================
+   2. ZMIANA KOLORÓW PRZYCISKÓW (BTN)
+   =================================================== */
+
+/* Nadpisanie klas kolorystycznych Bootstrapa (primary, info, success, warning, danger)
+   na Twój nowy kolor (#3f404a)
+   * UWAGA: Zostawiamy 'secondary' i 'light' bez zmian, chyba że potrzebujesz modyfikacji. */
+
+/* PRZYCISKI PRIMARY (główny kolor) */
+.btn-primary,
+.btn-primary:active,
+.btn-primary:focus {
+    background-color: #3f404a !important;
+    border-color: #3f404a !important;
+    color: #ffffff !important; /* Tekst na przycisku musi być biały */
+}
+
+/* Efekt Hover dla przycisku primary */
+.btn-primary:hover {
+    background-color: #5d5f6e !important; /* Nieco jaśniejszy odcień dla efektu najazdu */
+    border-color: #5d5f6e !important;
+    color: #ffffff !important;
+}
+
+/* Wszelkie inne przyciski z domyślnym tłem (np. btn-info, btn-success itp.)
+   Możesz zdefiniować je podobnie, zmieniając ich tło na #3f404a,
+   jeśli chcesz zachować jeden, spójny kolor dla wszystkich przycisków. */
+
+/* Jeśli chcesz, by DOMYŚLNY kolor tekstu na NIE-przyciskowych elementach
+   Bootstrapa (np. badge'e, alerty) też był spójny: */
+.text-primary {
+    color: #3f404a !important;
+}
+
 #charts-wrapper {
   display: flex;
   flex-direction: column;
