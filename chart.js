@@ -99,6 +99,36 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Plik: chart.js - SEKCJA RYSOWANIA
 
+    function setupSidebarToggle() {
+        const sidebarToggle = document.getElementById('sidebarToggleCustom');
+        const wrapper = document.getElementById('wrapper');
+        const toggleIcon = document.getElementById('sidebarToggleIcon');
+    
+        if (!sidebarToggle || !wrapper || !toggleIcon) {
+            // Zabezpieczenie na wypadek, gdyby elementy HTML nie zostały znalezione.
+            console.warn("Nie znaleziono wymaganych elementów HTML dla przełącznika paska bocznego (Sidebar Toggle).");
+            return;
+        }
+    
+        sidebarToggle.addEventListener('click', function() {
+            // Przełącza klasę 'toggled' na #wrapper, co chowa/pokazuje pasek boczny
+            wrapper.classList.toggle('toggled');
+    
+            // Sprawdza, czy pasek boczny jest schowany
+            if (wrapper.classList.contains('toggled')) {
+                // Jeśli schowany, ustawiamy strzałkę w prawo (dla rozwijania)
+                toggleIcon.classList.remove('fa-angle-left');
+                toggleIcon.classList.add('fa-angle-right');
+            } else {
+                // Jeśli rozwinięty, ustawiamy strzałkę w lewo (dla chowania)
+                toggleIcon.classList.remove('fa-angle-right');
+                toggleIcon.classList.add('fa-angle-left');
+            }
+        });
+    }
+
+    setupSidebarToggle();
+
     // Plik: chart.js (w sekcji rysowania)
 
     // === POCZĄTEK NOWEGO KODU - LOGIKA COFANIA ===
