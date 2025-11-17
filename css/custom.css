@@ -55,6 +55,41 @@ a:hover {
     color: #3f404a !important;
 }
 
+/* ===================================================
+   3. STYLIZACJA NAGŁÓWKÓW KART (CARD HEADERS)
+   =================================================== */
+
+/* Zmiana tła nagłówka karty na Twój kolor motywu */
+.card-header {
+    background-color: #3f404a !important; 
+    border-bottom: 1px solid #3f404a !important; /* Spójna ramka */
+    color: #ffffff !important; /* Ustawienie koloru tekstu nagłówka na biały */
+}
+
+/* Ustawienie koloru ikon/tekstu wewnątrz nagłówka karty na biały */
+.card-header * {
+    color: #ffffff !important;
+}
+
+/* ===================================================
+   4. STYLIZACJA PRZYCISKÓW W NAGŁÓWKU KARTY
+   =================================================== */
+
+/* Dostosowanie przycisków (np. btn-secondary lub btn-primary) wewnątrz nagłówka karty.
+   Jeśli przyciski w nagłówku używają klasy .btn-secondary (jak w oryginalnym szablonie), 
+   musimy je nadpisać: */
+.card-header .btn {
+    background-color: #3f404a !important; /* Tło przycisku takie samo jak nagłówek */
+    border-color: #ffffff !important;   /* Jasna ramka dla kontrastu */
+    color: #ffffff !important;          /* Biały tekst */
+}
+
+/* Dostosowanie efektu najazdu dla przycisków w nagłówku */
+.card-header .btn:hover {
+    background-color: #5d5f6e !important; /* Nieco jaśniejsze tło przy najechaniu */
+    border-color: #ffffff !important;
+}
+
 #charts-wrapper {
   display: flex;
   flex-direction: column;
