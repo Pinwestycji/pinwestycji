@@ -55,7 +55,68 @@ a:hover {
     color: #3f404a !important;
 }
 
+/* ===================================================
+   5. STYLIZACJA PRZYCISKÓW TOOLBARA (INFO, WARNING, DANGER)
+   =================================================== */
 
+/* Zmiana koloru dla BTN-INFO (np. "Wskaźniki") */
+.btn-info,
+.btn-info:active,
+.btn-info:focus {
+    background-color: #3f404a !important;
+    border-color: #3f404a !important;
+    color: #ffffff !important;
+}
+
+/* Efekt Hover dla BTN-INFO */
+.btn-info:hover {
+    background-color: #5d5f6e !important; 
+    border-color: #5d5f6e !important;
+    color: #ffffff !important;
+}
+
+/* Zmiana koloru dla BTN-WARNING (np. "Linie") */
+.btn-warning,
+.btn-warning:active,
+.btn-warning:focus {
+    background-color: #3f404a !important;
+    border-color: #3f404a !important;
+    color: #ffffff !important;
+}
+
+/* Efekt Hover dla BTN-WARNING */
+.btn-warning:hover {
+    background-color: #5d5f6e !important; 
+    border-color: #5d5f6e !important;
+    color: #ffffff !important;
+}
+
+/* Zmiana koloru dla BTN-DANGER (np. "Wyczyść") */
+.btn-danger,
+.btn-danger:active,
+.btn-danger:focus {
+    background-color: #3f404a !important;
+    border-color: #3f404a !important;
+    color: #ffffff !important;
+}
+
+/* Efekt Hover dla BTN-DANGER */
+.btn-danger:hover {
+    background-color: #5d5f6e !important; 
+    border-color: #5d5f6e !important;
+    color: #ffffff !important;
+}
+
+/* Upewnienie się, że element split dropdown (btn-danger dropdown-toggle-split) 
+   również ma poprawny kolor, jeśli jest widoczny. */
+.btn-danger.dropdown-toggle-split {
+     background-color: #3f404a !important;
+     border-color: #ffffff !important; 
+}
+.btn-danger.dropdown-toggle-split:hover {
+     background-color: #5d5f6e !important;
+     border-color: #ffffff !important; 
+}
 #charts-wrapper {
   display: flex;
   flex-direction: column;
