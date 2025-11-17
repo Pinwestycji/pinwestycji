@@ -99,34 +99,40 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Plik: chart.js - SEKCJA RYSOWANIA
 
+    /**
+ * ZAKTUALIZOWANA Obsługa przełączania paska bocznego (Sidebar Toggle)
+ * * Zastosowano składnię jQuery, aby zapewnić pełną kompatybilność i 
+ * odporność na potencjalne konflikty z innymi skryptami szablonu SB Admin 2.
+ */
     function setupSidebarToggle() {
-        const sidebarToggle = document.getElementById('sidebarToggleCustom');
-        const wrapper = document.getElementById('wrapper');
-        const toggleIcon = document.getElementById('sidebarToggleIcon');
+        // Używamy selektorów jQuery ($) i metod jQuery (np. .on, .toggleClass)
+        const $sidebarToggle = $('#sidebarToggleCustom');
+        const $wrapper = $('#wrapper');
+        const $toggleIcon = $('#sidebarToggleIcon');
     
-        if (!sidebarToggle || !wrapper || !toggleIcon) {
+        if ($sidebarToggle.length === 0 || $wrapper.length === 0 || $toggleIcon.length === 0) {
             // Zabezpieczenie na wypadek, gdyby elementy HTML nie zostały znalezione.
-            console.warn("Nie znaleziono wymaganych elementów HTML dla przełącznika paska bocznego (Sidebar Toggle).");
+            console.warn("Nie znaleziono wymaganych elementów HTML dla przełącznika paska bocznego. Sprawdź, czy ID: #sidebarToggleCustom, #wrapper, i #sidebarToggleIcon są poprawne.");
             return;
         }
     
-        sidebarToggle.addEventListener('click', function() {
-            // Przełącza klasę 'toggled' na #wrapper, co chowa/pokazuje pasek boczny
-            wrapper.classList.toggle('toggled');
+        // Używamy jQuery .on('click') i .toggleClass()
+        $sidebarToggle.on('click', function() {
+            // Przełącza klasę 'toggled' na #wrapper (standard SB Admin 2)
+            $wrapper.toggleClass('toggled');
     
-            // Sprawdza, czy pasek boczny jest schowany
-            if (wrapper.classList.contains('toggled')) {
-                // Jeśli schowany, ustawiamy strzałkę w prawo (dla rozwijania)
-                toggleIcon.classList.remove('fa-angle-left');
-                toggleIcon.classList.add('fa-angle-right');
+            // Przełącza ikony
+            if ($wrapper.hasClass('toggled')) {
+                // Jeśli schowany, ustawiamy strzałkę w prawo (fa-angle-right)
+                $toggleIcon.removeClass('fa-angle-left').addClass('fa-angle-right');
             } else {
-                // Jeśli rozwinięty, ustawiamy strzałkę w lewo (dla chowania)
-                toggleIcon.classList.remove('fa-angle-right');
-                toggleIcon.classList.add('fa-angle-left');
+                // Jeśli rozwinięty, ustawiamy strzałkę w lewo (fa-angle-left)
+                $toggleIcon.removeClass('fa-angle-right').addClass('fa-angle-left');
             }
         });
     }
-
+    
+    // Wywołanie funkcji, które nastąpi po załadowaniu DOM (zgodnie z Twoją strukturą pliku)
     setupSidebarToggle();
 
     // Plik: chart.js (w sekcji rysowania)
