@@ -24,3 +24,20 @@
 .sidebar-dark .nav-item .nav-link {
     color: rgba(255, 255, 255, 0.8);
 }
+
+/* Zapewnienie, że przycisk jest idealnie okrągły */
+#sidebarToggleCustom {
+    width: 2.5rem;   /* Ustalenie stałej szerokości (np. 40px) */
+    height: 2.5rem;  /* Ustalenie stałej wysokości (równej szerokości) */
+    padding: 0;      /* Usunięcie domyślnego paddingu, który może psuć kształt */
+    display: flex;   /* Użycie Flexboxa do wyśrodkowania ikony wewnątrz przycisku */
+    align-items: center;
+    justify-content: center;
+    line-height: 1; /* Korekta, aby ikona była dobrze wyśrodkowana */
+}
+
+/* Opcjonalnie: Zmiana koloru strzałki na ciemniejszym tle paska bocznego, 
+   jeśli oryginalny kolor nie był wystarczająco jasny */
+#sidebarToggleCustom i {
+    color: rgba(255, 255, 255, 0.75); 
+}
