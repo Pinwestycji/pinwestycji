@@ -1,0 +1,7 @@
+# W pliku requirements.txt
+requests
+pandas
+numpy
+sqlalchemy
+lxml
+mysql-connector-python
