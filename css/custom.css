@@ -25,19 +25,24 @@
     color: rgba(255, 255, 255, 0.8);
 }
 
-/* Zapewnienie, że przycisk jest idealnie okrągły */
+/* Zapewnienie, że przycisk przełączający pasek boczny (#sidebarToggleCustom) 
+   jest idealnym kwadratem, co w połączeniu z klasą .rounded-circle daje idealny okrąg. */
 #sidebarToggleCustom {
-    width: 2.5rem;   /* Ustalenie stałej szerokości (np. 40px) */
-    height: 2.5rem;  /* Ustalenie stałej wysokości (równej szerokości) */
-    padding: 0;      /* Usunięcie domyślnego paddingu, który może psuć kształt */
-    display: flex;   /* Użycie Flexboxa do wyśrodkowania ikony wewnątrz przycisku */
-    align-items: center;
-    justify-content: center;
-    line-height: 1; /* Korekta, aby ikona była dobrze wyśrodkowana */
+    /* Ustawienie stałych i równych wymiarów */
+    width: 2.5rem !important;   /* Szerokość (możesz dostosować) */
+    height: 2.5rem !important;  /* Wysokość równa szerokości */
+    
+    /* Usunięcie domyślnego dopełnienia, które psuje kształt */
+    padding: 0 !important;      
+    
+    /* Użycie Flexboxa do wyśrodkowania ikony */
+    display: flex !important;   
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1 !important; 
 }
 
-/* Opcjonalnie: Zmiana koloru strzałki na ciemniejszym tle paska bocznego, 
-   jeśli oryginalny kolor nie był wystarczająco jasny */
+/* Opcjonalna zmiana koloru ikony dla lepszej widoczności na ciemnym tle */
 #sidebarToggleCustom i {
     color: rgba(255, 255, 255, 0.75); 
 }
